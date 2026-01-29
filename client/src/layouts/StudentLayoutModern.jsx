@@ -1,0 +1,260 @@
+/**
+ * Modern Student Layout
+ * Futuristic, dark-mode enabled layout for student portal
+ */
+
+import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom'
+import { useAuth } from '../contexts/AuthContext'
+import { useState, useEffect } from 'react'
+import {
+    LayoutDashboard,
+    FileText,
+    User,
+    LogOut,
+    Menu,
+    X,
+    Calendar,
+    Home,
+    ChevronRight,
+    Settings,
+    BookOpen,
+    Award
+} from 'lucide-react'
+import NotificationBell from '../components/NotificationBell'
+
+const StudentLayoutModern = () => {
+    const { user, logout } = useAuth()
+    const location = useLocation()
+    const navigate = useNavigate()
+    const [sidebarOpen, setSidebarOpen] = useState(false)
+    const [scrolled, setScrolled] = useState(false)
+
+    useEffect(() => {
+        const handleScroll = () => setScrolled(window.scrollY > 20)
+        window.addEventListener('scroll', handleScroll)
+        return () => window.removeEventListener('scroll', handleScroll)
+    }, [])
+
+    const menuItems = [
+        { path: '/student', icon: LayoutDashboard, label: 'Dashboard', exact: true },
+        { path: '/student/schedule', icon: Calendar, label: 'My Schedule' },
+        { path: '/student/results', icon: FileText, label: 'My Results' },
+        { path: '/student/profile', icon: User, label: 'Profile' },
+    ]
+
+    const isActive = (path, exact) => {
+        if (exact) return location.pathname === path
+        return location.pathname.startsWith(path)
+    }
+
+    const handleLogout = async () => {
+        await logout()
+        navigate('/')
+    }
+
+    return (
+        <div className="min-h-screen bg-[var(--light)]">
+            {/* Mobile Header */}
+            <header className={`fixed top-0 left-0 right-0 z-50 md:hidden transition-all duration-300 ${scrolled ? 'bg-white/95 backdrop-blur-xl shadow-md' : 'bg-white shadow-sm'
+                }`}>
+                <div className="flex items-center justify-between px-4 py-3">
+                    <Link to="/student" className="flex items-center gap-2">
+                        <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[var(--primary)] to-[var(--primary-light)] flex items-center justify-center font-bold text-white">
+                            P
+                        </div>
+                        <span className="font-bold text-[var(--primary)]">PARAGON</span>
+                    </Link>
+
+                    <NotificationBell />
+                </div>
+            </header>
+
+            {/* Desktop Sidebar */}
+            <aside className="hidden md:flex fixed left-0 top-0 bottom-0 w-64 flex-col bg-[var(--primary)] z-50">
+                {/* Logo */}
+                <div className="p-6 border-b border-white/10">
+                    <Link to="/student" className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center font-bold text-lg text-white shadow-lg">
+                            P
+                        </div>
+                        <div>
+                            <span className="font-bold text-lg text-white block">PARAGON</span>
+                            <span className="text-xs text-white/70">Student Portal</span>
+                        </div>
+                    </Link>
+                </div>
+
+                {/* User Info */}
+                <div className="p-4 border-b border-white/10">
+                    <div className="flex items-center gap-3 p-3 rounded-xl bg-white/10">
+                        <div className="w-10 h-10 rounded-full bg-[var(--accent)] flex items-center justify-center font-bold text-white">
+                            {user?.name?.charAt(0) || 'S'}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                            <p className="font-semibold text-white truncate">{user?.name}</p>
+                            <p className="text-xs text-white/70">Roll: {user?.roll}</p>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Navigation */}
+                <nav className="flex-1 py-4 px-3 space-y-1">
+                    {menuItems.map((item) => (
+                        <Link
+                            key={item.path}
+                            to={item.path}
+                            className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 ${isActive(item.path, item.exact)
+                                ? 'bg-white/20 text-white shadow-lg'
+                                : 'text-white/70 hover:text-white hover:bg-white/10'
+                                }`}
+                        >
+                            <item.icon className="w-5 h-5" />
+                            <span className="font-medium">{item.label}</span>
+                            {isActive(item.path, item.exact) && (
+                                <ChevronRight className="w-4 h-4 ml-auto" />
+                            )}
+                        </Link>
+                    ))}
+                </nav>
+
+                {/* Bottom Actions */}
+                <div className="p-4 border-t border-white/10 space-y-2">
+                    <Link
+                        to="/"
+                        className="flex items-center gap-3 px-4 py-3 text-white/70 hover:text-white hover:bg-white/10 rounded-xl transition-all"
+                    >
+                        <Home className="w-5 h-5" />
+                        <span>Back to Home</span>
+                    </Link>
+                    <button
+                        onClick={handleLogout}
+                        className="w-full flex items-center gap-3 px-4 py-3 text-red-300 hover:text-red-200 hover:bg-red-500/20 rounded-xl transition-all"
+                    >
+                        <LogOut className="w-5 h-5" />
+                        <span>Logout</span>
+                    </button>
+                </div>
+            </aside>
+
+            {/* Mobile Sidebar - Removed hamburger, so this is accessed differently or removed */}
+            {sidebarOpen && (
+                <>
+                    <div
+                        className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 md:hidden"
+                        onClick={() => setSidebarOpen(false)}
+                    />
+                    <aside className="fixed left-0 top-0 bottom-0 w-72 bg-[var(--primary)] z-50 md:hidden animate-slideIn">
+                        <div className="flex items-center justify-between p-4 border-b border-white/10">
+                            <div className="flex items-center gap-2">
+                                <div className="w-8 h-8 rounded-lg bg-white/20 flex items-center justify-center font-bold text-white">
+                                    P
+                                </div>
+                                <span className="font-bold text-white">PARAGON</span>
+                            </div>
+                            <button
+                                onClick={() => setSidebarOpen(false)}
+                                className="p-2 rounded-lg hover:bg-white/10"
+                            >
+                                <X className="w-5 h-5 text-white" />
+                            </button>
+                        </div>
+
+                        {/* Mobile User Info */}
+                        <div className="p-4 border-b border-white/10">
+                            <div className="flex items-center gap-3">
+                                <div className="w-12 h-12 rounded-full bg-[var(--accent)] flex items-center justify-center font-bold text-white text-lg">
+                                    {user?.name?.charAt(0) || 'S'}
+                                </div>
+                                <div>
+                                    <p className="font-semibold text-white">{user?.name}</p>
+                                    <p className="text-sm text-white/70">Roll: {user?.roll}</p>
+                                    <p className="text-xs text-white/60">{user?.class}</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Mobile Navigation */}
+                        <nav className="p-4 space-y-2">
+                            {menuItems.map((item) => (
+                                <Link
+                                    key={item.path}
+                                    to={item.path}
+                                    className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${isActive(item.path, item.exact)
+                                        ? 'bg-white/20 text-white'
+                                        : 'text-white/70 hover:text-white hover:bg-white/10'
+                                        }`}
+                                    onClick={() => setSidebarOpen(false)}
+                                >
+                                    <item.icon className="w-5 h-5" />
+                                    <span className="font-medium">{item.label}</span>
+                                </Link>
+                            ))}
+
+                            <div className="pt-4 mt-4 border-t border-white/10">
+                                <Link
+                                    to="/"
+                                    className="flex items-center gap-3 px-4 py-3 text-white/70 hover:text-white rounded-xl"
+                                    onClick={() => setSidebarOpen(false)}
+                                >
+                                    <Home className="w-5 h-5" />
+                                    <span>Back to Home</span>
+                                </Link>
+                                <button
+                                    onClick={() => { setSidebarOpen(false); handleLogout(); }}
+                                    className="w-full flex items-center gap-3 px-4 py-3 text-red-300 hover:text-red-200 rounded-xl"
+                                >
+                                    <LogOut className="w-5 h-5" />
+                                    <span>Logout</span>
+                                </button>
+                            </div>
+                        </nav>
+                    </aside>
+                </>
+            )}
+
+            {/* Main Content - Added pb-24 for mobile bottom nav spacing */}
+            <main className="md:ml-64 min-h-screen pt-16 md:pt-0 pb-24 md:pb-0">
+                <Outlet />
+            </main>
+
+            {/* Mobile Bottom Navigation */}
+            <nav className="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-xl border-t border-gray-200 md:hidden z-40 safe-area-bottom">
+                <div className="flex items-center justify-around py-2">
+                    {menuItems.slice(0, 4).map((item) => (
+                        <Link
+                            key={item.path}
+                            to={item.path}
+                            className={`flex flex-col items-center gap-1 px-3 py-2 rounded-xl transition-all ${isActive(item.path, item.exact)
+                                ? 'text-[var(--primary)]'
+                                : 'text-gray-400'
+                                }`}
+                        >
+                            <item.icon className="w-5 h-5" />
+                            <span className="text-xs font-medium">{item.label.split(' ').pop()}</span>
+                        </Link>
+                    ))}
+                </div>
+            </nav>
+
+            {/* Custom Animations */}
+            <style>{`
+                @keyframes slideIn {
+                    from {
+                        transform: translateX(-100%);
+                        opacity: 0;
+                    }
+                    to {
+                        transform: translateX(0);
+                        opacity: 1;
+                    }
+                }
+                
+                .animate-slideIn {
+                    animation: slideIn 0.3s ease-out;
+                }
+            `}</style>
+        </div>
+    )
+}
+
+export default StudentLayoutModern
