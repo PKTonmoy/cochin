@@ -37,8 +37,7 @@ const siteContentSchema = new mongoose.Schema({
     timestamps: true
 });
 
-// Indexes
-siteContentSchema.index({ sectionKey: 1 });
+// Indexes (sectionKey has unique: true which auto-creates index)
 siteContentSchema.index({ isActive: 1 });
 
 const SiteContent = mongoose.model('SiteContent', siteContentSchema);

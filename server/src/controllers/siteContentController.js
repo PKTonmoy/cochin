@@ -5,9 +5,33 @@
 
 const SiteContent = require('../models/SiteContent');
 const AuditLog = require('../models/AuditLog');
-const { uploadImage: uploadToCloudinary } = require('../config/cloudinary');
 const { ApiError } = require('../middleware/errorHandler');
-const fs = require('fs');
+const cloudinary = require('cloudinary').v2;
+
+// Helper function to upload buffer to Cloudinary
+const uploadBufferToCloudinary = (buffer, folder) => {
+    return new Promise((resolve, reject) => {
+        const uploadStream = cloudinary.uploader.upload_stream(
+            {
+                folder: folder,
+                resource_type: 'auto',
+                transformation: [
+                    { quality: 'auto' },
+                    { fetch_format: 'auto' }
+                ]
+            },
+            (error, result) => {
+                if (error) reject(error);
+                else resolve({
+                    success: true,
+                    url: result.secure_url,
+                    publicId: result.public_id
+                });
+            }
+        );
+        uploadStream.end(buffer);
+    });
+};
 
 /**
  * Get all site content
@@ -75,19 +99,18 @@ exports.updateContent = async (req, res, next) => {
         const { key } = req.params;
         const { title, content, order, isActive } = req.body;
 
-        // Handle uploaded images
+        // Handle uploaded images (now using buffer)
         const uploadedImages = [];
         if (req.files && req.files.length > 0) {
             for (const file of req.files) {
                 try {
-                    const result = await uploadToCloudinary(file.path, 'paragon/site');
+                    const result = await uploadBufferToCloudinary(file.buffer, 'paragon/site');
                     if (result.success) {
                         uploadedImages.push({
                             url: result.url,
                             publicId: result.publicId
                         });
                     }
-                    fs.unlinkSync(file.path);
                 } catch (uploadErr) {
                     console.error('Image upload error:', uploadErr);
                 }
@@ -157,8 +180,7 @@ exports.uploadContentImage = async (req, res, next) => {
             throw new ApiError('No file uploaded', 400);
         }
 
-        const result = await uploadToCloudinary(req.file.path, 'paragon/site');
-        fs.unlinkSync(req.file.path);
+        const result = await uploadBufferToCloudinary(req.file.buffer, 'paragon/site');
 
         if (!result.success) {
             throw new ApiError('Image upload failed', 500);
@@ -172,9 +194,6 @@ exports.uploadContentImage = async (req, res, next) => {
             }
         });
     } catch (error) {
-        if (req.file) {
-            fs.unlink(req.file.path, () => { });
-        }
         next(error);
     }
 };

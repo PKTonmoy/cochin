@@ -1,109 +1,31 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import api from '../../lib/api'
 import { HeroSection3D } from '../../components/hero'
+import FloatingNav from '../../components/navigation/FloatingNav'
+import HolographicStatCard from '../../components/cards/HolographicStatCard'
+import CourseCarousel from '../../components/carousel/CourseCarousel'
+import VictoryCard from '../../components/cards/VictoryCard'
+import StoryCarousel, { StoryPreviews } from '../../components/testimonials/StoryCarousel'
 import {
-    GraduationCap,
-    Users,
-    Award,
-    BookOpen,
-    CheckCircle,
-    Star,
-    Phone,
-    Mail,
-    MapPin,
-    ArrowRight,
-    ArrowUp,
-    Play,
-    Monitor,
-    Target,
-    FileText,
-    MessageCircle,
-    Smartphone,
-    BarChart3,
-    ChevronDown,
-    Sparkles,
-    Building2,
-    Globe,
-    Clock,
-    Trophy,
-    Heart,
-    Zap,
-    Check,
-    Facebook,
-    Instagram,
-    Youtube,
-    Twitter,
-    ChevronLeft,
-    ChevronRight,
-    X,
-    TrendingUp
+    Users, GraduationCap, Award, Trophy, BookOpen, ArrowRight, Phone, Mail, MapPin,
+    MessageCircle, Sparkles, TrendingUp, Facebook, Instagram, Youtube, Twitter,
+    Target, Clock, ArrowUp
 } from 'lucide-react'
 
-// ===== HOOKS =====
-
-// Counter animation hook
-const useCountUp = (end, duration = 2000, startOnView = true) => {
-    const [count, setCount] = useState(0)
-    const [hasStarted, setHasStarted] = useState(false)
-    const ref = useRef(null)
-
-    useEffect(() => {
-        if (!startOnView) setHasStarted(true)
-    }, [startOnView])
-
-    useEffect(() => {
-        if (!hasStarted) return
-        let startTime
-        let animationFrame
-
-        const animate = (currentTime) => {
-            if (!startTime) startTime = currentTime
-            const progress = Math.min((currentTime - startTime) / duration, 1)
-            setCount(Math.floor(progress * end))
-            if (progress < 1) animationFrame = requestAnimationFrame(animate)
-        }
-
-        animationFrame = requestAnimationFrame(animate)
-        return () => cancelAnimationFrame(animationFrame)
-    }, [end, duration, hasStarted])
-
-    useEffect(() => {
-        if (!startOnView || !ref.current) return
-        const observer = new IntersectionObserver(
-            ([entry]) => { if (entry.isIntersecting && !hasStarted) setHasStarted(true) },
-            { threshold: 0.3 }
-        )
-        observer.observe(ref.current)
-        return () => observer.disconnect()
-    }, [startOnView, hasStarted])
-
-    return { count, ref }
-}
-
-// Scroll progress hook
-const useScrollProgress = () => {
+// Scroll Progress
+function ScrollProgress() {
     const [progress, setProgress] = useState(0)
 
     useEffect(() => {
         const handleScroll = () => {
-            const totalHeight = document.documentElement.scrollHeight - window.innerHeight
-            const scrollProgress = (window.scrollY / totalHeight) * 100
-            setProgress(scrollProgress)
+            const total = document.documentElement.scrollHeight - window.innerHeight
+            setProgress((window.scrollY / total) * 100)
         }
-
         window.addEventListener('scroll', handleScroll)
         return () => window.removeEventListener('scroll', handleScroll)
     }, [])
 
-    return progress
-}
-
-// ===== COMPONENTS =====
-
-// Scroll Progress Indicator
-const ScrollProgress = () => {
-    const progress = useScrollProgress()
     return (
         <div className="scroll-progress">
             <div className="scroll-progress-bar" style={{ width: `${progress}%` }} />
@@ -111,654 +33,357 @@ const ScrollProgress = () => {
     )
 }
 
-// Back to Top Button
-const BackToTop = () => {
+// Back to Top
+function BackToTop() {
     const [visible, setVisible] = useState(false)
 
     useEffect(() => {
-        const handleScroll = () => {
-            setVisible(window.scrollY > 500)
-        }
+        const handleScroll = () => setVisible(window.scrollY > 500)
         window.addEventListener('scroll', handleScroll)
         return () => window.removeEventListener('scroll', handleScroll)
     }, [])
 
-    const scrollToTop = () => {
-        window.scrollTo({ top: 0, behavior: 'smooth' })
-    }
-
     return (
         <button
             className={`back-to-top ${visible ? 'visible' : ''}`}
-            onClick={scrollToTop}
-            aria-label="Back to top"
+            onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
         >
-            <ArrowUp size={24} />
+            <ArrowUp size={20} />
         </button>
     )
 }
 
-// Modern Stat Card
-const StatCardModern = ({ value, suffix = '+', label, icon: Icon, delay = 0, progress = 75 }) => {
-    const { count, ref } = useCountUp(parseInt(value), 2000)
-    const [animateProgress, setAnimateProgress] = useState(false)
-
-    useEffect(() => {
-        const observer = new IntersectionObserver(
-            ([entry]) => { if (entry.isIntersecting) setAnimateProgress(true) },
-            { threshold: 0.3 }
-        )
-        if (ref.current) observer.observe(ref.current)
-        return () => observer.disconnect()
-    }, [ref])
-
-    return (
-        <div
-            ref={ref}
-            className="stat-card-modern reveal"
-            style={{ animationDelay: `${delay}ms` }}
-        >
-            <div className="stat-icon">
-                <Icon size={32} />
-            </div>
-            <p className="stat-value">{count}{suffix}</p>
-            <p className="stat-label">{label}</p>
-            <div className="stat-progress">
-                <div
-                    className="stat-progress-bar"
-                    style={{ width: animateProgress ? `${progress}%` : '0%' }}
-                />
-            </div>
-        </div>
-    )
-}
-
-// Modern Course Card
-const CourseCardModern = ({ course, index }) => {
-    const icons = {
-        medical: Heart,
-        engineering: Zap,
-        hsc: BookOpen,
-        ssc: FileText,
-        university: GraduationCap,
-        default: Target
-    }
-    const Icon = icons[course.type] || icons.default
-
-    return (
-        <div
-            className="course-card-modern reveal"
-            style={{ animationDelay: `${index * 100}ms` }}
-        >
-            <div className="card-image">
-                <div className="card-icon">
-                    <Icon size={36} />
-                </div>
-            </div>
-            <div className="card-body">
-                {course.badge && (
-                    <span className={`card-badge ${course.badge.toLowerCase()}`}>
-                        {course.badge}
-                    </span>
-                )}
-                <h3 className="card-title font-bangla">{course.title}</h3>
-                <p className="card-description font-bangla">{course.description}</p>
-                <div className="card-features">
-                    {course.features?.slice(0, 3).map((feature, i) => (
-                        <span key={i} className="feature-tag font-bangla">{feature}</span>
-                    ))}
-                </div>
-                <div className="card-footer">
-                    <span className="text-secondary font-bold">{course.price || 'বিস্তারিত'}</span>
-                    <span className="learn-more">
-                        আরও জানুন <ArrowRight size={16} />
-                    </span>
-                </div>
-            </div>
-        </div>
-    )
-}
-
 // Feature Card
-const FeatureCardModern = ({ feature, index }) => {
-    const icons = {
-        monitor: Monitor,
-        users: Users,
-        book: BookOpen,
-        target: Target,
-        filetext: FileText,
-        message: MessageCircle,
-        phone: Smartphone,
-        chart: BarChart3,
-        clock: Clock,
-        trophy: Trophy
-    }
+function FeatureCard({ feature, index }) {
+    const icons = { monitor: Target, users: Users, book: BookOpen, target: Target, clock: Clock, trophy: Trophy }
     const Icon = icons[feature.icon] || Sparkles
 
     return (
-        <div
-            className="card-feature p-6 md:p-8 group reveal"
-            style={{ animationDelay: `${index * 100}ms` }}
-        >
-            <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-[var(--primary)] to-[var(--primary-light)] flex items-center justify-center text-white mb-4 group-hover:scale-110 transition-transform shadow-lg">
-                <Icon size={24} />
+        <div className="glass-card p-6 reveal" style={{ animationDelay: `${index * 100}ms` }}>
+            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-blue-500 to-orange-500 flex items-center justify-center mb-4 shadow-lg shadow-blue-500/20">
+                <Icon size={24} className="text-white" />
             </div>
-            <h3 className="text-lg md:text-xl font-bold text-[var(--dark)] mb-2 font-bangla">{feature.title}</h3>
-            <p className="text-gray-500 text-sm md:text-base font-bangla">{feature.description}</p>
-        </div>
-    )
-}
-
-// Testimonial Tweet Card
-const TestimonialTweet = ({ testimonial, index }) => {
-    return (
-        <div
-            className="testimonial-tweet reveal"
-            style={{ animationDelay: `${index * 100}ms` }}
-        >
-            <div className="tweet-header">
-                <div className="avatar">
-                    {testimonial.name?.charAt(0) || 'S'}
-                </div>
-                <div className="user-info">
-                    <div className="user-name font-bangla">
-                        {testimonial.name}
-                        <span className="verified-badge">
-                            <Check size={10} />
-                        </span>
-                    </div>
-                    <div className="user-handle">
-                        {testimonial.achievement} • {testimonial.year}
-                    </div>
-                </div>
-                <div className="tweet-platform">
-                    <Star size={20} />
-                </div>
-            </div>
-            <p className="tweet-content font-bangla">"{testimonial.testimonial}"</p>
-            {testimonial.result && (
-                <div className="tweet-result">
-                    <Trophy size={16} />
-                    {testimonial.result}
-                </div>
-            )}
-            <div className="tweet-footer">
-                <div className="star-rating">
-                    {[...Array(5)].map((_, i) => (
-                        <Star key={i} size={14} fill="currentColor" />
-                    ))}
-                </div>
-                <span>{testimonial.date || 'সাম্প্রতিক'}</span>
-            </div>
+            <h3 className="text-lg font-bold mb-2 text-gray-900 font-bangla">{feature.title}</h3>
+            <p className="text-gray-500 text-sm font-bangla">{feature.description}</p>
         </div>
     )
 }
 
 // Faculty Card
-const FacultyCard = ({ faculty, index }) => {
+function FacultyCard({ faculty, index }) {
     return (
-        <div
-            className="faculty-card reveal"
-            style={{ animationDelay: `${index * 100}ms` }}
-        >
-            <div className="faculty-image">
-                {faculty.image ? (
-                    <img src={faculty.image} alt={faculty.name} />
-                ) : (
-                    faculty.name?.charAt(0) || 'T'
-                )}
+        <div className="glass-card p-6 text-center reveal group" style={{ animationDelay: `${index * 100}ms` }}>
+            <div className="w-24 h-24 mx-auto mb-4 rounded-full bg-gradient-to-br from-blue-500 to-orange-500 flex items-center justify-center text-3xl font-bold text-white group-hover:scale-110 transition-transform shadow-lg">
+                {faculty.name?.charAt(0) || 'T'}
             </div>
-            <h3 className="faculty-name font-bangla">{faculty.name}</h3>
-            <p className="faculty-subject font-bangla">{faculty.subject}</p>
-            <p className="faculty-experience">{faculty.experience}</p>
+            <h3 className="font-bold text-lg text-gray-900 font-bangla">{faculty.name}</h3>
+            <p className="text-orange-500 text-sm font-bangla">{faculty.subject}</p>
+            <p className="text-gray-400 text-xs mt-1">{faculty.experience}</p>
         </div>
     )
 }
 
-
-
-// Image Lightbox
-const Lightbox = ({ images, currentIndex, onClose, onPrev, onNext }) => {
-    if (currentIndex === null) return null
-
-    return (
-        <div className={`lightbox-overlay ${currentIndex !== null ? 'active' : ''}`} onClick={onClose}>
-            <div className="lightbox-content" onClick={e => e.stopPropagation()}>
-                <button className="lightbox-close" onClick={onClose}>
-                    <X size={20} />
-                </button>
-                <button className="lightbox-nav prev" onClick={onPrev}>
-                    <ChevronLeft size={24} />
-                </button>
-                <img src={images[currentIndex]} alt="Gallery" />
-                <button className="lightbox-nav next" onClick={onNext}>
-                    <ChevronRight size={24} />
-                </button>
-            </div>
-        </div>
-    )
-}
-
-// Gallery Section
-const GallerySection = () => {
-    const [lightboxIndex, setLightboxIndex] = useState(null)
-
-    const images = [
-        'https://images.unsplash.com/photo-1523050854058-8df90110c9f1?w=800&auto=format&fit=crop',
-        'https://images.unsplash.com/photo-1427504494785-3a9ca7044f45?w=800&auto=format&fit=crop',
-        'https://images.unsplash.com/photo-1509062522246-3755977927d7?w=800&auto=format&fit=crop',
-        'https://images.unsplash.com/photo-1580582932707-520aed937b7b?w=800&auto=format&fit=crop',
-        'https://images.unsplash.com/photo-1497633762265-9d179a990aa6?w=800&auto=format&fit=crop',
-        'https://images.unsplash.com/photo-1503676260728-1c00da094a0b?w=800&auto=format&fit=crop'
-    ]
-
-    const captions = [
-        'ক্লাসরুম সেশন',
-        'গ্রুপ স্টাডি',
-        'পরীক্ষার প্রস্তুতি',
-        'আধুনিক সুবিধা',
-        'লাইব্রেরি',
-        'সাফল্য উদযাপন'
-    ]
-
-    return (
-        <>
-            <div className="masonry-grid">
-                {images.map((img, index) => (
-                    <div
-                        key={index}
-                        className="grid-item"
-                        onClick={() => setLightboxIndex(index)}
-                    >
-                        <img src={img} alt={captions[index]} loading="lazy" />
-                        <div className="overlay-text">
-                            <p className="font-bold font-bangla">{captions[index]}</p>
-                        </div>
-                    </div>
-                ))}
-            </div>
-            <Lightbox
-                images={images}
-                currentIndex={lightboxIndex}
-                onClose={() => setLightboxIndex(null)}
-                onPrev={() => setLightboxIndex(prev => (prev > 0 ? prev - 1 : images.length - 1))}
-                onNext={() => setLightboxIndex(prev => (prev < images.length - 1 ? prev + 1 : 0))}
-            />
-        </>
-    )
-}
-
-// ===== MAIN COMPONENT =====
-
-const LandingPage = () => {
+// Main Component
+export default function LandingPage() {
     const [content, setContent] = useState({})
+    const [courses, setCourses] = useState([])
+    const [faculty, setFaculty] = useState([])
+    const [toppers, setToppers] = useState([])
     const [loading, setLoading] = useState(true)
+    const [storyOpen, setStoryOpen] = useState(false)
+    const [storyIndex, setStoryIndex] = useState(0)
 
     useEffect(() => {
-        const fetchContent = async () => {
+        const fetchData = async () => {
             try {
-                const response = await api.get('/site-content')
-                setContent(response.data.data || {})
+                // Fetch all data in parallel
+                const [contentRes, coursesRes, facultyRes, toppersRes] = await Promise.all([
+                    api.get('/site-content').catch(() => ({ data: { data: {} } })),
+                    api.get('/courses/public').catch(() => ({ data: { data: [] } })),
+                    api.get('/faculty/public').catch(() => ({ data: { data: [] } })),
+                    api.get('/toppers/public/homepage').catch(() => ({ data: { data: [] } }))
+                ])
+
+                setContent(contentRes.data.data || {})
+                setCourses(coursesRes.data.data || [])
+                setFaculty(facultyRes.data.data || [])
+                setToppers(toppersRes.data.data || [])
             } catch (error) {
-                console.error('Failed to fetch site content:', error)
+                console.error('Failed to fetch data:', error)
             } finally {
                 setLoading(false)
             }
         }
-        fetchContent()
+
+        fetchData()
     }, [])
 
+    // Reveal animations
     useEffect(() => {
+        if (loading) return
         const observer = new IntersectionObserver(
-            (entries) => entries.forEach(entry => { if (entry.isIntersecting) entry.target.classList.add('visible') }),
+            entries => entries.forEach(e => e.isIntersecting && e.target.classList.add('visible')),
             { threshold: 0.1 }
         )
-        document.querySelectorAll('.reveal, .reveal-left, .reveal-right, .reveal-scale').forEach(el => observer.observe(el))
+        document.querySelectorAll('.reveal').forEach(el => observer.observe(el))
         return () => observer.disconnect()
     }, [loading])
 
-    // Content from API or defaults
+    // Data
     const hero = content.hero?.content || {}
-    const about = content.about?.content || {}
-    const success = content.success?.content || {}
-    const contactInfo = content.contact?.content || {}
-    const programs = content.programs?.content || {}
-    const features = content.features?.content || {}
-
-    // Default data
-    const defaultStats = [
-        { label: 'Students Enrolled', value: '1000', suffix: '+', icon: Users, progress: 85 },
-        { label: 'Expert Teachers', value: '50', suffix: '+', icon: GraduationCap, progress: 90 },
-        { label: 'Years of Excellence', value: '10', suffix: '+', icon: Award, progress: 75 },
-        { label: 'Success Rate', value: '95', suffix: '%', icon: Trophy, progress: 95 },
+    const stats = hero.stats || [
+        { label: 'Students', value: '1000', suffix: '+' },
+        { label: 'Teachers', value: '50', suffix: '+' },
+        { label: 'Years', value: '10', suffix: '+' },
+        { label: 'Success', value: '95', suffix: '%' }
     ]
 
-    const defaultCourses = [
-        { title: 'Medical Admission 2026', description: 'মেডিকেল ভর্তি পরীক্ষার জন্য সম্পূর্ণ প্রস্তুতি', badge: 'Popular', type: 'medical', features: ['মেধাবী শিক্ষক', 'লাইভ ক্লাস', 'এক্সাম'] },
-        { title: 'Engineering Admission', description: 'ইঞ্জিনিয়ারিং ভর্তি পরীক্ষার জন্য সম্পূর্ণ প্রস্তুতি', badge: 'New', type: 'engineering', features: ['BUET ফোকাস', 'মডেল টেস্ট', 'Q&A'] },
-        { title: 'HSC Academic Program', description: 'একাদশ-দ্বাদশ শ্রেণীর জন্য একাডেমিক প্রোগ্রাম', type: 'hsc', features: ['বোর্ড প্রস্তুতি', 'চ্যাপ্টার ক্লাস', 'পরীক্ষা'] },
-        { title: 'DU Admission Crash', description: 'ঢাকা বিশ্ববিদ্যালয় ভর্তি পরীক্ষার জন্য ক্র্যাশ কোর্স', badge: 'Hot', type: 'university', features: ['Ka ও Kha Unit', 'শর্ট সিলেবাস'] },
-        { title: 'SSC Foundation', description: 'এসএসসি পরীক্ষার্থীদের জন্য ফাউন্ডেশন কোর্স', type: 'ssc', features: ['সকল বিষয়', 'উইকলি টেস্ট'] },
-        { title: 'Free Trial Class', description: 'বিনামূল্যে ট্রায়াল ক্লাস নিন', badge: 'Free', type: 'default', features: ['ডেমো ক্লাস', 'কোর্স পরিচিতি'] }
+    // Map API courses to display format (use fetched data or fallback)
+    const displayCourses = courses.length > 0
+        ? courses.map(course => ({
+            title: course.name || course.title,
+            description: course.shortDescription || course.description,
+            badge: course.isFeatured ? 'Popular' : (course.badge || ''),
+            type: course.category?.toLowerCase() || 'default',
+            features: course.features || course.highlights || [],
+            rating: course.rating || 4.9,
+            image: course.thumbnail || course.image
+        }))
+        : [
+            { title: 'Medical Admission 2026', description: 'মেডিকেল ভর্তি পরীক্ষার জন্য সম্পূর্ণ প্রস্তুতি', badge: 'Popular', type: 'medical', features: ['মেধাবী শিক্ষক', 'লাইভ ক্লাস'] },
+            { title: 'Engineering Admission', description: 'ইঞ্জিনিয়ারিং ভর্তির জন্য প্রস্তুতি', badge: 'New', type: 'engineering', features: ['BUET ফোকাস', 'মডেল টেস্ট'] },
+            { title: 'HSC Academic', description: 'একাদশ-দ্বাদশ শ্রেণীর প্রোগ্রাম', type: 'hsc', features: ['বোর্ড প্রস্তুতি'] },
+            { title: 'DU Admission', description: 'ঢাকা বিশ্ববিদ্যালয় ক্র্যাশ কোর্স', badge: 'Hot', type: 'university', features: ['Ka/Kha Unit'] },
+        ]
+
+    // Map API toppers to testimonials format
+    const testimonials = toppers.length > 0
+        ? toppers.map(topper => ({
+            name: topper.name,
+            achievement: topper.exam || topper.achievement,
+            year: topper.year?.toString() || '2024',
+            testimonial: topper.testimonial || topper.quote || '',
+            result: topper.meritPosition ? `Merit: ${topper.meritPosition}` : (topper.result || ''),
+            image: topper.photo || topper.image
+        }))
+        : [
+            { name: 'রহিম আহমেদ', achievement: 'BUET CSE', year: '2024', testimonial: 'প্যারাগনের শিক্ষকদের গাইডেন্স ছাড়া আমার পক্ষে BUET-এ চান্স পাওয়া সম্ভব ছিল না।', result: 'Merit: 45' },
+            { name: 'ফাতিমা খান', achievement: 'Dhaka Medical', year: '2024', testimonial: 'মেডিকেল ভর্তি পরীক্ষার প্রস্তুতি নেওয়ার জন্য প্যারাগন সেরা জায়গা।', result: 'Merit: 128' },
+            { name: 'করিম হাসান', achievement: 'Engineering', year: '2024', testimonial: 'অনলাইনে ক্লাস করেও ভালো রেজাল্ট করা সম্ভব - প্যারাগন প্রমাণ করেছে।', result: 'Merit: 89' },
+            { name: 'সোনিয়া আক্তার', achievement: 'DU Ka Unit', year: '2025', testimonial: 'ঢাকা বিশ্ববিদ্যালয়ে চান্স পাওয়ার জন্য প্যারাগনের বিকল্প নেই।', result: 'Merit: 156' }
+        ]
+
+    const features = content.features?.content?.list || [
+        { title: 'অফলাইন/অনলাইন', description: 'যেকোনো জায়গা থেকে শিখুন', icon: 'monitor' },
+        { title: 'মেধাবী শিক্ষক', description: 'দেশসেরা শিক্ষকদের কাছ থেকে শিখুন', icon: 'users' },
+        { title: 'স্টাডি ম্যাটেরিয়ালস', description: 'আপডেটেড শিক্ষা উপকরণ', icon: 'book' },
+        { title: 'এক্সাম সিস্টেম', description: 'নিয়মিত পরীক্ষা ও মূল্যায়ন', icon: 'target' },
     ]
 
-    const defaultFeatures = [
-        { title: 'অফলাইন/অনলাইন প্রোগ্রাম', description: 'আপনার সুবিধামত শিখুন যেকোনো জায়গা থেকে', icon: 'monitor' },
-        { title: 'মেধাবী ও অভিজ্ঞ শিক্ষক', description: 'দেশসেরা শিক্ষকদের কাছ থেকে শিখুন', icon: 'users' },
-        { title: 'মানসম্মত স্টাডি ম্যাটেরিয়ালস', description: 'গবেষণালব্ধ ও আপডেটেড শিক্ষা উপকরণ', icon: 'book' },
-        { title: 'কনসেপ্ট বেইজড ক্লাস', description: 'মুখস্থ নয়, ধারণাভিত্তিক শেখা', icon: 'target' },
-        { title: 'ইউনিক এক্সাম সিস্টেম', description: 'নিয়মিত পরীক্ষা ও মূল্যায়ন', icon: 'filetext' },
-        { title: 'সার্বক্ষণিক Q&A সেবা', description: '24/7 প্রশ্নের উত্তর পান', icon: 'message' },
-        { title: 'Auto SMS রেজাল্ট', description: 'অভিভাবকদের কাছে স্বয়ংক্রিয় রেজাল্ট', icon: 'phone' },
-        { title: 'এক্সাম এনালাইসিস রিপোর্ট', description: 'বিস্তারিত পারফরম্যান্স বিশ্লেষণ', icon: 'chart' }
-    ]
+    // Map API faculty to display format
+    const displayFaculty = faculty.length > 0
+        ? faculty.map(f => {
+            // Handle experience which can be an object {totalYears, teachingSince, previous} or string
+            let experienceStr = '5+ Years';
+            if (typeof f.experience === 'string') {
+                experienceStr = f.experience;
+            } else if (f.experience?.totalYears) {
+                experienceStr = `${f.experience.totalYears}+ Years`;
+            } else if (f.yearsExperience) {
+                experienceStr = `${f.yearsExperience}+ Years`;
+            }
 
-    const defaultTestimonials = [
-        { name: 'রহিম আহমেদ', achievement: 'BUET CSE', year: '2024', testimonial: 'প্যারাগনের শিক্ষকদের গাইডেন্স ছাড়া আমার পক্ষে BUET-এ চান্স পাওয়া সম্ভব ছিল না। তাদের পরিশ্রম ও আন্তরিকতা অসাধারণ।', result: 'Merit Position: 45' },
-        { name: 'ফাতিমা খান', achievement: 'Dhaka Medical', year: '2024', testimonial: 'মেডিকেল ভর্তি পরীক্ষার প্রস্তুতি নেওয়ার জন্য প্যারাগন সেরা জায়গা। এখানকার পড়াশোনার মান অনন্য।', result: 'Merit Position: 128' },
-        { name: 'করিম সাহেব', achievement: 'Engineering', year: '2024', testimonial: 'অনলাইনে ক্লাস করেও ভালো রেজাল্ট করা সম্ভব - প্যারাগন এটি প্রমাণ করেছে।', result: 'Merit Position: 89' },
-        { name: 'সোনিয়া আক্তার', achievement: 'DU Ka Unit', year: '2025', testimonial: 'ঢাকা বিশ্ববিদ্যালয়ে চান্স পাওয়ার জন্য প্যারাগনের কোনো বিকল্প নেই।', result: 'Merit Position: 156' }
-    ]
+            return {
+                name: f.name,
+                subject: f.subject || f.department,
+                experience: experienceStr,
+                image: f.photo || f.image
+            };
+        })
+        : [
+            { name: 'Dr. Mohammad Ali', subject: 'Physics', experience: '15+ Years' },
+            { name: 'Prof. Fatema Begum', subject: 'Chemistry', experience: '12+ Years' },
+            { name: 'Md. Abdul Karim', subject: 'Mathematics', experience: '10+ Years' },
+            { name: 'Dr. Nusrat Jahan', subject: 'Biology', experience: '8+ Years' }
+        ]
 
-    const defaultFaculty = [
-        { name: 'Dr. Mohammad Ali', subject: 'Physics', experience: '15+ Years Experience' },
-        { name: 'Prof. Fatema Begum', subject: 'Chemistry', experience: '12+ Years Experience' },
-        { name: 'Md. Abdul Karim', subject: 'Mathematics', experience: '10+ Years Experience' },
-        { name: 'Dr. Nusrat Jahan', subject: 'Biology', experience: '8+ Years Experience' }
-    ]
-
-    const stats = hero.stats || defaultStats
-    const courses = programs.list || defaultCourses
-    const featureList = features.list || defaultFeatures
-    const testimonials = success.list || defaultTestimonials
+    const topRankers = testimonials.slice(0, 3).map((t, i) => ({
+        name: t.name,
+        achievement: t.achievement,
+        score: t.result?.split(':')[1]?.trim() || `AIR ${(i + 1) * 15}`,
+        percentile: `${99.9 - i * 0.1}%`,
+        image: t.image
+    }))
 
     if (loading) {
         return (
             <div className="min-h-screen flex items-center justify-center bg-white">
-                <div className="spinner"></div>
+                <div className="spinner" />
             </div>
         )
     }
 
     return (
-        <div className="animate-fadeIn bg-white">
+        <div className="bg-white min-h-screen">
             <ScrollProgress />
             <BackToTop />
+            <FloatingNav />
 
-            {/* ===== ADVANCED 3D HERO SECTION ===== */}
-            <HeroSection3D
-                content={hero}
-                stats={stats}
-            />
+            {/* Hero */}
+            <HeroSection3D content={hero} stats={stats} />
 
-            {/* ===== STATS SECTION ===== */}
-            <section className="py-16 md:py-24 bg-white">
-                <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-                    <div className="section-title-modern reveal">
-                        <span className="subtitle">
-                            <TrendingUp size={16} />
-                            আমাদের সাফল্য
-                        </span>
-                        <h2 className="title font-bangla">
-                            সংখ্যায় <span className="title-highlight">প্যারাগন</span>
-                        </h2>
-                    </div>
-                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
-                        {stats.map((stat, index) => (
-                            <StatCardModern
-                                key={index}
-                                value={stat.value}
-                                suffix={stat.suffix || '+'}
-                                label={stat.label}
-                                icon={[Users, GraduationCap, Award, Trophy][index] || Star}
-                                delay={index * 100}
-                                progress={stat.progress || 75}
-                            />
-                        ))}
-                    </div>
-                </div>
-            </section>
-
-            {/* ===== ABOUT SECTION WITH GALLERY ===== */}
-            <section className="py-16 md:py-24 section-alt">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
-                        <div className="reveal-left">
-                            <span className="text-[var(--secondary)] font-bold text-sm uppercase tracking-wider mb-2 inline-block">আমাদের সম্পর্কে</span>
-                            <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-[var(--dark)] mb-6 leading-tight font-bangla">
-                                স্বপ্ন পূরণের <span className="gradient-text-blue">বিশ্বস্ত সঙ্গী</span>
-                            </h2>
-                            <p className="text-gray-600 text-lg mb-6 leading-relaxed font-bangla">
-                                {about.description || 'প্যারাগন কোচিং সেন্টার বাংলাদেশের অন্যতম শীর্ষস্থানীয় শিক্ষা প্রতিষ্ঠান। গত এক দশকেরও বেশি সময় ধরে আমরা শিক্ষার্থীদের সাফল্যের পথে এগিয়ে নিয়ে যাচ্ছি।'}
-                            </p>
-
-                            <div className="grid grid-cols-2 gap-4 mb-8">
-                                <div className="card-stat p-4 text-center">
-                                    <Building2 className="w-8 h-8 text-[var(--primary)] mx-auto mb-2" />
-                                    <p className="text-2xl font-bold text-[var(--dark)]">5+</p>
-                                    <p className="text-gray-500 text-sm font-bangla">শাখা</p>
-                                </div>
-                                <div className="card-stat p-4 text-center">
-                                    <Globe className="w-8 h-8 text-[var(--primary)] mx-auto mb-2" />
-                                    <p className="text-2xl font-bold text-[var(--dark)]">Online</p>
-                                    <p className="text-gray-500 text-sm font-bangla">প্ল্যাটফর্ম</p>
-                                </div>
-                            </div>
-
-                            <Link to="/stories" className="btn btn-primary font-bangla">
-                                সাফল্যের গল্প দেখুন
-                                <ArrowRight size={18} />
-                            </Link>
-                        </div>
-
-                        <div className="reveal-right">
-                            <GallerySection />
-                        </div>
-                    </div>
-                </div>
-            </section>
-
-            {/* ===== COURSES SECTION ===== */}
-            <section id="programs" className="py-16 md:py-24 bg-white">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                    <div className="section-title-modern reveal">
-                        <span className="subtitle">
+            {/* Courses */}
+            <section id="programs" className="section-cyber bg-gray-50">
+                <div className="container-cyber">
+                    <div className="section-title reveal">
+                        <div className="badge">
                             <BookOpen size={16} />
-                            Current Playlist
-                        </span>
-                        <h2 className="title font-bangla">
-                            আমাদের <span className="title-highlight">প্রোগ্রামসমূহ</span>
-                        </h2>
-                        <p className="description font-bangla">
-                            আপনার লক্ষ্য অনুযায়ী সেরা প্রোগ্রাম নির্বাচন করুন
-                        </p>
+                            <span>Our Programs</span>
+                        </div>
+                        <h2 className="font-bangla">আমাদের <span className="gradient-text">প্রোগ্রামসমূহ</span></h2>
+                        <p className="font-bangla">আপনার লক্ষ্য অনুযায়ী সেরা প্রোগ্রাম নির্বাচন করুন</p>
                     </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        {courses.map((course, index) => (
-                            <CourseCardModern key={index} course={course} index={index} />
-                        ))}
-                    </div>
+                    <CourseCarousel courses={displayCourses} />
                 </div>
             </section>
 
-            {/* ===== FEATURES SECTION ===== */}
-            <section id="features" className="py-16 md:py-24 section-alt">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                    <div className="section-title-modern reveal">
-                        <span className="subtitle">
+            {/* Features */}
+            <section className="section-cyber bg-white">
+                <div className="container-cyber">
+                    <div className="section-title reveal">
+                        <div className="badge">
                             <Sparkles size={16} />
-                            FAV Features
-                        </span>
-                        <h2 className="title font-bangla">
-                            কেন <span className="title-highlight">প্যারাগন?</span>
-                        </h2>
-                        <p className="description font-bangla">
-                            সেরা শিক্ষা অভিজ্ঞতার জন্য আমরা যা প্রদান করি
-                        </p>
+                            <span>Why Choose Us</span>
+                        </div>
+                        <h2 className="font-bangla">কেন <span className="gradient-text">প্যারাগন?</span></h2>
                     </div>
-
-                    <div className="bento-grid">
-                        {featureList.map((feature, index) => (
-                            <FeatureCardModern key={index} feature={feature} index={index} />
-                        ))}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                        {features.map((f, i) => <FeatureCard key={i} feature={f} index={i} />)}
                     </div>
                 </div>
             </section>
 
-
-
-            {/* ===== TESTIMONIALS SECTION ===== */}
-            <section className="py-16 md:py-24 bg-gradient-to-br from-[var(--primary)] via-[#1a5276] to-[#0d3b66]">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                    <div className="section-title-modern reveal text-white">
-                        <span className="subtitle" style={{ background: 'rgba(255,255,255,0.1)', color: 'white' }}>
-                            <MessageCircle size={16} />
-                            My Tweets
-                        </span>
-                        <h2 className="title text-white font-bangla">
-                            সফল শিক্ষার্থীদের <span style={{ color: 'var(--secondary)' }}>মতামত</span>
-                        </h2>
-                        <p className="description text-white/70 font-bangla">
-                            {success.description || 'আমাদের সফল শিক্ষার্থীদের অনুপ্রেরণামূলক গল্প'}
-                        </p>
+            {/* Results */}
+            <section className="section-cyber bg-gradient-to-b from-blue-50 to-white">
+                <div className="container-cyber">
+                    <div className="section-title reveal">
+                        <div className="badge">
+                            <Trophy size={16} />
+                            <span>Hall of Fame</span>
+                        </div>
+                        <h2 className="font-bangla">আমাদের <span className="gradient-text">সফল শিক্ষার্থী</span></h2>
                     </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        {testimonials.slice(0, 4).map((testimonial, index) => (
-                            <TestimonialTweet key={index} testimonial={testimonial} index={index} />
-                        ))}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        {topRankers.map((s, i) => <VictoryCard key={i} student={s} rank={i + 1} index={i} />)}
                     </div>
-
-                    <div className="mt-10 text-center reveal">
-                        <Link to="/stories" className="btn btn-outline-white px-8 py-3 font-bangla">
-                            সব গল্প দেখুন
-                            <ArrowRight size={18} />
+                    <div className="text-center mt-8 reveal">
+                        <Link to="/stories" className="btn-glass">
+                            সব গল্প দেখুন <ArrowRight size={18} />
                         </Link>
                     </div>
                 </div>
             </section>
 
-            {/* ===== FACULTY SECTION ===== */}
-            <section className="py-16 md:py-24 bg-white">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                    <div className="section-title-modern reveal">
-                        <span className="subtitle">
-                            <Users size={16} />
-                            Our Team
-                        </span>
-                        <h2 className="title font-bangla">
-                            আমাদের <span className="title-highlight">শিক্ষকমণ্ডলী</span>
-                        </h2>
-                        <p className="description font-bangla">
-                            অভিজ্ঞ ও নিবেদিতপ্রাণ শিক্ষকদের সাথে পরিচিত হোন
-                        </p>
-                    </div>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                        {defaultFaculty.map((faculty, index) => (
-                            <FacultyCard key={index} faculty={faculty} index={index} />
-                        ))}
-                    </div>
-                </div>
-            </section>
-
-            {/* ===== CTA SECTION ===== */}
-            <section className="cta-section-modern">
-                <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-                    <div className="cta-content reveal">
-                        <h2 className="cta-title font-bangla">
-                            আজই শুরু করুন আপনার সফলতার যাত্রা
-                        </h2>
-                        <p className="cta-description font-bangla">
-                            বিনামূল্যে ট্রায়াল ক্লাসে যোগ দিন এবং আমাদের শিক্ষা পদ্ধতি সম্পর্কে জানুন
-                        </p>
-                        <div className="cta-buttons">
-                            <a href="#contact" className="btn-hero-primary font-bangla">
-                                এখনই ভর্তি হন
-                                <ArrowRight size={20} />
-                            </a>
-                            <a href="tel:09666775566" className="btn-hero-secondary font-bangla">
-                                <Phone size={20} />
-                                কল করুন
-                            </a>
+            {/* Testimonials */}
+            <section className="section-cyber bg-white">
+                <div className="container-cyber">
+                    <div className="section-title reveal">
+                        <div className="badge">
+                            <MessageCircle size={16} />
+                            <span>Success Stories</span>
                         </div>
+                        <h2 className="font-bangla">সফল শিক্ষার্থীদের <span className="gradient-text">মতামত</span></h2>
+                    </div>
+                    <div className="reveal">
+                        <StoryPreviews testimonials={testimonials} onOpen={(i) => { setStoryIndex(i); setStoryOpen(true) }} />
                     </div>
                 </div>
             </section>
 
-            {/* ===== CONTACT SECTION ===== */}
-            <section id="contact" className="py-16 md:py-24 bg-white">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
-                        <div className="reveal-left">
-                            <span className="text-[var(--secondary)] font-bold text-sm uppercase tracking-wider mb-2 inline-block">যোগাযোগ করুন</span>
-                            <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-[var(--dark)] mb-6 leading-tight font-bangla">
-                                আজই শুরু করুন আপনার সফলতার যাত্রা
-                            </h2>
-                            <p className="text-gray-500 text-lg mb-8 font-bangla">
-                                বিনামূল্যে ট্রায়াল ক্লাসে যোগ দিন এবং আমাদের শিক্ষা পদ্ধতি সম্পর্কে জানুন।
-                            </p>
+            <StoryCarousel testimonials={testimonials} isOpen={storyOpen} onClose={() => setStoryOpen(false)} startIndex={storyIndex} />
 
-                            <div className="flex flex-col gap-4">
-                                <div className="flex items-center gap-4 p-4 rounded-xl bg-[#f8fbff] border border-[#e8f4fc]">
-                                    <div className="w-12 h-12 rounded-full bg-gradient-to-br from-[var(--primary)] to-[var(--primary-light)] flex items-center justify-center text-white">
-                                        <Phone size={20} />
+            {/* Faculty */}
+            <section className="section-cyber bg-gray-50">
+                <div className="container-cyber">
+                    <div className="section-title reveal">
+                        <div className="badge">
+                            <Users size={16} />
+                            <span>Our Team</span>
+                        </div>
+                        <h2 className="font-bangla">আমাদের <span className="gradient-text">শিক্ষকমণ্ডলী</span></h2>
+                    </div>
+                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                        {displayFaculty.map((f, i) => <FacultyCard key={i} faculty={f} index={i} />)}
+                    </div>
+                </div>
+            </section>
+
+            {/* CTA */}
+            <section className="py-20 bg-gradient-to-r from-blue-500 via-blue-600 to-orange-500 relative overflow-hidden">
+                <div className="container-cyber text-center relative z-10 reveal">
+                    <h2 className="text-3xl md:text-4xl font-bold mb-4 text-white font-bangla">
+                        আজই শুরু করুন আপনার সফলতার যাত্রা
+                    </h2>
+                    <p className="text-white/80 mb-8 font-bangla">বিনামূল্যে ট্রায়াল ক্লাসে যোগ দিন</p>
+                    <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                        <a href="#contact" className="btn-cyber bg-white text-blue-600 shadow-xl hover:shadow-2xl">
+                            <span className="font-bangla">এখনই ভর্তি হন</span>
+                            <ArrowRight size={20} />
+                        </a>
+                        <a href="tel:09666775566" className="btn-glass bg-white/20 text-white border-white/30">
+                            <Phone size={20} />
+                            <span>কল করুন</span>
+                        </a>
+                    </div>
+                </div>
+            </section>
+
+            {/* Contact */}
+            <section id="contact" className="section-cyber bg-white">
+                <div className="container-cyber">
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+                        <div className="reveal">
+                            <span className="text-orange-500 text-sm font-semibold uppercase tracking-wider">যোগাযোগ</span>
+                            <h2 className="text-3xl md:text-4xl font-bold mt-2 mb-6 text-gray-900 font-bangla">
+                                আজই <span className="gradient-text">শুরু করুন</span>
+                            </h2>
+
+                            <div className="space-y-4">
+                                {[
+                                    { icon: Phone, label: 'Helpline', value: '09666775566' },
+                                    { icon: MapPin, label: 'Address', value: 'ঢাকা, বাংলাদেশ' },
+                                    { icon: Mail, label: 'Email', value: 'info@paragon.edu.bd' }
+                                ].map((item, i) => (
+                                    <div key={i} className="glass-card p-4 flex items-center gap-4">
+                                        <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-orange-500 flex items-center justify-center shadow-md">
+                                            <item.icon size={20} className="text-white" />
+                                        </div>
+                                        <div>
+                                            <p className="text-gray-400 text-sm">{item.label}</p>
+                                            <p className="font-semibold text-gray-900 font-bangla">{item.value}</p>
+                                        </div>
                                     </div>
-                                    <div>
-                                        <p className="text-gray-500 text-sm">Helpline</p>
-                                        <p className="text-[var(--dark)] font-bold text-lg">{contactInfo.phone || '09666775566'}</p>
-                                    </div>
-                                </div>
-                                <div className="flex items-center gap-4 p-4 rounded-xl bg-[#f8fbff] border border-[#e8f4fc]">
-                                    <div className="w-12 h-12 rounded-full bg-gradient-to-br from-[var(--secondary)] to-[var(--accent)] flex items-center justify-center text-white">
-                                        <MapPin size={20} />
-                                    </div>
-                                    <div>
-                                        <p className="text-gray-500 text-sm">Address</p>
-                                        <p className="text-[var(--dark)] font-medium font-bangla">{contactInfo.address || 'ঢাকা, বাংলাদেশ'}</p>
-                                    </div>
-                                </div>
-                                <div className="flex items-center gap-4 p-4 rounded-xl bg-[#f8fbff] border border-[#e8f4fc]">
-                                    <div className="w-12 h-12 rounded-full bg-gradient-to-br from-[var(--success)] to-[#2ecc71] flex items-center justify-center text-white">
-                                        <Mail size={20} />
-                                    </div>
-                                    <div>
-                                        <p className="text-gray-500 text-sm">Email</p>
-                                        <p className="text-[var(--dark)] font-medium">{contactInfo.email || 'info@paragon.edu.bd'}</p>
-                                    </div>
-                                </div>
+                                ))}
                             </div>
                         </div>
 
-                        <div className="reveal-right">
-                            <div className="card p-6 md:p-8 shadow-xl border-t-4 border-[var(--primary)]">
-                                <h3 className="text-xl md:text-2xl font-bold text-[var(--dark)] mb-6 font-bangla">ফ্রি ক্লাস বুক করুন</h3>
-
+                        <div className="reveal">
+                            <div className="glass-card p-6 md:p-8">
+                                <h3 className="text-xl font-bold mb-6 text-gray-900 font-bangla">ফ্রি ক্লাস বুক করুন</h3>
                                 <form className="space-y-4">
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                        <div>
-                                            <label className="block text-sm font-semibold text-gray-700 mb-2 font-bangla">নাম</label>
-                                            <input type="text" className="input" placeholder="আপনার নাম" />
-                                        </div>
-                                        <div>
-                                            <label className="block text-sm font-semibold text-gray-700 mb-2 font-bangla">ফোন</label>
-                                            <input type="tel" className="input" placeholder="০১XXXXXXXXX" />
-                                        </div>
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <input type="text" placeholder="আপনার নাম" className="input-cyber" />
+                                        <input type="tel" placeholder="ফোন" className="input-cyber" />
                                     </div>
-                                    <div>
-                                        <label className="block text-sm font-semibold text-gray-700 mb-2 font-bangla">ক্লাস</label>
-                                        <select className="input">
-                                            <option value="">ক্লাস নির্বাচন করুন</option>
-                                            <option value="9">৯ম শ্রেণী</option>
-                                            <option value="10">১০ম শ্রেণী</option>
-                                            <option value="11">একাদশ শ্রেণী</option>
-                                            <option value="12">দ্বাদশ শ্রেণী</option>
-                                            <option value="admission">ভর্তি পরীক্ষার্থী</option>
-                                        </select>
-                                    </div>
-                                    <button type="submit" className="btn btn-primary w-full py-4 text-lg font-bangla">
-                                        ফ্রি ক্লাস বুক করুন
+                                    <select className="input-cyber">
+                                        <option>ক্লাস নির্বাচন করুন</option>
+                                        <option>৯ম শ্রেণী</option>
+                                        <option>১০ম শ্রেণী</option>
+                                        <option>একাদশ</option>
+                                        <option>ভর্তি পরীক্ষার্থী</option>
+                                    </select>
+                                    <button type="submit" className="btn-cyber w-full py-4">
+                                        <span className="font-bangla">বুক করুন</span>
                                         <ArrowRight size={20} />
                                     </button>
                                 </form>
@@ -768,90 +393,60 @@ const LandingPage = () => {
                 </div>
             </section>
 
-            {/* ===== FOOTER ===== */}
-            <footer className="footer-modern">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                    <div className="footer-grid">
-                        <div className="footer-brand">
-                            <Link to="/" className="logo">
-                                <GraduationCap size={32} />
-                                <span>PARAGON</span>
+            {/* Footer */}
+            <footer className="footer-cyber">
+                <div className="container-cyber">
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
+                        <div>
+                            <Link to="/" className="flex items-center gap-2 text-2xl font-bold mb-4">
+                                <GraduationCap size={32} className="text-blue-500" />
+                                <span className="gradient-text">PARAGON</span>
                             </Link>
-                            <p className="tagline font-bangla">
-                                শিক্ষায় শ্রেষ্ঠত্ব অর্জনের বিশ্বস্ত সঙ্গী। আমাদের মিশন হলো প্রতিটি শিক্ষার্থীকে তার স্বপ্ন পূরণে সহায়তা করা।
-                            </p>
-                            <div className="social-links">
-                                <a href="#" className="social-link" aria-label="Facebook">
-                                    <Facebook size={20} />
-                                </a>
-                                <a href="#" className="social-link" aria-label="Instagram">
-                                    <Instagram size={20} />
-                                </a>
-                                <a href="#" className="social-link" aria-label="Youtube">
-                                    <Youtube size={20} />
-                                </a>
-                                <a href="#" className="social-link" aria-label="Twitter">
-                                    <Twitter size={20} />
-                                </a>
+                            <p className="text-gray-500 text-sm font-bangla">শিক্ষায় শ্রেষ্ঠত্ব অর্জনের বিশ্বস্ত সঙ্গী</p>
+                            <div className="flex gap-3 mt-4">
+                                {[Facebook, Instagram, Youtube, Twitter].map((Icon, i) => (
+                                    <a key={i} href="#" className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center text-gray-500 hover:text-white hover:bg-blue-500 transition-all">
+                                        <Icon size={18} />
+                                    </a>
+                                ))}
                             </div>
                         </div>
 
                         <div>
-                            <h4 className="footer-heading">Quick Links</h4>
-                            <ul className="footer-links">
-                                <li><a href="#programs">Courses</a></li>
-                                <li><a href="#features">Features</a></li>
-                                <li><Link to="/stories">Success Stories</Link></li>
-                                <li><a href="#contact">Contact</a></li>
+                            <h4 className="font-semibold mb-4 text-gray-900">Quick Links</h4>
+                            <ul className="space-y-2 text-gray-500 text-sm">
+                                <li><Link to="/" className="hover:text-blue-500 transition-colors">Home</Link></li>
+                                <li><Link to="/programs" className="hover:text-blue-500 transition-colors">Programs</Link></li>
+                                <li><Link to="/stories" className="hover:text-blue-500 transition-colors">Results</Link></li>
+                                <li><a href="#contact" className="hover:text-blue-500 transition-colors">Contact</a></li>
                             </ul>
                         </div>
 
                         <div>
-                            <h4 className="footer-heading">Programs</h4>
-                            <ul className="footer-links">
-                                <li><a href="#">Medical Admission</a></li>
-                                <li><a href="#">Engineering</a></li>
-                                <li><a href="#">University</a></li>
-                                <li><a href="#">HSC/SSC</a></li>
+                            <h4 className="font-semibold mb-4 text-gray-900">Programs</h4>
+                            <ul className="space-y-2 text-gray-500 text-sm font-bangla">
+                                <li>মেডিকেল এডমিশন</li>
+                                <li>ইঞ্জিনিয়ারিং এডমিশন</li>
+                                <li>HSC Academic</li>
+                                <li>বিশ্ববিদ্যালয় ভর্তি</li>
                             </ul>
                         </div>
 
                         <div>
-                            <h4 className="footer-heading">Contact</h4>
-                            <ul className="footer-links">
-                                <li>
-                                    <a href={`tel:${contactInfo.phone || '09666775566'}`}>
-                                        <Phone size={16} />
-                                        {contactInfo.phone || '09666775566'}
-                                    </a>
-                                </li>
-                                <li>
-                                    <a href={`mailto:${contactInfo.email || 'info@paragon.edu.bd'}`}>
-                                        <Mail size={16} />
-                                        {contactInfo.email || 'info@paragon.edu.bd'}
-                                    </a>
-                                </li>
-                                <li>
-                                    <a href="#">
-                                        <MapPin size={16} />
-                                        <span className="font-bangla">{contactInfo.address || 'ঢাকা, বাংলাদেশ'}</span>
-                                    </a>
-                                </li>
+                            <h4 className="font-semibold mb-4 text-gray-900">Contact</h4>
+                            <ul className="space-y-2 text-gray-500 text-sm">
+                                <li>📞 09666775566</li>
+                                <li>📧 info@paragon.edu.bd</li>
+                                <li className="font-bangla">📍 ঢাকা, বাংলাদেশ</li>
                             </ul>
                         </div>
                     </div>
 
-                    <div className="footer-bottom">
+                    <div className="border-t border-gray-200 pt-6 text-center text-gray-400 text-sm">
                         <p>© 2026 PARAGON Coaching Center. All rights reserved.</p>
-                        <div className="flex gap-6">
-                            <a href="#" className="hover:text-white transition-colors">Privacy Policy</a>
-                            <a href="#" className="hover:text-white transition-colors">Terms of Service</a>
-                        </div>
                     </div>
                 </div>
             </footer>
         </div>
     )
 }
-
-export default LandingPage

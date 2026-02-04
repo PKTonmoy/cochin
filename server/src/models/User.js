@@ -59,8 +59,7 @@ const userSchema = new mongoose.Schema({
     timestamps: true
 });
 
-// Indexes for faster queries
-userSchema.index({ email: 1 }); // Email lookup (unique)
+// Indexes for faster queries (email has unique: true which auto-creates index)
 userSchema.index({ role: 1 }); // Role filtering
 userSchema.index({ isActive: 1 }); // Active users
 userSchema.index({ role: 1, isActive: 1 }); // Active users by role

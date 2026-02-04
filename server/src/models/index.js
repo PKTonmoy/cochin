@@ -19,6 +19,14 @@ const ScheduleTemplate = require('./ScheduleTemplate');
 const Page = require('./Page');
 const ContentBlock = require('./ContentBlock');
 
+// CMS Models
+const GlobalSettings = require('./GlobalSettings');
+const Course = require('./Course');
+const Faculty = require('./Faculty');
+const Topper = require('./Topper');
+const Testimonial = require('./Testimonial');
+const Media = require('./Media');
+
 module.exports = {
     User,
     Student,
@@ -34,5 +42,12 @@ module.exports = {
     Notification,
     ScheduleTemplate,
     Page,
-    ContentBlock
+    ContentBlock,
+    // CMS Models
+    GlobalSettings,
+    Course,
+    Faculty,
+    Topper,
+    Testimonial,
+    Media
 };

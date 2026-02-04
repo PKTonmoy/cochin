@@ -15,7 +15,12 @@ import {
     Database,
     Calendar,
     BookOpen,
-    Layout
+    Layout,
+    GraduationCap,
+    Award,
+    MessageSquareQuote,
+    Image,
+    Settings
 } from 'lucide-react'
 import NotificationBell from '../components/NotificationBell'
 
@@ -37,7 +42,14 @@ const AdminLayout = () => {
         { path: '/admin/attendance', icon: Calendar, label: 'Attendance' },
         { path: '/admin/upload', icon: Upload, label: 'Upload Results' },
         { path: '/admin/batches', icon: Database, label: 'Upload History' },
-        { path: '/admin/cms', icon: Layout, label: 'Content Management' },
+        { type: 'divider', label: 'Content Management' },
+        { path: '/admin/cms', icon: Layout, label: 'Pages & CMS' },
+        { path: '/admin/faculty', icon: GraduationCap, label: 'Faculty' },
+        { path: '/admin/courses', icon: BookOpen, label: 'Courses' },
+        { path: '/admin/toppers', icon: Award, label: 'Toppers' },
+        { path: '/admin/testimonials', icon: MessageSquareQuote, label: 'Testimonials' },
+        { path: '/admin/media', icon: Image, label: 'Media Library' },
+        { path: '/admin/settings', icon: Settings, label: 'Settings', adminOnly: true },
     ]
 
     const isActive = (path, exact) => {
@@ -65,9 +77,20 @@ const AdminLayout = () => {
                 </div>
 
                 {/* Navigation */}
-                <nav className="py-4">
-                    {menuItems.map((item) => {
+                <nav className="py-4 overflow-y-auto" style={{ maxHeight: 'calc(100vh - 180px)' }}>
+                    {menuItems.map((item, index) => {
                         if (item.adminOnly && user.role !== 'admin') return null
+
+                        // Handle divider items
+                        if (item.type === 'divider') {
+                            return (
+                                <div key={`divider-${index}`} className="px-4 pt-6 pb-2">
+                                    <span className="text-xs uppercase tracking-wider text-white/50">
+                                        {item.label}
+                                    </span>
+                                </div>
+                            )
+                        }
 
                         return (
                             <Link

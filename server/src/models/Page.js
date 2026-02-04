@@ -176,8 +176,7 @@ const pageSchema = new mongoose.Schema({
     timestamps: true
 });
 
-// Indexes
-pageSchema.index({ slug: 1 });
+// Indexes (slug has unique: true which auto-creates index)
 pageSchema.index({ status: 1 });
 pageSchema.index({ createdBy: 1 });
 pageSchema.index({ 'sections.type': 1 });

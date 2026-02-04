@@ -32,6 +32,14 @@ const notificationRoutes = require('./routes/notifications');
 const scheduleTemplateRoutes = require('./routes/scheduleTemplates');
 const cmsRoutes = require('./routes/cms');
 
+// CMS Content routes
+const settingsRoutes = require('./routes/settings');
+const courseRoutes = require('./routes/courses');
+const facultyRoutes = require('./routes/faculty');
+const topperRoutes = require('./routes/toppers');
+const testimonialRoutes = require('./routes/testimonials');
+const mediaRoutes = require('./routes/media');
+
 const app = express();
 
 // Create HTTP server for Socket.io
@@ -103,6 +111,14 @@ app.use('/api/classes', classRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/schedule-templates', scheduleTemplateRoutes);
 app.use('/api/cms', cmsRoutes);
+
+// CMS Content routes
+app.use('/api/settings', settingsRoutes);
+app.use('/api/courses', courseRoutes);
+app.use('/api/faculty', facultyRoutes);
+app.use('/api/toppers', topperRoutes);
+app.use('/api/testimonials', testimonialRoutes);
+app.use('/api/media', mediaRoutes);
 
 // 404 handler
 app.use((req, res) => {

@@ -35,8 +35,7 @@ router.get('/template', uploadController.downloadTemplate);
 
 // Image upload for site content
 const { uploadImage } = require('../middleware/upload');
-const { uploadImage: cloudinaryUpload } = require('../config/cloudinary');
-const fs = require('fs');
+const cloudinary = require('cloudinary').v2;
 
 router.post('/image', uploadImage.single('image'), async (req, res, next) => {
     try {
@@ -44,23 +43,30 @@ router.post('/image', uploadImage.single('image'), async (req, res, next) => {
             return res.status(400).json({ success: false, message: 'No image file provided' });
         }
 
-        // Upload to Cloudinary
-        const result = await cloudinaryUpload(req.file.path, 'paragon/site-content');
-
-        // Delete local file after upload
-        fs.unlink(req.file.path, (err) => {
-            if (err) console.error('Error deleting temp file:', err);
+        // Upload to Cloudinary using buffer stream
+        const result = await new Promise((resolve, reject) => {
+            const uploadStream = cloudinary.uploader.upload_stream(
+                {
+                    folder: 'paragon/site-content',
+                    resource_type: 'auto',
+                    transformation: [
+                        { quality: 'auto' },
+                        { fetch_format: 'auto' }
+                    ]
+                },
+                (error, result) => {
+                    if (error) reject(error);
+                    else resolve(result);
+                }
+            );
+            uploadStream.end(req.file.buffer);
         });
-
-        if (!result.success) {
-            return res.status(500).json({ success: false, message: 'Failed to upload image' });
-        }
 
         res.json({
             success: true,
             data: {
-                url: result.url,
-                publicId: result.publicId
+                url: result.secure_url,
+                publicId: result.public_id
             }
         });
     } catch (error) {

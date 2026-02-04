@@ -1,4 +1,5 @@
 import { Routes, Route, Navigate } from 'react-router-dom'
+import { Suspense, lazy, Component } from 'react'
 import { useAuth } from './contexts/AuthContext'
 
 // Layouts
@@ -11,6 +12,7 @@ import LandingPage from './pages/public/LandingPage'
 import LoginPage from './pages/public/LoginPage'
 import StudentLoginPage from './pages/public/StudentLoginPage'
 import SuccessStoriesPage from './pages/public/SuccessStories'
+import ProgramsPage from './pages/public/ProgramsPage'
 import DynamicPage from './pages/public/DynamicPage'
 
 // Admin pages
@@ -33,11 +35,57 @@ import ScheduleCalendarPage from './pages/admin/ScheduleCalendar'
 import CMSDashboard from './pages/admin/CMSDashboard'
 import PageEditor from './pages/admin/PageEditor'
 
+// CMS Entity Management Pages
+import FacultyList from './pages/admin/FacultyList'
+import AddFaculty from './pages/admin/AddFaculty'
+import CourseList from './pages/admin/CourseList'
+import AddCourse from './pages/admin/AddCourse'
+import TopperList from './pages/admin/TopperList'
+import AddTopper from './pages/admin/AddTopper'
+import TestimonialList from './pages/admin/TestimonialList'
+import AddTestimonial from './pages/admin/AddTestimonial'
+import MediaLibrary from './pages/admin/MediaLibrary'
+import GlobalSettings from './pages/admin/GlobalSettings'
+
 // Student pages
 import StudentDashboard from './pages/student/DashboardV2'
 import StudentResults from './pages/student/Results'
 import StudentProfile from './pages/student/Profile'
 import StudentSchedule from './pages/student/Schedule'
+
+// Lazy load BuilderPage to isolate Builder.io initialization issues
+const BuilderPage = lazy(() => import('./pages/public/BuilderPage'))
+
+// Error Boundary for Builder.io pages
+class BuilderErrorBoundary extends Component {
+  constructor(props) {
+    super(props)
+    this.state = { hasError: false, error: null }
+  }
+
+  static getDerivedStateFromError(error) {
+    return { hasError: true, error }
+  }
+
+  componentDidCatch(error, errorInfo) {
+    console.error('Builder.io Error:', error, errorInfo)
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="min-h-screen flex items-center justify-center bg-white">
+          <div className="text-center p-8">
+            <h1 className="text-2xl font-bold text-gray-800 mb-4">Page Load Error</h1>
+            <p className="text-gray-600 mb-4">There was an issue loading this page.</p>
+            <a href="/" className="btn btn-primary">Go to Homepage</a>
+          </div>
+        </div>
+      )
+    }
+    return this.props.children
+  }
+}
 
 // Protected Route component
 const ProtectedRoute = ({ children, roles }) => {
@@ -71,8 +119,21 @@ function App() {
         <Route path="/login" element={<LoginPage />} />
         <Route path="/student-login" element={<StudentLoginPage />} />
         <Route path="/stories" element={<SuccessStoriesPage />} />
+        <Route path="/programs" element={<ProgramsPage />} />
         <Route path="/page/:slug" element={<DynamicPage />} />
         <Route path="/preview/:slug" element={<DynamicPage />} />
+        {/* Builder.io Visual Editor Pages */}
+        <Route path="/b/*" element={
+          <BuilderErrorBoundary>
+            <Suspense fallback={
+              <div className="min-h-screen flex items-center justify-center">
+                <div className="spinner"></div>
+              </div>
+            }>
+              <BuilderPage />
+            </Suspense>
+          </BuilderErrorBoundary>
+        } />
       </Route>
 
       {/* Admin/Staff routes */}
@@ -104,6 +165,22 @@ function App() {
         {/* CMS Visual Editor Routes */}
         <Route path="cms" element={<CMSDashboard />} />
         <Route path="cms/pages/:slug" element={<PageEditor />} />
+
+        {/* CMS Entity Management Routes */}
+        <Route path="faculty" element={<FacultyList />} />
+        <Route path="faculty/add" element={<AddFaculty />} />
+        <Route path="faculty/edit/:id" element={<AddFaculty />} />
+        <Route path="courses" element={<CourseList />} />
+        <Route path="courses/add" element={<AddCourse />} />
+        <Route path="courses/edit/:id" element={<AddCourse />} />
+        <Route path="toppers" element={<TopperList />} />
+        <Route path="toppers/add" element={<AddTopper />} />
+        <Route path="toppers/edit/:id" element={<AddTopper />} />
+        <Route path="testimonials" element={<TestimonialList />} />
+        <Route path="testimonials/add" element={<AddTestimonial />} />
+        <Route path="testimonials/edit/:id" element={<AddTestimonial />} />
+        <Route path="media" element={<MediaLibrary />} />
+        <Route path="settings" element={<GlobalSettings />} />
       </Route>
 
       {/* Student routes */}

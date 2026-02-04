@@ -1,237 +1,195 @@
-import { useState, useEffect, Suspense, useRef } from 'react'
+import { useEffect, useRef, useState, Suspense } from 'react'
 import { Canvas } from '@react-three/fiber'
-import { getPerformanceSettings, PERFORMANCE_TIERS } from '../../utils/performanceUtils'
-import Scene3D from './Scene3D'
-import ParticleNetwork from './ParticleNetwork'
-import AnimatedHeadline from './AnimatedHeadline'
-import FloatingStatsCards from './FloatingStatsCards'
-import CTAButtons from './CTAButtons'
-import ScrollIndicator from './ScrollIndicator'
+import { Float, Sparkles, MeshDistortMaterial } from '@react-three/drei'
+import { gsap } from 'gsap'
+import { ArrowRight, Play, ChevronDown, Sparkles as SparklesIcon } from 'lucide-react'
+import { Link } from 'react-router-dom'
 
-// Loading screen component
-const HeroPreloader = ({ isLoading }) => {
-    if (!isLoading) return null
-
+// 3D Floating Sphere - Light Blue Theme
+function FloatingSphere({ position, color, speed = 1, distort = 0.4 }) {
     return (
-        <div className="hero-preloader">
-            <div className="preloader-content">
-                <div className="preloader-logo">
-                    <span>PARAGON</span>
-                </div>
-                <div className="preloader-bar">
-                    <div className="preloader-progress" />
-                </div>
-                <span className="preloader-text">Loading...</span>
-            </div>
-        </div>
+        <Float speed={speed} rotationIntensity={0.5} floatIntensity={1}>
+            <mesh position={position}>
+                <sphereGeometry args={[1, 64, 64]} />
+                <MeshDistortMaterial
+                    color={color}
+                    transparent
+                    opacity={0.4}
+                    distort={distort}
+                    speed={2}
+                    roughness={0.3}
+                />
+            </mesh>
+        </Float>
     )
 }
 
-// Performance indicator component (optional - shows current tier)
-const PerformanceIndicator = ({ tier, show = false }) => {
-    if (!show) return null
-
-    const tierColors = {
-        low: '#e74c3c',
-        medium: '#f39c12',
-        high: '#27ae60'
-    }
-
+// 3D Scene - Light theme colors
+function Scene3D() {
     return (
-        <div style={{
-            position: 'fixed',
-            top: '80px',
-            right: '10px',
-            padding: '8px 12px',
-            background: tierColors[tier],
-            color: 'white',
-            borderRadius: '8px',
-            fontSize: '12px',
-            fontWeight: 'bold',
-            zIndex: 1000,
-            textTransform: 'uppercase'
-        }}>
-            {tier} Quality
-        </div>
+        <>
+            <ambientLight intensity={0.8} />
+            <pointLight position={[10, 10, 10]} intensity={1} color="#3b82f6" />
+            <pointLight position={[-10, -10, -10]} intensity={0.5} color="#f97316" />
+
+            <FloatingSphere position={[-4, 2, -3]} color="#3b82f6" speed={1.5} distort={0.3} />
+            <FloatingSphere position={[4, -1, -4]} color="#f97316" speed={1} distort={0.4} />
+            <FloatingSphere position={[0, 2, -5]} color="#06b6d4" speed={2} distort={0.3} />
+
+            <Sparkles count={60} scale={12} size={1.5} speed={0.2} color="#3b82f6" opacity={0.5} />
+        </>
     )
 }
 
-const HeroSection3D = ({ content = {}, stats, onLoad }) => {
-    const [isLoading, setIsLoading] = useState(true)
-    const [mousePosition, setMousePosition] = useState({ x: 0.5, y: 0.5 })
-    const [perfSettings, setPerfSettings] = useState(null)
-    const containerRef = useRef(null)
+// Animated Typewriter Text
+function TypewriterText({ texts, className }) {
+    const [currentIndex, setCurrentIndex] = useState(0)
+    const [displayText, setDisplayText] = useState('')
+    const [isDeleting, setIsDeleting] = useState(false)
 
-    // Detect performance tier on mount
     useEffect(() => {
-        const settings = getPerformanceSettings()
-        setPerfSettings(settings)
+        const currentText = texts[currentIndex]
+        const timeout = setTimeout(() => {
+            if (!isDeleting) {
+                if (displayText.length < currentText.length) {
+                    setDisplayText(currentText.slice(0, displayText.length + 1))
+                } else {
+                    setTimeout(() => setIsDeleting(true), 2000)
+                }
+            } else {
+                if (displayText.length > 0) {
+                    setDisplayText(displayText.slice(0, -1))
+                } else {
+                    setIsDeleting(false)
+                    setCurrentIndex((prev) => (prev + 1) % texts.length)
+                }
+            }
+        }, isDeleting ? 50 : 100)
 
-        console.log(`🎮 Performance Tier: ${settings.tier.toUpperCase()}`)
-        console.log(`   - 3D Enabled: ${settings.enable3D}`)
-        console.log(`   - Particles: ${settings.particleCount}`)
-        console.log(`   - 3D Shapes: ${settings.shapeCount}`)
+        return () => clearTimeout(timeout)
+    }, [displayText, isDeleting, currentIndex, texts])
 
-        // Quick loading for low-end devices
-        const loadTime = settings.tier === PERFORMANCE_TIERS.LOW ? 300 : 800
-        const loadTimer = setTimeout(() => {
-            setIsLoading(false)
-            onLoad?.()
-        }, loadTime)
+    return (
+        <span className={className}>
+            {displayText}
+            <span className="animate-blink text-primary">|</span>
+        </span>
+    )
+}
 
-        return () => clearTimeout(loadTimer)
-    }, [onLoad])
+// Main Hero Component
+export function HeroSection3D({ content, stats }) {
+    const heroRef = useRef(null)
 
-    // Mouse tracking only for non-LOW tier
-    useEffect(() => {
-        if (!perfSettings || !perfSettings.enable3D) return
-
-        let rafId
-        const handleMouseMove = (e) => {
-            if (rafId) return
-            rafId = requestAnimationFrame(() => {
-                setMousePosition({
-                    x: e.clientX / window.innerWidth,
-                    y: e.clientY / window.innerHeight
-                })
-                rafId = null
-            })
-        }
-
-        window.addEventListener('mousemove', handleMouseMove, { passive: true })
-        return () => {
-            window.removeEventListener('mousemove', handleMouseMove)
-            if (rafId) cancelAnimationFrame(rafId)
-        }
-    }, [perfSettings])
-
-    // Extract content with fallbacks
-    const headline = content.headline || 'UNLOCK YOUR FUTURE'
-    const subtitles = content.subtitles || [
-        'ENGINEERING EXCELLENCE',
-        'MEDICAL MASTERY',
-        'FOUNDATION STRENGTH',
-        'COMPETITIVE EDGE'
+    const subtitles = [
+        'Engineering Excellence',
+        'Medical Mastery',
+        'Academic Success',
+        'Future Leaders'
     ]
-    const description = content.description ||
-        'Join thousands of successful students who have achieved their dreams with PARAGON. We provide quality education with experienced teachers and modern facilities.'
-    const primaryCTA = content.ctaText || 'Enroll Now'
-    const secondaryCTA = content.secondaryCTA || 'Explore Courses'
 
-    const handlePrimaryCTA = () => {
-        const programsSection = document.getElementById('programs')
-        if (programsSection) {
-            programsSection.scrollIntoView({ behavior: 'smooth' })
+    useEffect(() => {
+        // GSAP animations
+        const ctx = gsap.context(() => {
+            gsap.from('.hero-animate', {
+                y: 60,
+                opacity: 0,
+                duration: 1,
+                stagger: 0.15,
+                ease: 'power3.out',
+                delay: 0.3
+            })
+        }, heroRef)
+
+        return () => ctx.revert()
+    }, [])
+
+    const scrollToPrograms = () => {
+        const element = document.getElementById('programs')
+        if (element) {
+            element.scrollIntoView({ behavior: 'smooth' })
         }
-    }
-
-    const handleSecondaryCTA = () => {
-        const featuresSection = document.getElementById('features')
-        if (featuresSection) {
-            featuresSection.scrollIntoView({ behavior: 'smooth' })
-        }
-    }
-
-    // Don't render until performance settings are detected
-    if (!perfSettings) {
-        return (
-            <section className="hero-section-3d">
-                <div className="hero-gradient-bg" />
-                <HeroPreloader isLoading={true} />
-            </section>
-        )
     }
 
     return (
-        <section ref={containerRef} className="hero-section-3d">
-            {/* Optional: Show performance tier for debugging */}
-            {/* <PerformanceIndicator tier={perfSettings.tier} show={true} /> */}
-
-            {/* Preloader */}
-            <HeroPreloader isLoading={isLoading} />
-
-            {/* Gradient Background */}
-            <div className="hero-gradient-bg" />
-
-            {/* 3D Canvas Layer - Only for MEDIUM and HIGH tiers */}
-            {perfSettings.enable3D && perfSettings.shapeCount > 0 && (
-                <div className="hero-canvas-container">
-                    <Canvas
-                        camera={{ position: [0, 0, 8], fov: 50 }}
-                        dpr={1}
-                        gl={{
-                            antialias: perfSettings.tier === PERFORMANCE_TIERS.HIGH,
-                            alpha: true,
-                            powerPreference: 'high-performance',
-                            failIfMajorPerformanceCaveat: true
-                        }}
-                    >
-                        <Suspense fallback={null}>
-                            <Scene3D
-                                mousePosition={mousePosition}
-                                shapeCount={perfSettings.shapeCount}
-                                starCount={perfSettings.starCount}
-                            />
-                        </Suspense>
-                    </Canvas>
-                </div>
-            )}
-
-            {/* Particles Layer - Only if enabled */}
-            {perfSettings.enableParticles && perfSettings.particleCount > 0 && (
-                <ParticleNetwork particleCount={perfSettings.particleCount} />
-            )}
-
-            {/* Content Layer */}
-            <div className="hero-content-layer">
-                <div className="hero-content-wrapper">
-                    {/* Skip to main content link for accessibility */}
-                    <a href="#programs" className="skip-link">
-                        Skip to main content
-                    </a>
-
-                    {/* Badge */}
-                    <div className="hero-badge-futuristic">
-                        <span className="badge-glow" />
-                        <span className="badge-text">🚀 Bangladesh's Premier Coaching Center</span>
-                    </div>
-
-                    {/* Animated Headline */}
-                    <AnimatedHeadline
-                        headline={headline}
-                        subtitles={subtitles}
-                        enableAnimations={perfSettings.enableAnimations}
-                    />
-
-                    {/* Description */}
-                    <p className="hero-description">
-                        {description}
-                    </p>
-
-                    {/* CTA Buttons */}
-                    <CTAButtons
-                        primaryText={primaryCTA}
-                        secondaryText={secondaryCTA}
-                        onPrimaryClick={handlePrimaryCTA}
-                        onSecondaryClick={handleSecondaryCTA}
-                    />
-
-                    {/* Floating Stats */}
-                    <FloatingStatsCards stats={stats} />
-                </div>
+        <section ref={heroRef} className="hero-cyber relative">
+            {/* 3D Canvas Background */}
+            <div className="absolute inset-0 z-0 opacity-60">
+                <Canvas camera={{ position: [0, 0, 8], fov: 45 }}>
+                    <Suspense fallback={null}>
+                        <Scene3D />
+                    </Suspense>
+                </Canvas>
             </div>
 
-            {/* Scroll Indicator */}
-            <ScrollIndicator />
+            {/* Morphing Blobs - Light colors */}
+            <div className="absolute top-20 left-10 w-72 h-72 bg-blue-400/20 rounded-full blur-3xl animate-morph" />
+            <div className="absolute bottom-40 right-10 w-96 h-96 bg-orange-400/15 rounded-full blur-3xl animate-morph" style={{ animationDelay: '-4s' }} />
 
-            {/* Bottom Wave */}
-            <div className="hero-wave-bottom">
-                <svg viewBox="0 0 1440 120" fill="none" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none">
-                    <path
-                        d="M0 120L48 110C96 100 192 80 288 70C384 60 480 60 576 65C672 70 768 80 864 85C960 90 1056 90 1152 85C1248 80 1344 70 1392 65L1440 60V120H1392C1344 120 1248 120 1152 120C1056 120 960 120 864 120C768 120 672 120 576 120C480 120 384 120 288 120C192 120 96 120 48 120H0Z"
-                        fill="white"
+            {/* Content */}
+            <div className="relative z-20 container-cyber text-center">
+                {/* Badge */}
+                <div className="hero-animate inline-flex items-center gap-2 px-4 py-2 bg-blue-50 border border-blue-200 rounded-full mb-6">
+                    <SparklesIcon size={16} className="text-blue-500" />
+                    <span className="text-sm font-semibold text-blue-600">
+                        {content.badge || '#1 Coaching Center in Bangladesh'}
+                    </span>
+                </div>
+
+                {/* Main Title */}
+                <h1 className="hero-animate hero-title">
+                    <span className="block text-gray-900">Transform Your</span>
+                    <span className="block gradient-text">Future Today</span>
+                </h1>
+
+                {/* Typewriter Subtitle */}
+                <div className="hero-animate hero-subtitle font-bangla">
+                    <TypewriterText
+                        texts={subtitles}
+                        className="text-orange-500 font-semibold"
                     />
-                </svg>
+                    <span className="block mt-2 text-gray-500">
+                        {content.subtitle || 'শিক্ষায় শ্রেষ্ঠত্ব অর্জনের বিশ্বস্ত সঙ্গী'}
+                    </span>
+                </div>
+
+                {/* CTA Buttons */}
+                <div className="hero-animate flex flex-col sm:flex-row gap-4 justify-center mt-8">
+                    <Link to="/student-login" className="btn-cyber">
+                        <span className="font-bangla">এখনই শুরু করুন</span>
+                        <ArrowRight size={20} />
+                    </Link>
+                    <button className="btn-glass">
+                        <Play size={20} className="text-blue-500" />
+                        <span>Watch Demo</span>
+                    </button>
+                </div>
+
+                {/* Scroll Indicator - positioned above stats on mobile, between CTA and stats */}
+                <button
+                    onClick={scrollToPrograms}
+                    className="hero-animate flex flex-col items-center gap-2 text-gray-400 hover:text-blue-500 transition-colors cursor-pointer mt-8 mb-4 mx-auto"
+                >
+                    <span className="text-sm">Scroll to explore</span>
+                    <ChevronDown size={24} className="animate-bounce" />
+                </button>
+
+                {/* Quick Stats */}
+                <div className="hero-animate grid grid-cols-2 sm:grid-cols-4 gap-4 max-w-3xl mx-auto">
+                    {(stats?.slice?.(0, 4) || [
+                        { value: '1000', suffix: '+', label: 'Students' },
+                        { value: '50', suffix: '+', label: 'Teachers' },
+                        { value: '10', suffix: '+', label: 'Years' },
+                        { value: '95', suffix: '%', label: 'Success' }
+                    ]).map((stat, index) => (
+                        <div key={index} className="glass-card p-4 text-center">
+                            <p className="text-2xl sm:text-3xl font-bold gradient-text">
+                                {stat.value}{stat.suffix}
+                            </p>
+                            <p className="text-xs sm:text-sm text-gray-500">{stat.label}</p>
+                        </div>
+                    ))}
+                </div>
             </div>
         </section>
     )

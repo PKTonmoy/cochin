@@ -157,8 +157,7 @@ const testSchema = new mongoose.Schema({
 });
 
 // Indexes for faster queries
-// Primary lookup indexes
-testSchema.index({ testCode: 1 }); // Test code lookup
+// Primary lookup indexes (testCode has unique: true which auto-creates index)
 testSchema.index({ status: 1, date: 1 }); // Tests by status and date
 
 // Class and section filtering

@@ -89,9 +89,8 @@ const paymentSchema = new mongoose.Schema({
 });
 
 // Indexes for faster queries
-// Primary lookup indexes
+// Primary lookup indexes (receiptId has unique: true which auto-creates index)
 paymentSchema.index({ studentId: 1 }); // All payments for a student
-paymentSchema.index({ receiptId: 1 }); // Receipt lookup
 paymentSchema.index({ transactionId: 1 }, { sparse: true }); // Transaction ID lookup
 
 // Date-based queries

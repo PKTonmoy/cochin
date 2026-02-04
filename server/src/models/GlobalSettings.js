@@ -1,0 +1,142 @@
+/**
+ * GlobalSettings Model
+ * Singleton model for site-wide configuration
+ */
+
+const mongoose = require('mongoose');
+
+// Address schema
+const addressSchema = new mongoose.Schema({
+    street: { type: String },
+    city: { type: String },
+    state: { type: String },
+    country: { type: String, default: 'Bangladesh' },
+    postalCode: { type: String },
+    googleMapsLink: { type: String }
+}, { _id: false });
+
+// Office hours schema
+const officeHoursSchema = new mongoose.Schema({
+    weekdays: { type: String, default: '9:00 AM - 7:00 PM' },
+    saturday: { type: String, default: '9:00 AM - 5:00 PM' },
+    sunday: { type: String, default: 'Closed' }
+}, { _id: false });
+
+// Theme schema
+const themeSchema = new mongoose.Schema({
+    primaryColor: { type: String, default: '#3B82F6' },
+    secondaryColor: { type: String, default: '#8B5CF6' },
+    accentColor: { type: String, default: '#10B981' },
+    darkMode: { type: Boolean, default: false },
+    defaultTheme: { type: String, enum: ['light', 'dark', 'system'], default: 'light' },
+    fonts: {
+        heading: { type: String, default: 'Poppins' },
+        body: { type: String, default: 'Inter' },
+        bangla: { type: String, default: 'Hind Siliguri' }
+    }
+}, { _id: false });
+
+// SEO schema
+const seoSettingsSchema = new mongoose.Schema({
+    defaultMetaTitle: { type: String },
+    defaultMetaDescription: { type: String, maxlength: 160 },
+    defaultKeywords: [{ type: String }],
+    googleAnalyticsId: { type: String },
+    googleSearchConsoleId: { type: String },
+    facebookPixelId: { type: String }
+}, { _id: false });
+
+// Social media schema
+const socialMediaSchema = new mongoose.Schema({
+    facebook: { type: String },
+    instagram: { type: String },
+    youtube: { type: String },
+    linkedin: { type: String },
+    twitter: { type: String },
+    tiktok: { type: String }
+}, { _id: false });
+
+// Notification settings schema
+const notificationSettingsSchema = new mongoose.Schema({
+    adminEmail: { type: String },
+    newEnrollmentAlert: { type: Boolean, default: true },
+    newContactFormAlert: { type: Boolean, default: true },
+    dailySummary: { type: Boolean, default: false }
+}, { _id: false });
+
+// Main GlobalSettings schema
+const globalSettingsSchema = new mongoose.Schema({
+    // Site info
+    siteInfo: {
+        name: { type: String, default: 'PARAGON Coaching Center' },
+        tagline: { type: String, default: 'Transform Your Future' },
+        logo: {
+            url: { type: String },
+            publicId: { type: String }
+        },
+        favicon: {
+            url: { type: String },
+            publicId: { type: String }
+        }
+    },
+
+    // Contact information
+    contact: {
+        phones: [{ type: String }],
+        email: { type: String },
+        whatsapp: { type: String },
+        address: { type: addressSchema, default: () => ({}) },
+        officeHours: { type: officeHoursSchema, default: () => ({}) }
+    },
+
+    // Theme settings
+    theme: { type: themeSchema, default: () => ({}) },
+
+    // SEO settings
+    seo: { type: seoSettingsSchema, default: () => ({}) },
+
+    // Social media
+    socialMedia: { type: socialMediaSchema, default: () => ({}) },
+
+    // Notification settings
+    notifications: { type: notificationSettingsSchema, default: () => ({}) },
+
+    // Tracking
+    updatedAt: { type: Date, default: Date.now },
+    updatedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' }
+}, {
+    timestamps: true,
+    collection: 'global_settings'
+});
+
+// Pre-save middleware
+globalSettingsSchema.pre('save', function (next) {
+    this.updatedAt = new Date();
+    next();
+});
+
+// Static method to get settings (singleton pattern)
+globalSettingsSchema.statics.getSettings = async function () {
+    let settings = await this.findOne();
+    if (!settings) {
+        settings = await this.create({});
+    }
+    return settings;
+};
+
+// Static method to update settings
+globalSettingsSchema.statics.updateSettings = async function (data, userId) {
+    let settings = await this.findOne();
+    if (!settings) {
+        settings = new this(data);
+    } else {
+        Object.assign(settings, data);
+    }
+    settings.updatedBy = userId;
+    await settings.save();
+    return settings;
+};
+
+const GlobalSettings = mongoose.model('GlobalSettings', globalSettingsSchema);
+
+module.exports = GlobalSettings;

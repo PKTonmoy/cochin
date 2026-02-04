@@ -33,17 +33,9 @@ const excelStorage = multer.diskStorage({
 });
 
 /**
- * Storage configuration for images
+ * Storage configuration for images (memory storage for Cloudinary upload)
  */
-const imageStorage = multer.diskStorage({
-    destination: (req, file, cb) => {
-        cb(null, imagesDir);
-    },
-    filename: (req, file, cb) => {
-        const uniqueName = `${uuidv4()}${path.extname(file.originalname)}`;
-        cb(null, uniqueName);
-    }
-});
+const imageStorage = multer.memoryStorage();
 
 /**
  * File filter for Excel files
