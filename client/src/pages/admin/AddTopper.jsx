@@ -14,12 +14,24 @@ const EXAMS = [
     { value: 'du_kha', label: 'DU Kha Unit' },
     { value: 'du_cha', label: 'DU Cha Unit' },
     { value: 'du_gha', label: 'DU Gha Unit' },
+    { value: 'ru', label: 'RU' },
+    { value: 'ju', label: 'JU' },
+    { value: 'jnu', label: 'JnU' },
+    { value: 'cu', label: 'CU' },
+    { value: 'gst', label: 'GST' },
+    { value: 'nu', label: 'NU' },
+    { value: 'ku', label: 'KU' },
+    { value: 'sust', label: 'SUST' },
+    { value: 'hust', label: 'HUST' },
+    { value: 'bup', label: 'BUP' },
     { value: 'medical', label: 'Medical' },
     { value: 'engineering', label: 'Engineering' },
     { value: 'hsc', label: 'HSC' },
     { value: 'ssc', label: 'SSC' },
     { value: 'other', label: 'Other' }
 ];
+
+const UNITS = ['A', 'B', 'C', 'D', 'E'];
 
 const initialFormState = {
     studentName: '',
@@ -38,6 +50,7 @@ const initialFormState = {
     successStory: '',
     videoUrl: '',
     institution: '',
+    section: '',
     featured: false,
     showOnHomepage: true,
     displayOrder: 0,
@@ -97,7 +110,9 @@ export default function AddTopper() {
             return api.post('/toppers', data);
         },
         onSuccess: () => {
-            queryClient.invalidateQueries(['toppers']);
+            // Invalidate all topper-related queries to ensure fresh data
+            queryClient.invalidateQueries({ queryKey: ['toppers'] });
+            queryClient.invalidateQueries({ queryKey: ['topper', id] });
             toast.success(isEditing ? 'Topper updated successfully' : 'Topper created successfully');
             navigate('/admin/toppers');
         },
@@ -161,7 +176,8 @@ export default function AddTopper() {
             }));
             toast.success('Photo uploaded');
         } catch (error) {
-            toast.error('Failed to upload photo');
+            console.error('Upload error:', error.response?.data || error.message);
+            toast.error(error.response?.data?.message || 'Failed to upload photo');
             setImagePreview('');
         } finally {
             setUploading(false);
@@ -267,6 +283,21 @@ export default function AddTopper() {
                                 placeholder="e.g., BUET CSE, Dhaka Medical"
                                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                             />
+                        </div>
+
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Unit</label>
+                            <select
+                                name="section"
+                                value={formData.section}
+                                onChange={handleChange}
+                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                            >
+                                <option value="">No Unit</option>
+                                {UNITS.map(s => (
+                                    <option key={s} value={s}>Unit {s}</option>
+                                ))}
+                            </select>
                         </div>
                     </div>
                 </div>

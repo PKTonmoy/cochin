@@ -25,7 +25,7 @@ const StudentDashboard = () => {
     const { data, isLoading } = useQuery({
         queryKey: ['student-dashboard'],
         queryFn: async () => {
-            const response = await api.get('/students/dashboard')
+            const response = await api.get(`/students/${user?.roll}/dashboard`)
             return response.data.data
         }
     })

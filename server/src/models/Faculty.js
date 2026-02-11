@@ -35,7 +35,12 @@ const facultySchema = new mongoose.Schema({
     // Professional details
     subjects: [{
         type: String,
-        enum: ['physics', 'chemistry', 'mathematics', 'biology', 'english', 'bangla', 'ict', 'general_knowledge', 'other']
+        enum: [
+            'physics', 'chemistry', 'mathematics', 'biology', 'higher_math', 'english', 'bangla', 'ict',
+            'accounting', 'finance', 'marketing', 'management', 'business_studies', 'statistics', 'economics',
+            'history', 'geography', 'civics', 'sociology', 'social_work', 'psychology', 'logic', 'islamic_studies', 'agriculture',
+            'general_knowledge', 'other'
+        ]
     }],
     qualifications: [{ type: String }],
     experience: { type: experienceSchema, default: () => ({}) },

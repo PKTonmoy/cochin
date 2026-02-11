@@ -56,7 +56,7 @@ export default function StudentDashboard() {
     const { data: dashboardData, isLoading } = useQuery({
         queryKey: ['student-dashboard-v2'],
         queryFn: async () => {
-            const response = await api.get('/students/dashboard')
+            const response = await api.get(`/students/${user?.roll}/dashboard`)
             return response.data.data
         }
     })
@@ -153,7 +153,7 @@ export default function StudentDashboard() {
                     {/* Left Column - Large Cards */}
                     <div className="lg:col-span-2 space-y-6">
                         {/* Attendance Overview */}
-                        <AttendanceOverview studentId={user?._id} />
+                        <AttendanceOverview studentId={user?.id} />
 
                         {/* Upcoming Classes */}
                         <div className="card p-6">
@@ -339,43 +339,7 @@ export default function StudentDashboard() {
                             </div>
                         )}
 
-                        {/* Achievements / Badges */}
-                        <div className="card p-6">
-                            <div className="flex items-center gap-3 mb-4">
-                                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-yellow-500 to-amber-600 flex items-center justify-center">
-                                    <Award className="w-5 h-5 text-white" />
-                                </div>
-                                <h2 className="text-lg font-bold text-[var(--dark)]">
-                                    Achievements
-                                </h2>
-                            </div>
 
-                            <div className="grid grid-cols-3 gap-3">
-                                {[
-                                    { icon: Flame, label: '7 Day Streak', color: 'from-orange-500 to-red-500', unlocked: true },
-                                    { icon: Star, label: 'Top 5', color: 'from-yellow-400 to-amber-500', unlocked: true },
-                                    { icon: CheckCircle2, label: '100% Week', color: 'from-emerald-400 to-green-500', unlocked: true },
-                                    { icon: GraduationCap, label: 'A+ Master', color: 'from-purple-400 to-pink-500', unlocked: false },
-                                    { icon: Target, label: 'Goal Crusher', color: 'from-blue-400 to-cyan-500', unlocked: false },
-                                    { icon: Trophy, label: 'Champion', color: 'from-amber-400 to-orange-500', unlocked: false },
-                                ].map((badge, index) => (
-                                    <div
-                                        key={index}
-                                        className={`flex flex-col items-center p-3 rounded-xl transition-all duration-300 ${badge.unlocked
-                                            ? 'hover:scale-105'
-                                            : 'opacity-40 grayscale'
-                                            } bg-gray-50`}
-                                    >
-                                        <div className={`w-10 h-10 rounded-full bg-gradient-to-br ${badge.color} flex items-center justify-center mb-2`}>
-                                            <badge.icon className="w-5 h-5 text-white" />
-                                        </div>
-                                        <span className="text-xs text-center text-gray-600">
-                                            {badge.label}
-                                        </span>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
 
                         {/* Upcoming Tests */}
                         <div className="card p-6">
@@ -422,40 +386,7 @@ export default function StudentDashboard() {
                             )}
                         </div>
 
-                        {/* Study Goals */}
-                        <div className="card p-6">
-                            <div className="flex items-center gap-3 mb-4">
-                                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center">
-                                    <Target className="w-5 h-5 text-white" />
-                                </div>
-                                <h2 className="text-lg font-bold text-[var(--dark)]">
-                                    Study Goals
-                                </h2>
-                            </div>
 
-                            <div className="space-y-4">
-                                {[
-                                    { label: 'Maintain 90%+ attendance', progress: 85, target: 90 },
-                                    { label: 'Complete all assignments', progress: 7, target: 10, isCount: true },
-                                    { label: 'Achieve A+ in Physics', progress: 78, target: 90 },
-                                ].map((goal, index) => (
-                                    <div key={index}>
-                                        <div className="flex items-center justify-between text-sm mb-1">
-                                            <span className="text-gray-700">{goal.label}</span>
-                                            <span className="text-gray-500">
-                                                {goal.isCount ? `${goal.progress}/${goal.target}` : `${goal.progress}%`}
-                                            </span>
-                                        </div>
-                                        <div className="h-2 rounded-full overflow-hidden bg-gray-200">
-                                            <div
-                                                className="h-full rounded-full bg-gradient-to-r from-cyan-500 to-blue-500 transition-all duration-500"
-                                                style={{ width: `${(goal.progress / goal.target) * 100}%` }}
-                                            />
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
 
                         {/* Motivational Quote */}
                         <div className="rounded-2xl p-6 bg-gradient-to-br from-[var(--primary)]/10 to-[var(--secondary)]/10 border border-[var(--primary)]/20">

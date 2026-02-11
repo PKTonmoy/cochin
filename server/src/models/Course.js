@@ -46,7 +46,7 @@ const courseSchema = new mongoose.Schema({
     },
     category: {
         type: String,
-        enum: ['medical', 'engineering', 'university', 'hsc', 'ssc', 'foundation', 'other'],
+        enum: ['medical', 'engineering', 'university', 'ru', 'ju', 'jnu', 'cu', 'gst', 'nu', 'ku', 'sust', 'hust', 'bup', 'hsc', 'ssc', 'foundation', 'other'],
         default: 'other'
     },
     tags: [{ type: String }],
@@ -70,6 +70,12 @@ const courseSchema = new mongoose.Schema({
     totalSeats: { type: Number },
     availableSeats: { type: Number },
     eligibility: { type: String },
+    classSchedule: { type: String }, // e.g., "সপ্তাহে ৩ দিন", "Weekly 3 days"
+    mode: {
+        type: String,
+        enum: ['offline', 'online', 'hybrid'],
+        default: 'offline'
+    },
 
     // Pricing
     pricing: { type: pricingSchema },

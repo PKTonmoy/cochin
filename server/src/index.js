@@ -31,6 +31,7 @@ const classRoutes = require('./routes/classes');
 const notificationRoutes = require('./routes/notifications');
 const scheduleTemplateRoutes = require('./routes/scheduleTemplates');
 const cmsRoutes = require('./routes/cms');
+const workflowRoutes = require('./routes/workflow');
 
 // CMS Content routes
 const settingsRoutes = require('./routes/settings');
@@ -39,6 +40,7 @@ const facultyRoutes = require('./routes/faculty');
 const topperRoutes = require('./routes/toppers');
 const testimonialRoutes = require('./routes/testimonials');
 const mediaRoutes = require('./routes/media');
+const smsRoutes = require('./routes/sms');
 
 const app = express();
 
@@ -111,6 +113,8 @@ app.use('/api/classes', classRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/schedule-templates', scheduleTemplateRoutes);
 app.use('/api/cms', cmsRoutes);
+app.use('/api/workflow', workflowRoutes);
+app.use('/api/leads', require('./routes/leads'));
 
 // CMS Content routes
 app.use('/api/settings', settingsRoutes);
@@ -119,6 +123,7 @@ app.use('/api/faculty', facultyRoutes);
 app.use('/api/toppers', topperRoutes);
 app.use('/api/testimonials', testimonialRoutes);
 app.use('/api/media', mediaRoutes);
+app.use('/api/sms', smsRoutes);
 
 // 404 handler
 app.use((req, res) => {

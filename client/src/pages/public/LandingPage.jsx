@@ -1,16 +1,17 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import api from '../../lib/api'
+import { useSettings } from '../../contexts/SettingsContext'
 import { HeroSection3D } from '../../components/hero'
 import FloatingNav from '../../components/navigation/FloatingNav'
 import HolographicStatCard from '../../components/cards/HolographicStatCard'
 import CourseCarousel from '../../components/carousel/CourseCarousel'
 import VictoryCard from '../../components/cards/VictoryCard'
 import StoryCarousel, { StoryPreviews } from '../../components/testimonials/StoryCarousel'
+import Footer from '../../components/layout/Footer'
 import {
     Users, GraduationCap, Award, Trophy, BookOpen, ArrowRight, Phone, Mail, MapPin,
-    MessageCircle, Sparkles, TrendingUp, Facebook, Instagram, Youtube, Twitter,
-    Target, Clock, ArrowUp
+    MessageCircle, Sparkles, TrendingUp, Target, Clock, ArrowUp
 } from 'lucide-react'
 
 // Scroll Progress
@@ -73,8 +74,18 @@ function FeatureCard({ feature, index }) {
 function FacultyCard({ faculty, index }) {
     return (
         <div className="glass-card p-6 text-center reveal group" style={{ animationDelay: `${index * 100}ms` }}>
-            <div className="w-24 h-24 mx-auto mb-4 rounded-full bg-gradient-to-br from-blue-500 to-orange-500 flex items-center justify-center text-3xl font-bold text-white group-hover:scale-110 transition-transform shadow-lg">
-                {faculty.name?.charAt(0) || 'T'}
+            <div className="w-24 h-24 mx-auto mb-4 rounded-full overflow-hidden group-hover:scale-110 transition-transform shadow-lg ring-4 ring-blue-50">
+                {faculty.image ? (
+                    <img
+                        src={faculty.image}
+                        alt={faculty.name}
+                        className="w-full h-full object-cover"
+                    />
+                ) : (
+                    <div className="w-full h-full bg-gradient-to-br from-blue-500 to-orange-500 flex items-center justify-center text-3xl font-bold text-white">
+                        {faculty.name?.charAt(0) || 'T'}
+                    </div>
+                )}
             </div>
             <h3 className="font-bold text-lg text-gray-900 font-bangla">{faculty.name}</h3>
             <p className="text-orange-500 text-sm font-bangla">{faculty.subject}</p>
@@ -85,29 +96,63 @@ function FacultyCard({ faculty, index }) {
 
 // Main Component
 export default function LandingPage() {
+    const { getPrimaryPhone, getEmail, getAddress } = useSettings()
     const [content, setContent] = useState({})
     const [courses, setCourses] = useState([])
     const [faculty, setFaculty] = useState([])
     const [toppers, setToppers] = useState([])
+    const [testimonialData, setTestimonialData] = useState([])
     const [loading, setLoading] = useState(true)
     const [storyOpen, setStoryOpen] = useState(false)
     const [storyIndex, setStoryIndex] = useState(0)
+    const [leadName, setLeadName] = useState('')
+    const [leadPhone, setLeadPhone] = useState('')
+    const [leadClass, setLeadClass] = useState('')
+    const [submitting, setSubmitting] = useState(false)
+
+    const handleLeadSubmit = async (e) => {
+        e.preventDefault()
+        if (!leadName || !leadPhone) {
+            alert('Please fill in Name and Phone')
+            return
+        }
+
+        try {
+            setSubmitting(true)
+            await api.post('/leads', {
+                name: leadName,
+                phone: leadPhone,
+                class: leadClass
+            })
+            alert('Thank you! We will contact you soon.')
+            setLeadName('')
+            setLeadPhone('')
+            setLeadClass('')
+        } catch (error) {
+            console.error('Lead submission failed:', error)
+            alert('Something went wrong. Please try again.')
+        } finally {
+            setSubmitting(false)
+        }
+    }
 
     useEffect(() => {
         const fetchData = async () => {
             try {
                 // Fetch all data in parallel
-                const [contentRes, coursesRes, facultyRes, toppersRes] = await Promise.all([
+                const [contentRes, coursesRes, facultyRes, toppersRes, testimonialsRes] = await Promise.all([
                     api.get('/site-content').catch(() => ({ data: { data: {} } })),
-                    api.get('/courses/public').catch(() => ({ data: { data: [] } })),
+                    api.get('/courses/public?showOnHomepage=true').catch(() => ({ data: { data: [] } })),
                     api.get('/faculty/public').catch(() => ({ data: { data: [] } })),
-                    api.get('/toppers/public/homepage').catch(() => ({ data: { data: [] } }))
+                    api.get('/toppers/public/homepage').catch(() => ({ data: { data: [] } })),
+                    api.get('/testimonials/public/homepage').catch(() => ({ data: { data: [] } }))
                 ])
 
                 setContent(contentRes.data.data || {})
                 setCourses(coursesRes.data.data || [])
                 setFaculty(facultyRes.data.data || [])
                 setToppers(toppersRes.data.data || [])
+                setTestimonialData(testimonialsRes.data.data || [])
             } catch (error) {
                 console.error('Failed to fetch data:', error)
             } finally {
@@ -143,11 +188,20 @@ export default function LandingPage() {
         ? courses.map(course => ({
             title: course.name || course.title,
             description: course.shortDescription || course.description,
-            badge: course.isFeatured ? 'Popular' : (course.badge || ''),
+            badge: course.featured ? 'Popular' : (course.badge || ''),
             type: course.category?.toLowerCase() || 'default',
-            features: course.features || course.highlights || [],
+            features: course.features || course.studyMaterials?.map(m =>
+                m.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())
+            ) || [],
             rating: course.rating || 4.9,
-            image: course.thumbnail || course.image
+            image: course.image?.url || course.thumbnail,   // Fixed: access image.url
+            price: course.price,
+            discountPrice: course.discountPrice,
+            duration: course.duration,
+            totalSeats: course.totalSeats,
+            classSchedule: course.classSchedule,
+            mode: course.mode,
+            pricing: course.pricing
         }))
         : [
             { title: 'Medical Admission 2026', description: 'মেডিকেল ভর্তি পরীক্ষার জন্য সম্পূর্ণ প্রস্তুতি', badge: 'Popular', type: 'medical', features: ['মেধাবী শিক্ষক', 'লাইভ ক্লাস'] },
@@ -156,22 +210,34 @@ export default function LandingPage() {
             { title: 'DU Admission', description: 'ঢাকা বিশ্ববিদ্যালয় ক্র্যাশ কোর্স', badge: 'Hot', type: 'university', features: ['Ka/Kha Unit'] },
         ]
 
-    // Map API toppers to testimonials format
-    const testimonials = toppers.length > 0
-        ? toppers.map(topper => ({
-            name: topper.name,
-            achievement: topper.exam || topper.achievement,
-            year: topper.year?.toString() || '2024',
-            testimonial: topper.testimonial || topper.quote || '',
-            result: topper.meritPosition ? `Merit: ${topper.meritPosition}` : (topper.result || ''),
-            image: topper.photo || topper.image
+    // Map API testimonials to display format (prioritize Testimonials API, fallback to toppers)
+    const testimonials = testimonialData.length > 0
+        ? testimonialData.map(t => ({
+            name: t.studentName || t.name,
+            achievement: t.achievement || t.courseName || '',
+            year: t.year?.toString() || '2024',
+            testimonial: t.quote || t.shortQuote || '',
+            result: t.achievement || '',
+            image: t.photo?.url || t.image,
+            rating: t.rating || 5,
+            institution: t.achievement
         }))
-        : [
-            { name: 'রহিম আহমেদ', achievement: 'BUET CSE', year: '2024', testimonial: 'প্যারাগনের শিক্ষকদের গাইডেন্স ছাড়া আমার পক্ষে BUET-এ চান্স পাওয়া সম্ভব ছিল না।', result: 'Merit: 45' },
-            { name: 'ফাতিমা খান', achievement: 'Dhaka Medical', year: '2024', testimonial: 'মেডিকেল ভর্তি পরীক্ষার প্রস্তুতি নেওয়ার জন্য প্যারাগন সেরা জায়গা।', result: 'Merit: 128' },
-            { name: 'করিম হাসান', achievement: 'Engineering', year: '2024', testimonial: 'অনলাইনে ক্লাস করেও ভালো রেজাল্ট করা সম্ভব - প্যারাগন প্রমাণ করেছে।', result: 'Merit: 89' },
-            { name: 'সোনিয়া আক্তার', achievement: 'DU Ka Unit', year: '2025', testimonial: 'ঢাকা বিশ্ববিদ্যালয়ে চান্স পাওয়ার জন্য প্যারাগনের বিকল্প নেই।', result: 'Merit: 156' }
-        ]
+        : toppers.length > 0
+            ? toppers.map(topper => ({
+                name: topper.studentName || topper.name,
+                achievement: topper.examName || topper.exam || topper.achievement,
+                year: topper.year?.toString() || '2024',
+                testimonial: topper.successStory || topper.testimonial || topper.quote || '',
+                result: topper.rank || (topper.score ? `Score: ${topper.score}` : ''),
+                image: topper.photo?.url || topper.image,
+                institution: topper.institution
+            }))
+            : [
+                { name: 'রহিম আহমেদ', achievement: 'BUET CSE', year: '2024', testimonial: 'প্যারাগনের শিক্ষকদের গাইডেন্স ছাড়া আমার পক্ষে BUET-এ চান্স পাওয়া সম্ভব ছিল না।', result: 'Merit: 45' },
+                { name: 'ফাতিমা খান', achievement: 'Dhaka Medical', year: '2024', testimonial: 'মেডিকেল ভর্তি পরীক্ষার প্রস্তুতি নেওয়ার জন্য প্যারাগন সেরা জায়গা।', result: 'Merit: 128' },
+                { name: 'করিম হাসান', achievement: 'Engineering', year: '2024', testimonial: 'অনলাইনে ক্লাস করেও ভালো রেজাল্ট করা সম্ভব - প্যারাগন প্রমাণ করেছে।', result: 'Merit: 89' },
+                { name: 'সোনিয়া আক্তার', achievement: 'DU Ka Unit', year: '2025', testimonial: 'ঢাকা বিশ্ববিদ্যালয়ে চান্স পাওয়ার জন্য প্যারাগনের বিকল্প নেই।', result: 'Merit: 156' }
+            ]
 
     const features = content.features?.content?.list || [
         { title: 'অফলাইন/অনলাইন', description: 'যেকোনো জায়গা থেকে শিখুন', icon: 'monitor' },
@@ -182,24 +248,12 @@ export default function LandingPage() {
 
     // Map API faculty to display format
     const displayFaculty = faculty.length > 0
-        ? faculty.map(f => {
-            // Handle experience which can be an object {totalYears, teachingSince, previous} or string
-            let experienceStr = '5+ Years';
-            if (typeof f.experience === 'string') {
-                experienceStr = f.experience;
-            } else if (f.experience?.totalYears) {
-                experienceStr = `${f.experience.totalYears}+ Years`;
-            } else if (f.yearsExperience) {
-                experienceStr = `${f.yearsExperience}+ Years`;
-            }
-
-            return {
-                name: f.name,
-                subject: f.subject || f.department,
-                experience: experienceStr,
-                image: f.photo || f.image
-            };
-        })
+        ? faculty.map(f => ({
+            name: f.name,
+            subject: f.subjects?.[0]?.replace('_', ' ')?.replace(/\b\w/g, l => l.toUpperCase()) || f.designation || 'Faculty',
+            experience: f.experience?.totalYears ? `${f.experience.totalYears}+ Years` : '5+ Years',
+            image: f.photo?.url || f.image              // Fixed: access photo.url
+        }))
         : [
             { name: 'Dr. Mohammad Ali', subject: 'Physics', experience: '15+ Years' },
             { name: 'Prof. Fatema Begum', subject: 'Chemistry', experience: '12+ Years' },
@@ -207,13 +261,29 @@ export default function LandingPage() {
             { name: 'Dr. Nusrat Jahan', subject: 'Biology', experience: '8+ Years' }
         ]
 
-    const topRankers = testimonials.slice(0, 3).map((t, i) => ({
-        name: t.name,
-        achievement: t.achievement,
-        score: t.result?.split(':')[1]?.trim() || `AIR ${(i + 1) * 15}`,
-        percentile: `${99.9 - i * 0.1}%`,
-        image: t.image
-    }))
+    // Top Rankers for Victory Cards - use Toppers API data directly
+    const topRankers = toppers.length > 0
+        ? toppers.slice(0, 3).map((topper, i) => ({
+            name: topper.studentName || topper.name,
+            achievement: topper.examName || topper.exam || topper.achievement,
+            score: topper.rank || (topper.score ? `Score: ${topper.score}` : `AIR ${(i + 1) * 15}`),
+            percentile: `${99.9 - i * 0.1}%`,
+            image: topper.photo?.url || topper.image,
+            institution: topper.institution || topper.examName || topper.achievement,
+            testimonial: topper.successStory || topper.testimonial || topper.quote || '',
+            year: topper.year?.toString() || '2024',
+            section: topper.section
+        }))
+        : testimonials.slice(0, 3).map((t, i) => ({
+            name: t.name,
+            achievement: t.achievement,
+            score: t.result || `AIR ${(i + 1) * 15}`,
+            percentile: `${99.9 - i * 0.1}%`,
+            image: t.image,
+            institution: t.institution || t.achievement,
+            testimonial: t.testimonial,
+            year: t.year
+        }))
 
     if (loading) {
         return (
@@ -233,8 +303,15 @@ export default function LandingPage() {
             <HeroSection3D content={hero} stats={stats} />
 
             {/* Courses */}
-            <section id="programs" className="section-cyber bg-gray-50">
-                <div className="container-cyber">
+            <section id="programs" className="section-cyber relative" style={{
+                background: 'linear-gradient(180deg, #f8fafc 0%, #f1f5f9 40%, #f8fafc 100%)'
+            }}>
+                {/* Decorative background elements */}
+                <div className="absolute inset-0 pointer-events-none" aria-hidden="true" style={{
+                    background: 'radial-gradient(circle at 15% 50%, rgba(59, 130, 246, 0.04) 0%, transparent 50%), radial-gradient(circle at 85% 50%, rgba(249, 115, 22, 0.04) 0%, transparent 50%)',
+                    zIndex: 0
+                }} />
+                <div className="container-cyber relative" style={{ zIndex: 1 }}>
                     <div className="section-title reveal">
                         <div className="badge">
                             <BookOpen size={16} />
@@ -274,7 +351,15 @@ export default function LandingPage() {
                         <h2 className="font-bangla">আমাদের <span className="gradient-text">সফল শিক্ষার্থী</span></h2>
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                        {topRankers.map((s, i) => <VictoryCard key={i} student={s} rank={i + 1} index={i} />)}
+                        {topRankers.map((s, i) => (
+                            <VictoryCard
+                                key={i}
+                                student={s}
+                                rank={i + 1}
+                                index={i}
+                                onViewStory={(idx) => { setStoryIndex(idx); setStoryOpen(true) }}
+                            />
+                        ))}
                     </div>
                     <div className="text-center mt-8 reveal">
                         <Link to="/stories" className="btn-glass">
@@ -330,7 +415,7 @@ export default function LandingPage() {
                             <span className="font-bangla">এখনই ভর্তি হন</span>
                             <ArrowRight size={20} />
                         </a>
-                        <a href="tel:09666775566" className="btn-glass bg-white/20 text-white border-white/30">
+                        <a href={`tel:${getPrimaryPhone()}`} className="btn-glass bg-white/20 text-white border-white/30">
                             <Phone size={20} />
                             <span>কল করুন</span>
                         </a>
@@ -350,9 +435,9 @@ export default function LandingPage() {
 
                             <div className="space-y-4">
                                 {[
-                                    { icon: Phone, label: 'Helpline', value: '09666775566' },
-                                    { icon: MapPin, label: 'Address', value: 'ঢাকা, বাংলাদেশ' },
-                                    { icon: Mail, label: 'Email', value: 'info@paragon.edu.bd' }
+                                    { icon: Phone, label: 'Helpline', value: getPrimaryPhone() },
+                                    { icon: MapPin, label: 'Address', value: getAddress() },
+                                    { icon: Mail, label: 'Email', value: getEmail() }
                                 ].map((item, i) => (
                                     <div key={i} className="glass-card p-4 flex items-center gap-4">
                                         <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-orange-500 flex items-center justify-center shadow-md">
@@ -370,20 +455,38 @@ export default function LandingPage() {
                         <div className="reveal">
                             <div className="glass-card p-6 md:p-8">
                                 <h3 className="text-xl font-bold mb-6 text-gray-900 font-bangla">ফ্রি ক্লাস বুক করুন</h3>
-                                <form className="space-y-4">
+                                <form className="space-y-4" onSubmit={handleLeadSubmit}>
                                     <div className="grid grid-cols-2 gap-4">
-                                        <input type="text" placeholder="আপনার নাম" className="input-cyber" />
-                                        <input type="tel" placeholder="ফোন" className="input-cyber" />
+                                        <input
+                                            type="text"
+                                            placeholder="আপনার নাম"
+                                            className="input-cyber"
+                                            value={leadName}
+                                            onChange={(e) => setLeadName(e.target.value)}
+                                            required
+                                        />
+                                        <input
+                                            type="tel"
+                                            placeholder="ফোন"
+                                            className="input-cyber"
+                                            value={leadPhone}
+                                            onChange={(e) => setLeadPhone(e.target.value)}
+                                            required
+                                        />
                                     </div>
-                                    <select className="input-cyber">
-                                        <option>ক্লাস নির্বাচন করুন</option>
-                                        <option>৯ম শ্রেণী</option>
-                                        <option>১০ম শ্রেণী</option>
-                                        <option>একাদশ</option>
-                                        <option>ভর্তি পরীক্ষার্থী</option>
+                                    <select
+                                        className="input-cyber"
+                                        value={leadClass}
+                                        onChange={(e) => setLeadClass(e.target.value)}
+                                    >
+                                        <option value="">ক্লাস নির্বাচন করুন</option>
+                                        <option value="9">৯ম শ্রেণী</option>
+                                        <option value="10">১০ম শ্রেণী</option>
+                                        <option value="11">একাদশ</option>
+                                        <option value="Examinee">ভর্তি পরীক্ষার্থী</option>
                                     </select>
-                                    <button type="submit" className="btn-cyber w-full py-4">
-                                        <span className="font-bangla">বুক করুন</span>
+                                    <button type="submit" className="btn-cyber w-full py-4" disabled={submitting}>
+                                        <span className="font-bangla">{submitting ? 'Submitting...' : 'বুক করুন'}</span>
                                         <ArrowRight size={20} />
                                     </button>
                                 </form>
@@ -394,59 +497,7 @@ export default function LandingPage() {
             </section>
 
             {/* Footer */}
-            <footer className="footer-cyber">
-                <div className="container-cyber">
-                    <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
-                        <div>
-                            <Link to="/" className="flex items-center gap-2 text-2xl font-bold mb-4">
-                                <GraduationCap size={32} className="text-blue-500" />
-                                <span className="gradient-text">PARAGON</span>
-                            </Link>
-                            <p className="text-gray-500 text-sm font-bangla">শিক্ষায় শ্রেষ্ঠত্ব অর্জনের বিশ্বস্ত সঙ্গী</p>
-                            <div className="flex gap-3 mt-4">
-                                {[Facebook, Instagram, Youtube, Twitter].map((Icon, i) => (
-                                    <a key={i} href="#" className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center text-gray-500 hover:text-white hover:bg-blue-500 transition-all">
-                                        <Icon size={18} />
-                                    </a>
-                                ))}
-                            </div>
-                        </div>
-
-                        <div>
-                            <h4 className="font-semibold mb-4 text-gray-900">Quick Links</h4>
-                            <ul className="space-y-2 text-gray-500 text-sm">
-                                <li><Link to="/" className="hover:text-blue-500 transition-colors">Home</Link></li>
-                                <li><Link to="/programs" className="hover:text-blue-500 transition-colors">Programs</Link></li>
-                                <li><Link to="/stories" className="hover:text-blue-500 transition-colors">Results</Link></li>
-                                <li><a href="#contact" className="hover:text-blue-500 transition-colors">Contact</a></li>
-                            </ul>
-                        </div>
-
-                        <div>
-                            <h4 className="font-semibold mb-4 text-gray-900">Programs</h4>
-                            <ul className="space-y-2 text-gray-500 text-sm font-bangla">
-                                <li>মেডিকেল এডমিশন</li>
-                                <li>ইঞ্জিনিয়ারিং এডমিশন</li>
-                                <li>HSC Academic</li>
-                                <li>বিশ্ববিদ্যালয় ভর্তি</li>
-                            </ul>
-                        </div>
-
-                        <div>
-                            <h4 className="font-semibold mb-4 text-gray-900">Contact</h4>
-                            <ul className="space-y-2 text-gray-500 text-sm">
-                                <li>📞 09666775566</li>
-                                <li>📧 info@paragon.edu.bd</li>
-                                <li className="font-bangla">📍 ঢাকা, বাংলাদেশ</li>
-                            </ul>
-                        </div>
-                    </div>
-
-                    <div className="border-t border-gray-200 pt-6 text-center text-gray-400 text-sm">
-                        <p>© 2026 PARAGON Coaching Center. All rights reserved.</p>
-                    </div>
-                </div>
-            </footer>
+            <Footer />
         </div>
     )
 }

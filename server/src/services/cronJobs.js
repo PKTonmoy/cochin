@@ -4,12 +4,16 @@
  */
 
 const cron = require('node-cron');
+const axios = require('axios');
 const Class = require('../models/Class');
 const Test = require('../models/Test');
 const Notification = require('../models/Notification');
 const notificationService = require('./notificationService');
 
 let jobs = [];
+let keepAliveFailures = 0;
+const KEEP_ALIVE_MAX_RETRIES = 3;
+const KEEP_ALIVE_JITTER_MS = 60000; // Random delay up to 60 seconds
 
 /**
  * Initialize all cron jobs
@@ -50,6 +54,17 @@ function initializeCronJobs() {
         await processScheduledNotifications();
     }));
     console.log('  ✓ Scheduled notification processor started');
+
+    // Keep-alive self-ping — prevents Render free tier from spinning down
+    const renderUrl = process.env.RENDER_EXTERNAL_URL;
+    if (renderUrl) {
+        jobs.push(cron.schedule('*/13 * * * *', async () => {
+            await keepAlivePin(renderUrl);
+        }));
+        console.log(`  ✓ Keep-alive ping scheduled (target: ${renderUrl})`);
+    } else {
+        console.log('  ⏭ Keep-alive ping skipped (RENDER_EXTERNAL_URL not set)');
+    }
 
     console.log('⏰ All cron jobs initialized');
 }
@@ -300,6 +315,59 @@ async function processScheduledNotifications() {
 }
 
 /**
+ * Keep-alive self-ping to prevent Render free tier spin-down
+ * Features: jitter, exponential backoff retry, failure tracking
+ */
+async function keepAlivePin(baseUrl) {
+    // Add random jitter (0 to 60s) to avoid predictable request patterns
+    const jitter = Math.floor(Math.random() * KEEP_ALIVE_JITTER_MS);
+    await new Promise(resolve => setTimeout(resolve, jitter));
+
+    const healthUrl = `${baseUrl}/api/health`;
+    let lastError = null;
+
+    for (let attempt = 1; attempt <= KEEP_ALIVE_MAX_RETRIES; attempt++) {
+        try {
+            const start = Date.now();
+            const response = await axios.get(healthUrl, {
+                timeout: 10000, // 10s timeout
+                headers: { 'User-Agent': 'PARAGON-KeepAlive/1.0' }
+            });
+            const duration = Date.now() - start;
+
+            if (response.status === 200) {
+                // Reset failure counter on success
+                if (keepAliveFailures > 0) {
+                    console.log(`🏓 Keep-alive recovered after ${keepAliveFailures} consecutive failure(s)`);
+                }
+                keepAliveFailures = 0;
+                console.log(`🏓 Keep-alive ping successful (${duration}ms, attempt ${attempt}, jitter ${jitter}ms)`);
+                return;
+            }
+
+            lastError = new Error(`Unexpected status: ${response.status}`);
+        } catch (err) {
+            lastError = err;
+            if (attempt < KEEP_ALIVE_MAX_RETRIES) {
+                // Exponential backoff: 2s, 4s before retry
+                const backoff = Math.pow(2, attempt) * 1000;
+                console.warn(`🏓 Keep-alive attempt ${attempt} failed, retrying in ${backoff}ms...`);
+                await new Promise(resolve => setTimeout(resolve, backoff));
+            }
+        }
+    }
+
+    // All retries exhausted
+    keepAliveFailures++;
+    const errMsg = lastError?.message || 'Unknown error';
+    console.error(`🏓 Keep-alive FAILED after ${KEEP_ALIVE_MAX_RETRIES} attempts: ${errMsg}`);
+
+    if (keepAliveFailures >= 3) {
+        console.error(`⚠️  WARNING: ${keepAliveFailures} consecutive keep-alive failures — service may spin down!`);
+    }
+}
+
+/**
  * Combine date and time string into a Date object
  */
 function combineDateTime(date, timeStr) {
@@ -326,5 +394,6 @@ module.exports = {
     send1HourReminders,
     cleanupOldNotifications,
     updateClassStatuses,
-    processScheduledNotifications
+    processScheduledNotifications,
+    keepAlivePin
 };

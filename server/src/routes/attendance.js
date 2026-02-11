@@ -16,8 +16,11 @@ router.post('/bulk', authorize('admin', 'staff'), attendanceController.markAtten
 router.get('/', authorize('admin', 'staff'), attendanceController.getAttendance);
 // Get attendance history summary
 router.get('/history', authorize('admin', 'staff'), attendanceController.getAttendanceHistory);
+// Get attendance stats for admin dashboard
+router.get('/stats', authorize('admin', 'staff'), attendanceController.getAttendanceStats);
 
 router.get('/test/:testId', authorize('admin', 'staff'), attendanceController.getTestAttendees);
+router.put('/:id', authorize('admin', 'staff'), attendanceController.updateSingleAttendance);
 router.delete('/:id', authorize('admin', 'staff'), attendanceController.deleteAttendance);
 
 // Student can view their own attendance

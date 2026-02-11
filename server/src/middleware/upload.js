@@ -60,14 +60,28 @@ const excelFilter = (req, file, cb) => {
  * File filter for images
  */
 const imageFilter = (req, file, cb) => {
-    const allowedMimes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+    const allowedMimes = [
+        'image/jpeg',
+        'image/png',
+        'image/gif',
+        'image/webp',
+        'image/jpg',
+        'image/pjpeg'  // Progressive JPEG
+    ];
     const allowedExts = ['.jpg', '.jpeg', '.png', '.gif', '.webp'];
     const ext = path.extname(file.originalname).toLowerCase();
+
+    console.log('[Upload Middleware] File received:', {
+        originalname: file.originalname,
+        mimetype: file.mimetype,
+        extension: ext
+    });
 
     if (allowedMimes.includes(file.mimetype) || allowedExts.includes(ext)) {
         cb(null, true);
     } else {
-        cb(new Error('Only image files (jpg, png, gif, webp) are allowed'), false);
+        console.error('[Upload Middleware] File rejected - invalid type:', file.mimetype);
+        cb(new Error(`Only image files (jpg, png, gif, webp) are allowed. Received: ${file.mimetype}`), false);
     }
 };
 

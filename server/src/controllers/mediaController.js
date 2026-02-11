@@ -94,13 +94,30 @@ exports.getMedia = async (req, res, next) => {
  */
 exports.uploadMedia = async (req, res, next) => {
     try {
+        console.log('[MediaController] uploadMedia called');
+        console.log('[MediaController] req.file:', req.file ? {
+            fieldname: req.file.fieldname,
+            originalname: req.file.originalname,
+            mimetype: req.file.mimetype,
+            size: req.file.size,
+            hasBuffer: !!req.file.buffer
+        } : 'NO FILE');
+
         if (!req.file) {
+            console.error('[MediaController] No file in request');
             throw new ApiError('No file uploaded', 400);
         }
 
+        if (!req.file.buffer) {
+            console.error('[MediaController] File exists but no buffer');
+            throw new ApiError('File buffer is missing', 400);
+        }
+
         const { folder = 'general', alt, title, tags } = req.body;
+        console.log('[MediaController] Uploading to folder:', folder);
 
         // Upload to Cloudinary
+        console.log('[MediaController] Starting Cloudinary upload...');
         const result = await new Promise((resolve, reject) => {
             const uploadStream = cloudinary.uploader.upload_stream(
                 {
@@ -112,8 +129,13 @@ exports.uploadMedia = async (req, res, next) => {
                     ]
                 },
                 (error, result) => {
-                    if (error) reject(error);
-                    else resolve(result);
+                    if (error) {
+                        console.error('[MediaController] Cloudinary error:', error);
+                        reject(error);
+                    } else {
+                        console.log('[MediaController] Cloudinary success:', result?.secure_url);
+                        resolve(result);
+                    }
                 }
             );
             uploadStream.end(req.file.buffer);

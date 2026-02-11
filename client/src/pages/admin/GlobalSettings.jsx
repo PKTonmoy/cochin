@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
-    Save, RefreshCw, Globe, Phone, Palette, Search, Share2, Bell, ExternalLink
+    Save, RefreshCw, Globe, Phone, Palette, Search, Share2, Bell, ExternalLink, Upload, X, Image, FileText
 } from 'lucide-react';
 import api from '../../lib/api';
 import { toast } from 'react-hot-toast';
@@ -9,6 +9,7 @@ import { toast } from 'react-hot-toast';
 const TABS = [
     { id: 'site', label: 'Site Info', icon: Globe },
     { id: 'contact', label: 'Contact', icon: Phone },
+    { id: 'receipt', label: 'Receipt', icon: FileText },
     { id: 'theme', label: 'Theme', icon: Palette },
     { id: 'seo', label: 'SEO', icon: Search },
     { id: 'social', label: 'Social Media', icon: Share2 },
@@ -30,6 +31,15 @@ const initialSettings = {
         alternatePhone: '',
         whatsapp: '',
         address: { street: '', city: '', state: '', country: '', postalCode: '' }
+    },
+    receiptTemplate: {
+        primaryColor: '#1a365d',
+        showLogo: true,
+        showQRCode: true,
+        showCredentialsOnFirst: true,
+        footerNote: 'This is a computer-generated receipt. Please keep this for your records.',
+        signatureLeftLabel: 'Student/Guardian',
+        signatureRightLabel: 'Authorized Signature'
     },
     theme: {
         primaryColor: '#3B82F6',
@@ -68,6 +78,8 @@ export default function GlobalSettings() {
     const [formData, setFormData] = useState(initialSettings);
     const [keywordInput, setKeywordInput] = useState('');
     const [hasChanges, setHasChanges] = useState(false);
+    const [uploadingLogo, setUploadingLogo] = useState(false);
+    const logoInputRef = useRef(null);
 
     // Fetch settings
     const { data: settingsResponse, isLoading } = useQuery({
@@ -80,11 +92,21 @@ export default function GlobalSettings() {
 
     useEffect(() => {
         if (settingsResponse) {
+            // Map phones array from backend to phone/alternatePhone fields for the form
+            const contactData = settingsResponse.contact || {};
+            const phonesArray = contactData.phones || [];
+
             setFormData(prev => ({
                 ...prev,
                 ...settingsResponse,
                 siteInfo: { ...initialSettings.siteInfo, ...settingsResponse.siteInfo },
-                contact: { ...initialSettings.contact, ...settingsResponse.contact },
+                contact: {
+                    ...initialSettings.contact,
+                    ...contactData,
+                    phone: phonesArray[0] || '',
+                    alternatePhone: phonesArray[1] || '',
+                },
+                receiptTemplate: { ...initialSettings.receiptTemplate, ...settingsResponse.receiptTemplate },
                 theme: { ...initialSettings.theme, ...settingsResponse.theme },
                 seo: { ...initialSettings.seo, ...settingsResponse.seo },
                 socialMedia: { ...initialSettings.socialMedia, ...settingsResponse.socialMedia },
@@ -95,7 +117,20 @@ export default function GlobalSettings() {
 
     // Save mutation
     const saveMutation = useMutation({
-        mutationFn: (data) => api.put('/settings', data),
+        mutationFn: (data) => {
+            // Convert phone/alternatePhone back to phones array for backend
+            const payload = {
+                ...data,
+                contact: {
+                    ...data.contact,
+                    phones: [data.contact.phone, data.contact.alternatePhone].filter(Boolean),
+                }
+            };
+            // Remove form-only fields
+            delete payload.contact.phone;
+            delete payload.contact.alternatePhone;
+            return api.put('/settings', payload);
+        },
         onSuccess: () => {
             queryClient.invalidateQueries(['settings']);
             toast.success('Settings saved successfully');
@@ -126,6 +161,66 @@ export default function GlobalSettings() {
                     ...prev[section]?.[parent],
                     [field]: value
                 }
+            }
+        }));
+        setHasChanges(true);
+    };
+
+    const handleLogoUpload = async (e) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        // Validate file type
+        if (!file.type.startsWith('image/')) {
+            toast.error('Please select an image file');
+            return;
+        }
+
+        // Validate file size (max 2MB)
+        if (file.size > 2 * 1024 * 1024) {
+            toast.error('Image must be less than 2MB');
+            return;
+        }
+
+        setUploadingLogo(true);
+        try {
+            const fd = new FormData();
+            fd.append('image', file);
+            const res = await api.post('/uploads/image', fd, {
+                headers: { 'Content-Type': 'multipart/form-data' }
+            });
+            if (res.data?.data) {
+                handleNestedChange('siteInfo', 'logo', 'url', res.data.data.url);
+                handleNestedChange('siteInfo', 'logo', 'publicId', res.data.data.publicId);
+                // Directly update both fields at once to avoid partial state
+                setFormData(prev => ({
+                    ...prev,
+                    siteInfo: {
+                        ...prev.siteInfo,
+                        logo: {
+                            url: res.data.data.url,
+                            publicId: res.data.data.publicId
+                        }
+                    }
+                }));
+                setHasChanges(true);
+                toast.success('Logo uploaded! Click "Save Settings" to apply.');
+            }
+        } catch (error) {
+            toast.error('Failed to upload logo');
+            console.error('Logo upload error:', error);
+        } finally {
+            setUploadingLogo(false);
+            if (logoInputRef.current) logoInputRef.current.value = '';
+        }
+    };
+
+    const handleRemoveLogo = () => {
+        setFormData(prev => ({
+            ...prev,
+            siteInfo: {
+                ...prev.siteInfo,
+                logo: { url: '', publicId: '' }
             }
         }));
         setHasChanges(true);
@@ -250,6 +345,69 @@ export default function GlobalSettings() {
                                         />
                                     </div>
                                 </div>
+
+                                {/* Logo Upload Section */}
+                                <div className="border-t pt-6">
+                                    <h3 className="text-md font-semibold mb-4">Logo</h3>
+                                    <div className="flex items-start gap-6">
+                                        {/* Logo Preview */}
+                                        <div className="flex-shrink-0">
+                                            {formData.siteInfo.logo?.url ? (
+                                                <div className="relative group">
+                                                    <img
+                                                        src={formData.siteInfo.logo.url}
+                                                        alt="Site logo"
+                                                        className="w-32 h-32 object-contain rounded-xl border-2 border-gray-200 bg-gray-50 p-2"
+                                                    />
+                                                    <button
+                                                        type="button"
+                                                        onClick={handleRemoveLogo}
+                                                        className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow-lg"
+                                                        title="Remove logo"
+                                                    >
+                                                        <X className="w-4 h-4" />
+                                                    </button>
+                                                </div>
+                                            ) : (
+                                                <div className="w-32 h-32 rounded-xl border-2 border-dashed border-gray-300 bg-gray-50 flex flex-col items-center justify-center text-gray-400">
+                                                    <Image className="w-8 h-8 mb-1" />
+                                                    <span className="text-xs">No logo</span>
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        {/* Upload Control */}
+                                        <div className="flex-1">
+                                            <input
+                                                ref={logoInputRef}
+                                                type="file"
+                                                accept="image/*"
+                                                onChange={handleLogoUpload}
+                                                className="hidden"
+                                                id="logo-upload"
+                                            />
+                                            <label
+                                                htmlFor="logo-upload"
+                                                className={`inline-flex items-center gap-2 px-4 py-2 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-blue-400 hover:bg-blue-50 transition-colors ${uploadingLogo ? 'opacity-50 pointer-events-none' : ''}`}
+                                            >
+                                                {uploadingLogo ? (
+                                                    <>
+                                                        <RefreshCw className="w-4 h-4 animate-spin" />
+                                                        Uploading...
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        <Upload className="w-4 h-4" />
+                                                        {formData.siteInfo.logo?.url ? 'Change Logo' : 'Upload Logo'}
+                                                    </>
+                                                )}
+                                            </label>
+                                            <p className="text-xs text-gray-500 mt-2">
+                                                Recommended: Square image, at least 200×200px. Max 2MB. PNG or SVG preferred.
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         )}
 
@@ -343,6 +501,180 @@ export default function GlobalSettings() {
                                             onChange={(e) => handleNestedChange('contact', 'address', 'country', e.target.value)}
                                             className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                                         />
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Receipt Template Tab */}
+                        {activeTab === 'receipt' && (
+                            <div className="bg-white rounded-lg shadow p-6 space-y-6">
+                                <h2 className="text-lg font-semibold">Receipt Template</h2>
+                                <p className="text-sm text-gray-500 mb-4">Customize how your payment receipts look. Changes will apply to all future receipts.</p>
+
+                                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                                    {/* Settings Column */}
+                                    <div className="space-y-6">
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 mb-1">Accent Color</label>
+                                            <div className="flex gap-2">
+                                                <input
+                                                    type="color"
+                                                    value={formData.receiptTemplate.primaryColor}
+                                                    onChange={(e) => handleNestedChange('receiptTemplate', null, 'primaryColor', e.target.value)}
+                                                    className="h-10 w-16 border border-gray-300 rounded cursor-pointer"
+                                                />
+                                                <input
+                                                    type="text"
+                                                    value={formData.receiptTemplate.primaryColor}
+                                                    onChange={(e) => handleNestedChange('receiptTemplate', null, 'primaryColor', e.target.value)}
+                                                    className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                                                />
+                                            </div>
+                                            <p className="text-xs text-gray-500 mt-1">Used for borders, headers, and highlights.</p>
+                                        </div>
+
+                                        <div className="space-y-3">
+                                            <label className="flex items-center gap-3 p-3 border rounded-lg hover:bg-gray-50 cursor-pointer">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={formData.receiptTemplate.showLogo}
+                                                    onChange={(e) => handleNestedChange('receiptTemplate', null, 'showLogo', e.target.checked)}
+                                                    className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
+                                                />
+                                                <div>
+                                                    <span className="font-medium block">Show Logo</span>
+                                                    <span className="text-xs text-gray-500">Display institute logo in header</span>
+                                                </div>
+                                            </label>
+
+                                            <label className="flex items-center gap-3 p-3 border rounded-lg hover:bg-gray-50 cursor-pointer">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={formData.receiptTemplate.showQRCode}
+                                                    onChange={(e) => handleNestedChange('receiptTemplate', null, 'showQRCode', e.target.checked)}
+                                                    className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
+                                                />
+                                                <div>
+                                                    <span className="font-medium block">Show QR Code</span>
+                                                    <span className="text-xs text-gray-500">Enable student portal login QR code</span>
+                                                </div>
+                                            </label>
+
+                                            <label className="flex items-center gap-3 p-3 border rounded-lg hover:bg-gray-50 cursor-pointer">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={formData.receiptTemplate.showCredentialsOnFirst}
+                                                    onChange={(e) => handleNestedChange('receiptTemplate', null, 'showCredentialsOnFirst', e.target.checked)}
+                                                    className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
+                                                />
+                                                <div>
+                                                    <span className="font-medium block">Show Credentials</span>
+                                                    <span className="text-xs text-gray-500">Show login username/password on first receipt only</span>
+                                                </div>
+                                            </label>
+                                        </div>
+
+                                        <div className="grid grid-cols-2 gap-4">
+                                            <div>
+                                                <label className="block text-sm font-medium text-gray-700 mb-1">Left Signature</label>
+                                                <input
+                                                    type="text"
+                                                    value={formData.receiptTemplate.signatureLeftLabel}
+                                                    onChange={(e) => handleNestedChange('receiptTemplate', null, 'signatureLeftLabel', e.target.value)}
+                                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="block text-sm font-medium text-gray-700 mb-1">Right Signature</label>
+                                                <input
+                                                    type="text"
+                                                    value={formData.receiptTemplate.signatureRightLabel}
+                                                    onChange={(e) => handleNestedChange('receiptTemplate', null, 'signatureRightLabel', e.target.value)}
+                                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                                                />
+                                            </div>
+                                        </div>
+
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 mb-1">Footer Note</label>
+                                            <textarea
+                                                value={formData.receiptTemplate.footerNote}
+                                                onChange={(e) => handleNestedChange('receiptTemplate', null, 'footerNote', e.target.value)}
+                                                rows={3}
+                                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 resize-none"
+                                            />
+                                        </div>
+                                    </div>
+
+                                    {/* Preview Column */}
+                                    <div className="border rounded-lg p-1 bg-gray-100">
+                                        <p className="text-xs text-gray-500 text-center mb-2 font-medium">Live Preview</p>
+                                        <div
+                                            className="bg-white p-4 shadow-sm mx-auto text-[10px] leading-relaxed origin-top transform scale-95"
+                                            style={{
+                                                width: '100%',
+                                                maxWidth: '350px',
+                                                border: `2px solid ${formData.receiptTemplate.primaryColor}`,
+                                                fontFamily: 'sans-serif'
+                                            }}
+                                        >
+                                            <div className="text-center border-b pb-2 mb-2" style={{ borderColor: formData.receiptTemplate.primaryColor }}>
+                                                {formData.receiptTemplate.showLogo && formData.siteInfo.logo?.url && (
+                                                    <img src={formData.siteInfo.logo.url} alt="Logo" className="h-8 mx-auto mb-1" />
+                                                )}
+                                                <div className="font-bold text-lg" style={{ color: formData.receiptTemplate.primaryColor }}>
+                                                    {formData.siteInfo.name || 'Institute Name'}
+                                                </div>
+                                                <div className="text-gray-500">
+                                                    {formData.contact.address.city || 'City'}, {formData.contact.address.country || 'Country'}
+                                                </div>
+                                            </div>
+
+                                            <div className="text-white font-bold text-center py-1 mb-3" style={{ backgroundColor: formData.receiptTemplate.primaryColor }}>
+                                                PAYMENT RECEIPT
+                                            </div>
+
+                                            <div className="flex justify-between bg-gray-50 p-2 rounded mb-3">
+                                                <div className="text-center">
+                                                    <div className="text-gray-500 text-[8px] uppercase">Receipt No</div>
+                                                    <div className="font-bold" style={{ color: formData.receiptTemplate.primaryColor }}>REC-001</div>
+                                                </div>
+                                                <div className="text-center">
+                                                    <div className="text-gray-500 text-[8px] uppercase">Amount</div>
+                                                    <div className="font-bold" style={{ color: formData.receiptTemplate.primaryColor }}>৳5,000</div>
+                                                </div>
+                                                <div className="text-center">
+                                                    <div className="text-gray-500 text-[8px] uppercase">Date</div>
+                                                    <div className="font-bold" style={{ color: formData.receiptTemplate.primaryColor }}>12 Feb 2026</div>
+                                                </div>
+                                            </div>
+
+                                            <div className="space-y-1 mb-3">
+                                                <div className="flex justify-between border-b border-dashed border-gray-200 py-1">
+                                                    <span className="text-gray-500">Name:</span>
+                                                    <span className="font-medium">John Doe</span>
+                                                </div>
+                                                <div className="flex justify-between border-b border-dashed border-gray-200 py-1">
+                                                    <span className="text-gray-500">Roll No:</span>
+                                                    <span className="font-medium">1001</span>
+                                                </div>
+                                            </div>
+
+                                            <div className="border border-gray-200 mt-2">
+                                                <div className="bg-gray-50 p-1 font-semibold border-b border-gray-200">Total Fee</div>
+                                                <div className="p-1 text-right">5,000</div>
+                                            </div>
+
+                                            <div className="flex justify-between mt-8 pt-2">
+                                                <div className="w-16 border-t border-black text-center text-[8px]">{formData.receiptTemplate.signatureLeftLabel}</div>
+                                                <div className="w-16 border-t border-black text-center text-[8px]">{formData.receiptTemplate.signatureRightLabel}</div>
+                                            </div>
+
+                                            <div className="text-center text-gray-500 italic mt-4 text-[8px]">
+                                                {formData.receiptTemplate.footerNote}
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -577,38 +909,21 @@ export default function GlobalSettings() {
                                     </div>
 
                                     {/* SMS Notifications */}
-                                    <div className="p-4 border rounded-lg">
-                                        <label className="flex items-center gap-3 mb-4">
-                                            <input
-                                                type="checkbox"
-                                                checked={formData.notifications.smsNotifications?.enabled}
-                                                onChange={(e) => handleNestedChange('notifications', 'smsNotifications', 'enabled', e.target.checked)}
-                                                className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
-                                            />
-                                            <span className="font-medium">SMS Notifications</span>
-                                        </label>
-                                        {formData.notifications.smsNotifications?.enabled && (
-                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                                <div>
-                                                    <label className="block text-sm font-medium text-gray-700 mb-1">API Provider</label>
-                                                    <input
-                                                        type="text"
-                                                        value={formData.notifications.smsNotifications?.apiProvider || ''}
-                                                        onChange={(e) => handleNestedChange('notifications', 'smsNotifications', 'apiProvider', e.target.value)}
-                                                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                                                    />
-                                                </div>
-                                                <div>
-                                                    <label className="block text-sm font-medium text-gray-700 mb-1">API Key</label>
-                                                    <input
-                                                        type="password"
-                                                        value={formData.notifications.smsNotifications?.apiKey || ''}
-                                                        onChange={(e) => handleNestedChange('notifications', 'smsNotifications', 'apiKey', e.target.value)}
-                                                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                                                    />
-                                                </div>
+                                    <div className="p-4 border rounded-lg bg-gray-50">
+                                        <div className="flex items-center justify-between">
+                                            <div>
+                                                <h3 className="font-medium text-gray-900 mb-1">SMS Notifications</h3>
+                                                <p className="text-sm text-gray-500">
+                                                    SMS settings have moved to a dedicated management page.
+                                                </p>
                                             </div>
-                                        )}
+                                            <a
+                                                href="/admin/sms-management"
+                                                className="px-4 py-2 bg-white border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+                                            >
+                                                Go to SMS Management
+                                            </a>
+                                        </div>
                                     </div>
                                 </div>
                             </div>

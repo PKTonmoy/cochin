@@ -151,12 +151,7 @@ export default function AttendanceOverview({ studentId }) {
                             <p className="text-sm text-gray-500">This Year</p>
                         </div>
                     </div>
-                    <Link
-                        to="/student/attendance"
-                        className="text-sm text-[var(--primary)] hover:underline flex items-center gap-1"
-                    >
-                        Details <ChevronRight className="w-4 h-4" />
-                    </Link>
+
                 </div>
             </div>
 
@@ -273,8 +268,8 @@ export default function AttendanceOverview({ studentId }) {
                             <div
                                 key={index}
                                 className={`aspect-square rounded-lg flex items-center justify-center text-xs font-medium transition-all ${day.isToday
-                                        ? 'ring-2 ring-[var(--primary)] ring-offset-1'
-                                        : ''
+                                    ? 'ring-2 ring-[var(--primary)] ring-offset-1'
+                                    : ''
                                     } ${day.isFuture
                                         ? 'text-gray-300'
                                         : day.status === 'present'
@@ -300,6 +295,15 @@ export default function AttendanceOverview({ studentId }) {
                         {stats.thisMonth.present} / {stats.thisMonth.total} days
                     </span>
                 </div>
+
+                {/* View Full History Link */}
+                <Link
+                    to="/student/attendance"
+                    className="mt-4 flex items-center justify-center gap-2 p-3 text-sm font-medium text-[var(--primary)] hover:bg-[var(--primary)]/5 rounded-xl transition-colors"
+                >
+                    View Full History
+                    <ChevronRight className="w-4 h-4" />
+                </Link>
             </div>
         </div>
     )

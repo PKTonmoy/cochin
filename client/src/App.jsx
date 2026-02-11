@@ -28,12 +28,14 @@ import UploadResults from './pages/admin/UploadResults'
 import UploadBatches from './pages/admin/UploadBatches'
 import ReceiptView from './pages/admin/ReceiptView'
 import ReceiptList from './pages/admin/ReceiptList'
+import LeadManagement from './pages/admin/LeadManagement'
 import AttendanceManagement from './pages/admin/AttendanceManagement'
 import ClassList from './pages/admin/ClassList'
 import AddClass from './pages/admin/AddClass'
 import ScheduleCalendarPage from './pages/admin/ScheduleCalendar'
 import CMSDashboard from './pages/admin/CMSDashboard'
 import PageEditor from './pages/admin/PageEditor'
+import AdminWorkflowDashboard from './pages/admin/AdminWorkflowDashboard'
 
 // CMS Entity Management Pages
 import FacultyList from './pages/admin/FacultyList'
@@ -46,12 +48,14 @@ import TestimonialList from './pages/admin/TestimonialList'
 import AddTestimonial from './pages/admin/AddTestimonial'
 import MediaLibrary from './pages/admin/MediaLibrary'
 import GlobalSettings from './pages/admin/GlobalSettings'
+import SMSManagement from './pages/admin/SMSManagement'
 
 // Student pages
 import StudentDashboard from './pages/student/DashboardV2'
-import StudentResults from './pages/student/Results'
+import StudentResults from './pages/student/ResultsV2'
 import StudentProfile from './pages/student/Profile'
 import StudentSchedule from './pages/student/Schedule'
+import StudentAttendanceHistory from './pages/student/AttendanceHistory'
 
 // Lazy load BuilderPage to isolate Builder.io initialization issues
 const BuilderPage = lazy(() => import('./pages/public/BuilderPage'))
@@ -158,6 +162,7 @@ function App() {
         <Route path="batches" element={<UploadBatches />} />
         <Route path="receipts" element={<ReceiptList />} />
         <Route path="receipts/:receiptId" element={<ReceiptView />} />
+        <Route path="leads" element={<LeadManagement />} />
         {/* Class Management Routes */}
         <Route path="classes" element={<ClassList />} />
         <Route path="classes/add" element={<AddClass />} />
@@ -165,6 +170,8 @@ function App() {
         {/* CMS Visual Editor Routes */}
         <Route path="cms" element={<CMSDashboard />} />
         <Route path="cms/pages/:slug" element={<PageEditor />} />
+        {/* Workflow Dashboard */}
+        <Route path="workflow" element={<AdminWorkflowDashboard />} />
 
         {/* CMS Entity Management Routes */}
         <Route path="faculty" element={<FacultyList />} />
@@ -181,6 +188,7 @@ function App() {
         <Route path="testimonials/edit/:id" element={<AddTestimonial />} />
         <Route path="media" element={<MediaLibrary />} />
         <Route path="settings" element={<GlobalSettings />} />
+        <Route path="sms-management" element={<SMSManagement />} />
       </Route>
 
       {/* Student routes */}
@@ -196,6 +204,7 @@ function App() {
         <Route path="results" element={<StudentResults />} />
         <Route path="profile" element={<StudentProfile />} />
         <Route path="schedule" element={<StudentSchedule />} />
+        <Route path="attendance" element={<StudentAttendanceHistory />} />
       </Route>
 
       {/* Catch all */}

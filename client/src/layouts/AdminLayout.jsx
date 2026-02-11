@@ -20,7 +20,9 @@ import {
     Award,
     MessageSquareQuote,
     Image,
-    Settings
+    Settings,
+    MessageCircle,
+    MessageSquare
 } from 'lucide-react'
 import NotificationBell from '../components/NotificationBell'
 
@@ -42,6 +44,8 @@ const AdminLayout = () => {
         { path: '/admin/attendance', icon: Calendar, label: 'Attendance' },
         { path: '/admin/upload', icon: Upload, label: 'Upload Results' },
         { path: '/admin/batches', icon: Database, label: 'Upload History' },
+        { path: '/admin/leads', icon: MessageCircle, label: 'Leads & Inquiries' },
+        { path: '/admin/sms-management', icon: MessageSquare, label: 'SMS', adminOnly: true },
         { type: 'divider', label: 'Content Management' },
         { path: '/admin/cms', icon: Layout, label: 'Pages & CMS' },
         { path: '/admin/faculty', icon: GraduationCap, label: 'Faculty' },

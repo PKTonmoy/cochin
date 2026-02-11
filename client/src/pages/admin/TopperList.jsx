@@ -17,6 +17,16 @@ const EXAMS = {
     du_kha: 'DU Kha Unit',
     du_cha: 'DU Cha Unit',
     du_gha: 'DU Gha Unit',
+    ru: 'RU',
+    ju: 'JU',
+    jnu: 'JnU',
+    cu: 'CU',
+    gst: 'GST',
+    nu: 'NU',
+    ku: 'KU',
+    sust: 'SUST',
+    hust: 'HUST',
+    bup: 'BUP',
     medical: 'Medical',
     engineering: 'Engineering',
     hsc: 'HSC',
@@ -218,6 +228,13 @@ export default function TopperList() {
                                     <p className="text-sm text-green-600 mt-2 font-medium">
                                         → {topper.institution}
                                     </p>
+                                )}
+
+                                {/* Unit */}
+                                {topper.section && (
+                                    <span className="inline-block mt-1 px-2 py-0.5 bg-blue-100 text-blue-700 text-xs font-semibold rounded-full">
+                                        Unit {topper.section}
+                                    </span>
                                 )}
 
                                 {/* Actions */}

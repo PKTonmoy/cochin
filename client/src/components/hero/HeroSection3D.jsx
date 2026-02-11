@@ -155,14 +155,10 @@ export function HeroSection3D({ content, stats }) {
 
                 {/* CTA Buttons */}
                 <div className="hero-animate flex flex-col sm:flex-row gap-4 justify-center mt-8">
-                    <Link to="/student-login" className="btn-cyber">
+                    <a href="#contact" className="btn-cyber">
                         <span className="font-bangla">এখনই শুরু করুন</span>
                         <ArrowRight size={20} />
-                    </Link>
-                    <button className="btn-glass">
-                        <Play size={20} className="text-blue-500" />
-                        <span>Watch Demo</span>
-                    </button>
+                    </a>
                 </div>
 
                 {/* Scroll Indicator - positioned above stats on mobile, between CTA and stats */}

@@ -74,9 +74,52 @@ const ReceiptList = () => {
         }
     })
 
-    const handleDownloadPDF = (receiptId) => {
-        window.open(`${import.meta.env.VITE_API_URL || ''}/api/receipts/${receiptId}/pdf`, '_blank')
-        toast.success('Downloading PDF...')
+    const handleDownloadPDF = async (receiptId) => {
+        const toastId = toast.loading('Downloading PDF...')
+        try {
+            const response = await api.get(`/receipts/${receiptId}/pdf`, {
+                responseType: 'blob'
+            })
+
+            // Create blob link to download
+            const url = window.URL.createObjectURL(new Blob([response.data]))
+            const link = document.createElement('a')
+            link.href = url
+            link.setAttribute('download', `receipt-${receiptId}.pdf`)
+
+            document.body.appendChild(link)
+            link.click()
+            link.parentNode.removeChild(link)
+            window.URL.revokeObjectURL(url)
+
+            toast.success('Download complete', { id: toastId })
+        } catch (error) {
+            console.error('Download error:', error)
+            // Fallback: fetch HTML and print
+            try {
+                const htmlResponse = await api.get(`/receipts/${receiptId}`, { responseType: 'text' })
+                if (htmlResponse.data) {
+                    toast.success('Opening print dialog — use "Save as PDF" to download', { icon: '🖨️', duration: 5000, id: toastId })
+                    const printWindow = window.open('', '_blank')
+                    if (printWindow) {
+                        printWindow.document.write(htmlResponse.data)
+                        printWindow.document.close()
+                        // Add print style to ensure it fits nicely
+                        const style = printWindow.document.createElement('style')
+                        style.textContent = `
+                            body { margin: 0; padding: 0; }
+                            @page { size: A4; margin: 0; }
+                        `
+                        printWindow.document.head.appendChild(style)
+                        printWindow.onload = () => printWindow.print()
+                    }
+                } else {
+                    throw new Error('No content')
+                }
+            } catch (err) {
+                toast.error('Failed to download PDF', { id: toastId })
+            }
+        }
     }
 
     const handlePrint = (receiptId) => {

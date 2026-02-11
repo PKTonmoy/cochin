@@ -63,7 +63,8 @@ exports.downloadPDF = async (req, res, next) => {
             }
 
             // If it's a local path, send file
-            const localPath = path.join(__dirname, '../..', payment.receiptUrl);
+            const relativePath = payment.receiptUrl.startsWith('/') ? payment.receiptUrl.slice(1) : payment.receiptUrl;
+            const localPath = path.join(__dirname, '../..', relativePath);
             if (fs.existsSync(localPath)) {
                 return res.download(localPath, `receipt-${receiptId}.pdf`);
             }
@@ -76,7 +77,8 @@ exports.downloadPDF = async (req, res, next) => {
             return res.redirect(pdfUrl);
         }
 
-        const localPath = path.join(__dirname, '../..', pdfUrl);
+        const relativePath = pdfUrl.startsWith('/') ? pdfUrl.slice(1) : pdfUrl;
+        const localPath = path.join(__dirname, '../..', relativePath);
         res.download(localPath, `receipt-${receiptId}.pdf`);
     } catch (error) {
         next(error);
@@ -107,10 +109,12 @@ exports.emailReceipt = async (req, res, next) => {
         // Generate PDF if not exists
         let pdfPath;
         if (payment.receiptUrl && !payment.receiptUrl.startsWith('http')) {
-            pdfPath = path.join(__dirname, '../..', payment.receiptUrl);
+            const relativePath = payment.receiptUrl.startsWith('/') ? payment.receiptUrl.slice(1) : payment.receiptUrl;
+            pdfPath = path.join(__dirname, '../..', relativePath);
         } else {
             const pdfUrl = await receiptService.generateReceipt(payment._id, false);
-            pdfPath = path.join(__dirname, '../..', pdfUrl);
+            const relativePath = pdfUrl.startsWith('/') ? pdfUrl.slice(1) : pdfUrl;
+            pdfPath = path.join(__dirname, '../..', relativePath);
         }
 
         // Create email transporter

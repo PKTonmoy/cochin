@@ -1,6 +1,7 @@
 /**
  * Result Card Component
- * Beautiful animated result display with confetti for top performers
+ * Premium animated result display with confetti for top performers
+ * Matches website theme with glass morphism and gradients
  */
 
 import { useState, useEffect } from 'react'
@@ -78,7 +79,7 @@ const ResultCard = ({
 
     return (
         <div className="relative">
-            {/* Confetti celebration for top 3 */}
+            {/* Confetti celebration for top 3 - theme colors */}
             {showCelebration && (
                 <Confetti
                     width={windowSize.width}
@@ -86,20 +87,22 @@ const ResultCard = ({
                     recycle={false}
                     numberOfPieces={rank === 1 ? 300 : rank === 2 ? 200 : 100}
                     gravity={0.3}
-                    colors={['#FFD700', '#FFA500', '#FF6347', '#00CED1', '#7B68EE', '#32CD32']}
+                    colors={['#3b82f6', '#60a5fa', '#f97316', '#fb923c', '#10b981', '#fbbf24']}
                 />
             )}
 
-            {/* Main Card */}
+            {/* Main Card - Glass morphism style */}
             <div className={`
-                relative overflow-hidden rounded-2xl shadow-2xl
+                relative overflow-hidden rounded-2xl shadow-xl
                 bg-gradient-to-br ${getGradeGradient(result.grade)}
                 text-white p-6 md:p-8
                 animate-fadeIn
+                border border-white/20
             `}>
                 {/* Decorative elements */}
-                <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full -mr-32 -mt-32" />
-                <div className="absolute bottom-0 left-0 w-48 h-48 bg-black/10 rounded-full -ml-24 -mb-24" />
+                <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full -mr-32 -mt-32 blur-xl" />
+                <div className="absolute bottom-0 left-0 w-48 h-48 bg-black/10 rounded-full -ml-24 -mb-24 blur-xl" />
+                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-white/5 rounded-full blur-3xl" />
 
                 {/* Sparkle effect for top ranks */}
                 {rank && rank <= 3 && (
@@ -110,7 +113,7 @@ const ResultCard = ({
                 <div className="relative z-10">
                     {/* Rank badge */}
                     {rank && (
-                        <div className="flex items-center gap-2 mb-4">
+                        <div className="flex items-center gap-2 mb-4 bg-white/10 backdrop-blur-sm rounded-full px-4 py-2 w-fit">
                             {getRankIcon(rank)}
                             <span className="text-lg font-bold">{getRankLabel(rank)}</span>
                             {totalStudents && (
@@ -120,21 +123,21 @@ const ResultCard = ({
                     )}
 
                     {/* Score Display */}
-                    <div className="flex items-end justify-between mb-6">
+                    <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-6">
                         <div>
-                            <p className="text-5xl md:text-6xl font-extrabold mb-1">
+                            <p className="text-4xl md:text-5xl lg:text-6xl font-extrabold mb-1">
                                 <CountUp end={result.totalMarks} duration={1.5} />
-                                <span className="text-3xl opacity-70">/{result.maxMarks}</span>
+                                <span className="text-2xl md:text-3xl opacity-70">/{result.maxMarks}</span>
                             </p>
-                            <p className="text-xl font-semibold">
+                            <p className="text-lg md:text-xl font-semibold text-white/90">
                                 <CountUp end={result.percentage} decimals={1} duration={1.5} />% Score
                             </p>
                         </div>
 
                         {/* Grade Badge */}
-                        <div className="bg-white/20 backdrop-blur-sm rounded-xl p-4 text-center">
-                            <p className="text-4xl font-extrabold">{result.grade}</p>
-                            <p className="text-xs uppercase tracking-wider opacity-70">Grade</p>
+                        <div className="bg-white/20 backdrop-blur-sm rounded-2xl p-4 md:p-5 text-center border border-white/10">
+                            <p className="text-3xl md:text-4xl font-extrabold">{result.grade}</p>
+                            <p className="text-xs uppercase tracking-wider opacity-70 mt-1">Grade</p>
                         </div>
                     </div>
 
@@ -143,10 +146,10 @@ const ResultCard = ({
                         {[...Array(5)].map((_, i) => (
                             <Star
                                 key={i}
-                                size={24}
+                                size={22}
                                 className={`transition-all duration-300 ${i < getPerformanceStars(result.percentage)
-                                        ? 'fill-yellow-300 text-yellow-300'
-                                        : 'text-white/30'
+                                    ? 'fill-yellow-300 text-yellow-300 drop-shadow-lg'
+                                    : 'text-white/30'
                                     }`}
                                 style={{ animationDelay: `${i * 100}ms` }}
                             />
@@ -155,7 +158,8 @@ const ResultCard = ({
 
                     {/* Percentile */}
                     {percentile && (
-                        <div className="bg-white/15 backdrop-blur-sm rounded-lg p-3 inline-block">
+                        <div className="bg-white/15 backdrop-blur-sm rounded-xl p-3 inline-flex items-center gap-2 border border-white/10">
+                            <Star className="text-yellow-300" size={16} />
                             <p className="text-sm">
                                 Percentile: <span className="font-bold text-lg">{percentile}</span>
                             </p>

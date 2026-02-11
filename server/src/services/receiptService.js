@@ -9,34 +9,78 @@ const fs = require('fs');
 const QRCode = require('qrcode');
 const Payment = require('../models/Payment');
 const Student = require('../models/Student');
-const SiteContent = require('../models/SiteContent');
+const GlobalSettings = require('../models/GlobalSettings');
 const { uploadPDF } = require('../config/cloudinary');
 
 // Ensure receipts directory exists
 const receiptsDir = path.join(__dirname, '../../receipts');
 if (!fs.existsSync(receiptsDir)) {
-    fs.mkdirSync(receiptsDir, { recursive: true });
+  fs.mkdirSync(receiptsDir, { recursive: true });
 }
+
+/**
+ * Get site info and receipt template from GlobalSettings
+ */
+const getSettingsData = async () => {
+  try {
+    const settings = await GlobalSettings.getSettings();
+    const siteInfo = settings.siteInfo || {};
+    const contact = settings.contact || {};
+    const receiptTemplate = settings.receiptTemplate || {};
+    const addr = contact.address || {};
+
+    // Build full address string
+    const addressParts = [addr.street, addr.city, addr.state, addr.country].filter(Boolean);
+    const fullAddress = addressParts.join(', ');
+
+    return {
+      logo: (receiptTemplate.showLogo !== false && siteInfo.logo?.url) ? siteInfo.logo.url : '',
+      name: siteInfo.name || 'PARAGON Coaching Center',
+      address: fullAddress,
+      phone: contact.phones?.[0] || '',
+      email: contact.email || '',
+      primaryColor: receiptTemplate.primaryColor || '#1a365d',
+      showQRCode: receiptTemplate.showQRCode !== false,
+      showCredentialsOnFirst: receiptTemplate.showCredentialsOnFirst !== false,
+      footerNote: receiptTemplate.footerNote || 'This is a computer-generated receipt. Please keep this for your records.',
+      signatureLeftLabel: receiptTemplate.signatureLeftLabel || 'Student/Guardian',
+      signatureRightLabel: receiptTemplate.signatureRightLabel || 'Authorized Signature',
+    };
+  } catch (err) {
+    console.error('Error fetching global settings:', err);
+    return {
+      logo: '', name: 'Coaching Center', address: '', phone: '', email: '',
+      primaryColor: '#1a365d', showQRCode: true, showCredentialsOnFirst: true,
+      footerNote: 'This is a computer-generated receipt. Please keep this for your records.',
+      signatureLeftLabel: 'Student/Guardian', signatureRightLabel: 'Authorized Signature',
+    };
+  }
+};
 
 /**
  * Generate receipt HTML template
  */
-const generateReceiptHTML = async (payment, student, showCredentials, siteInfo) => {
-    // Generate QR code for student portal login
-    let qrCodeDataUrl = '';
+const generateReceiptHTML = async (payment, student, showCredentials, cfg) => {
+  // Generate QR code for student portal login
+  let qrCodeDataUrl = '';
+  if (cfg.showQRCode) {
     try {
-        const portalUrl = `${process.env.CLIENT_URL}/login?roll=${student.roll}`;
-        qrCodeDataUrl = await QRCode.toDataURL(portalUrl, { width: 80, margin: 1 });
+      const portalUrl = `${process.env.CLIENT_URL}/login?roll=${student.roll}`;
+      qrCodeDataUrl = await QRCode.toDataURL(portalUrl, { width: 80, margin: 1 });
     } catch (err) {
-        console.error('QR Code generation error:', err);
+      console.error('QR Code generation error:', err);
     }
+  }
 
-    const logo = siteInfo?.logo || '';
-    const coachingName = siteInfo?.name || 'PARAGON Coaching Center';
-    const address = siteInfo?.address || '';
-    const phone = siteInfo?.phone || '';
+  const pc = cfg.primaryColor;
 
-    return `
+  // Contact line under address
+  const contactParts = [];
+  if (cfg.phone) contactParts.push(`Phone: ${cfg.phone}`);
+  if (cfg.email) contactParts.push(`Email: ${cfg.email}`);
+  const contactLine = contactParts.join('  |  ');
+
+  return `
     <!DOCTYPE html>
     <html lang="en">
     <head>
@@ -46,7 +90,7 @@ const generateReceiptHTML = async (payment, student, showCredentials, siteInfo) 
       <style>
         @page {
           size: A4;
-          margin: 15mm;
+          margin: 0; /* Hide browser default headers/footers */
         }
         
         * {
@@ -61,56 +105,78 @@ const generateReceiptHTML = async (payment, student, showCredentials, siteInfo) 
           line-height: 1.5;
           color: #333;
           background: white;
+          padding: 15mm; /* Restore visual margin */
         }
         
         .receipt {
-          width: 180mm;
-          min-height: 267mm;
-          padding: 10mm;
+          width: 100%;
+          max-width: 190mm; /* A4 width minus padding */
+          min-height: 260mm;
           margin: 0 auto;
-          border: 2px solid #1a365d;
+          border: 2px solid ${pc};
           position: relative;
+          overflow: hidden;
+          padding: 10mm;
+        }
+
+        .print-footer {
+            position: absolute;
+            bottom: 5px;
+            left: 0;
+            right: 0;
+            text-align: center;
+            font-size: 9pt;
+            color: #888;
+            padding-top: 10px;
+            display: none; /* Hidden by default, shown in print/pdf */
+        }
+
+        @media print {
+            .print-footer {
+                display: block;
+            }
         }
         
         .header {
           text-align: center;
-          border-bottom: 2px solid #1a365d;
-          padding-bottom: 15px;
-          margin-bottom: 20px;
+          border-bottom: 2px solid ${pc};
+          padding-bottom: 12px;
+          margin-bottom: 16px;
         }
         
         .logo {
-          max-height: 60px;
-          margin-bottom: 10px;
+          max-height: 55px;
+          margin-bottom: 8px;
         }
         
         .coaching-name {
-          font-size: 24pt;
+          font-size: 22pt;
           font-weight: bold;
-          color: #1a365d;
-          margin-bottom: 5px;
+          color: ${pc};
+          margin-bottom: 3px;
         }
         
         .coaching-address {
           font-size: 10pt;
           color: #666;
+          margin-bottom: 2px;
         }
         
         .receipt-title {
-          background: #1a365d;
+          background: ${pc};
           color: white;
-          padding: 8px 20px;
-          font-size: 14pt;
+          padding: 6px 20px;
+          font-size: 13pt;
           font-weight: bold;
           text-align: center;
-          margin: 20px 0;
+          margin: 14px 0;
         }
         
         .receipt-meta {
           display: flex;
           justify-content: space-between;
-          margin-bottom: 20px;
-          padding: 10px;
+          margin-bottom: 16px;
+          padding: 8px 10px;
           background: #f7fafc;
           border-radius: 5px;
         }
@@ -128,52 +194,56 @@ const generateReceiptHTML = async (payment, student, showCredentials, siteInfo) 
         .meta-value {
           font-size: 11pt;
           font-weight: bold;
-          color: #1a365d;
+          color: ${pc};
         }
         
         .section {
-          margin-bottom: 20px;
+          margin-bottom: 16px;
         }
         
         .section-title {
           font-size: 11pt;
           font-weight: bold;
-          color: #1a365d;
+          color: ${pc};
           border-bottom: 1px solid #e2e8f0;
-          padding-bottom: 5px;
-          margin-bottom: 10px;
+          padding-bottom: 4px;
+          margin-bottom: 8px;
         }
         
         .info-grid {
           display: grid;
           grid-template-columns: 1fr 1fr;
-          gap: 10px;
+          gap: 8px;
         }
         
         .info-row {
           display: flex;
-          justify-content: space-between;
-          padding: 5px 0;
+          align-items: center;
+          padding: 4px 0;
           border-bottom: 1px dotted #e2e8f0;
         }
         
         .info-label {
           color: #666;
+          white-space: nowrap;
+          margin-right: 10px;
         }
         
         .info-value {
-          font-weight: 500;
+            flex: 1;
+            text-align: center;
+            font-weight: 600;
         }
         
         .payment-table {
           width: 100%;
           border-collapse: collapse;
-          margin-top: 10px;
+          margin-top: 8px;
         }
         
         .payment-table th,
         .payment-table td {
-          padding: 10px;
+          padding: 8px 10px;
           text-align: left;
           border: 1px solid #e2e8f0;
         }
@@ -189,37 +259,39 @@ const generateReceiptHTML = async (payment, student, showCredentials, siteInfo) 
         }
         
         .total-row {
-          background: #1a365d;
+          background: ${pc};
           color: white;
         }
         
         .total-row td {
           font-weight: bold;
-          font-size: 13pt;
+          font-size: 12pt;
+          border-color: ${pc};
         }
         
         .due-warning {
           background: #fff5f5;
           border: 1px solid #fc8181;
           color: #c53030;
-          padding: 10px;
+          padding: 8px;
           border-radius: 5px;
-          margin: 15px 0;
+          margin: 12px 0;
           text-align: center;
+          font-size: 10pt;
         }
         
         .credentials-box {
           background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
           color: white;
-          padding: 15px;
+          padding: 12px;
           border-radius: 8px;
-          margin: 20px 0;
+          margin: 14px 0;
         }
         
         .credentials-title {
-          font-size: 11pt;
+          font-size: 10pt;
           font-weight: bold;
-          margin-bottom: 10px;
+          margin-bottom: 8px;
           text-align: center;
         }
         
@@ -234,18 +306,18 @@ const generateReceiptHTML = async (payment, student, showCredentials, siteInfo) 
         }
         
         .credential-label {
-          font-size: 9pt;
+          font-size: 8pt;
           opacity: 0.9;
         }
         
         .credential-value {
-          font-size: 14pt;
+          font-size: 13pt;
           font-weight: bold;
           font-family: 'Courier New', monospace;
           background: rgba(255,255,255,0.2);
-          padding: 5px 15px;
+          padding: 4px 12px;
           border-radius: 4px;
-          margin-top: 5px;
+          margin-top: 4px;
         }
         
         .qr-section {
@@ -253,42 +325,35 @@ const generateReceiptHTML = async (payment, student, showCredentials, siteInfo) 
         }
         
         .qr-section img {
-          width: 70px;
-          height: 70px;
+          width: 60px;
+          height: 60px;
         }
         
         .qr-label {
-          font-size: 8pt;
-          margin-top: 5px;
-        }
-        
-        .footer {
-          position: absolute;
-          bottom: 10mm;
-          left: 10mm;
-          right: 10mm;
+          font-size: 7pt;
+          margin-top: 3px;
         }
         
         .signatures {
           display: flex;
           justify-content: space-between;
-          margin-top: 40px;
-          padding-top: 20px;
+          margin-top: 30px;
+          padding-top: 15px;
         }
         
         .signature-line {
           width: 150px;
           border-top: 1px solid #333;
           text-align: center;
-          padding-top: 5px;
-          font-size: 10pt;
+          padding-top: 4px;
+          font-size: 9pt;
         }
         
         .note {
-          font-size: 9pt;
+          font-size: 8pt;
           color: #666;
           text-align: center;
-          margin-top: 20px;
+          margin-top: 14px;
           font-style: italic;
         }
         
@@ -297,11 +362,12 @@ const generateReceiptHTML = async (payment, student, showCredentials, siteInfo) 
           top: 50%;
           left: 50%;
           transform: translate(-50%, -50%) rotate(-45deg);
-          font-size: 80pt;
-          color: rgba(26, 54, 93, 0.05);
+          font-size: 72pt;
+          color: rgba(0, 0, 0, 0.04);
           font-weight: bold;
           pointer-events: none;
-          z-index: -1;
+          z-index: 0;
+          white-space: nowrap;
         }
         
         @media print {
@@ -317,14 +383,14 @@ const generateReceiptHTML = async (payment, student, showCredentials, siteInfo) 
     </head>
     <body>
       <div class="receipt">
-        <div class="watermark">PARAGON</div>
+        <div class="watermark">${cfg.name}</div>
         
         <!-- Header -->
         <div class="header">
-          ${logo ? `<img src="${logo}" alt="Logo" class="logo">` : ''}
-          <div class="coaching-name">${coachingName}</div>
-          ${address ? `<div class="coaching-address">${address}</div>` : ''}
-          ${phone ? `<div class="coaching-address">Phone: ${phone}</div>` : ''}
+          ${cfg.logo ? `<img src="${cfg.logo}" alt="Logo" class="logo">` : ''}
+          <div class="coaching-name">${cfg.name}</div>
+          ${cfg.address ? `<div class="coaching-address">${cfg.address}</div>` : ''}
+          ${contactLine ? `<div class="coaching-address">${contactLine}</div>` : ''}
         </div>
         
         <!-- Receipt Title -->
@@ -399,7 +465,7 @@ const generateReceiptHTML = async (payment, student, showCredentials, siteInfo) 
             </tr>
           </table>
           
-          <div style="margin-top: 10px; font-size: 10pt;">
+          <div style="margin-top: 8px; font-size: 10pt;">
             <strong>Payment Method:</strong> ${payment.paymentMethod?.toUpperCase() || 'CASH'}
             ${payment.transactionId ? ` | <strong>Transaction ID:</strong> ${payment.transactionId}` : ''}
           </div>
@@ -411,7 +477,7 @@ const generateReceiptHTML = async (payment, student, showCredentials, siteInfo) 
         </div>
         ` : ''}
         
-        ${showCredentials ? `
+        ${showCredentials && cfg.showCredentialsOnFirst ? `
         <!-- Login Credentials (only shown on first receipt) -->
         <div class="credentials-box">
           <div class="credentials-title">🎓 Student Portal Login Credentials</div>
@@ -431,7 +497,7 @@ const generateReceiptHTML = async (payment, student, showCredentials, siteInfo) 
             </div>
             ` : ''}
           </div>
-          <div style="text-align: center; margin-top: 10px; font-size: 9pt; opacity: 0.9;">
+          <div style="text-align: center; margin-top: 8px; font-size: 8pt; opacity: 0.9;">
             Please change your password after first login for security.
           </div>
         </div>
@@ -439,13 +505,24 @@ const generateReceiptHTML = async (payment, student, showCredentials, siteInfo) 
         
         <!-- Signatures -->
         <div class="signatures">
-          <div class="signature-line">Student/Guardian</div>
-          <div class="signature-line">Authorized Signature</div>
+          <div class="signature-line">${cfg.signatureLeftLabel}</div>
+          <div class="signature-line">${cfg.signatureRightLabel}</div>
         </div>
         
         <!-- Note -->
         <div class="note">
-          This is a computer-generated receipt. Please keep this for your records.
+          ${cfg.footerNote}
+        </div>
+
+        <div class="print-footer">
+            ${new Date().toLocaleString('en-US', {
+    year: 'numeric',
+    month: 'numeric',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: 'numeric',
+    hour12: true
+  })} Payment Receipt - ${payment.receiptId}
         </div>
       </div>
     </body>
@@ -460,103 +537,88 @@ const generateReceiptHTML = async (payment, student, showCredentials, siteInfo) 
  * @returns {Promise<string>} PDF file URL
  */
 exports.generateReceipt = async (paymentId, showCredentials = false) => {
-    let browser;
+  let browser;
 
-    try {
-        const payment = await Payment.findById(paymentId).setOptions({ skipPopulate: true });
-        if (!payment) {
-            throw new Error('Payment not found');
-        }
-
-        const student = await Student.findById(payment.studentId);
-        if (!student) {
-            throw new Error('Student not found');
-        }
-
-        // Get site info for header
-        let siteInfo = {};
-        try {
-            const content = await SiteContent.findOne({ sectionKey: 'header' });
-            if (content) {
-                siteInfo = content.content || {};
-            }
-        } catch (err) {
-            console.error('Error fetching site content:', err);
-        }
-
-        // Generate HTML
-        const html = await generateReceiptHTML(payment, student, showCredentials, siteInfo);
-
-        // Launch Puppeteer
-        browser = await puppeteer.launch({
-            headless: 'new',
-            args: ['--no-sandbox', '--disable-setuid-sandbox']
-        });
-
-        const page = await browser.newPage();
-        await page.setContent(html, { waitUntil: 'networkidle0' });
-
-        // Generate PDF
-        const pdfBuffer = await page.pdf({
-            format: 'A4',
-            printBackground: true,
-            margin: {
-                top: '10mm',
-                bottom: '10mm',
-                left: '10mm',
-                right: '10mm'
-            }
-        });
-
-        // Save PDF locally
-        const filename = `receipt-${payment.receiptId}.pdf`;
-        const filepath = path.join(receiptsDir, filename);
-        fs.writeFileSync(filepath, pdfBuffer);
-
-        // Try to upload to Cloudinary
-        let pdfUrl = `/receipts/${filename}`;
-        try {
-            const uploadResult = await uploadPDF(filepath);
-            if (uploadResult.success) {
-                pdfUrl = uploadResult.url;
-            }
-        } catch (uploadErr) {
-            console.error('Cloudinary upload error:', uploadErr);
-            // Fall back to local URL
-        }
-
-        return pdfUrl;
-    } finally {
-        if (browser) {
-            await browser.close();
-        }
+  try {
+    const payment = await Payment.findById(paymentId).setOptions({ skipPopulate: true });
+    if (!payment) {
+      throw new Error('Payment not found');
     }
+
+    const student = await Student.findById(payment.studentId);
+    if (!student) {
+      throw new Error('Student not found');
+    }
+
+    // Get settings from GlobalSettings
+    const cfg = await getSettingsData();
+
+    // Generate HTML
+    const html = await generateReceiptHTML(payment, student, showCredentials, cfg);
+
+    // Launch Puppeteer
+    browser = await puppeteer.launch({
+      headless: 'new',
+      args: ['--no-sandbox', '--disable-setuid-sandbox']
+    });
+
+    const page = await browser.newPage();
+    await page.setContent(html, { waitUntil: 'networkidle0' });
+
+    // Generate PDF
+    const pdfBuffer = await page.pdf({
+      format: 'A4',
+      printBackground: true,
+      margin: {
+        top: '10mm',
+        bottom: '10mm',
+        left: '10mm',
+        right: '10mm'
+      }
+    });
+
+    // Save PDF locally
+    const filename = `receipt-${payment.receiptId}.pdf`;
+    const filepath = path.join(receiptsDir, filename);
+    fs.writeFileSync(filepath, pdfBuffer);
+
+    // Try to upload to Cloudinary
+    let pdfUrl = `/receipts/${filename}`;
+    try {
+      const uploadResult = await uploadPDF(filepath);
+      if (uploadResult.success) {
+        pdfUrl = uploadResult.url;
+      }
+    } catch (uploadErr) {
+      console.error('Cloudinary upload error:', uploadErr);
+      // Fall back to local URL
+    }
+
+    return pdfUrl;
+  } finally {
+    if (browser) {
+      await browser.close();
+    }
+  }
 };
 
 /**
  * Get receipt HTML for viewing/printing in browser
  */
 exports.getReceiptHTML = async (receiptId) => {
-    const payment = await Payment.findOne({ receiptId }).setOptions({ skipPopulate: true });
-    if (!payment) {
-        throw new Error('Payment not found');
-    }
+  const payment = await Payment.findOne({ receiptId }).setOptions({ skipPopulate: true });
+  if (!payment) {
+    throw new Error('Payment not found');
+  }
 
-    const student = await Student.findById(payment.studentId);
-    if (!student) {
-        throw new Error('Student not found');
-    }
+  const student = await Student.findById(payment.studentId);
+  if (!student) {
+    throw new Error('Student not found');
+  }
 
-    let siteInfo = {};
-    try {
-        const content = await SiteContent.findOne({ sectionKey: 'header' });
-        if (content) {
-            siteInfo = content.content || {};
-        }
-    } catch (err) {
-        console.error('Error fetching site content:', err);
-    }
+  // Get settings from GlobalSettings
+  const cfg = await getSettingsData();
 
-    // Don't show credentials on subsequent views
-    return generateReceiptHTML(payment, student, false, siteInfo);
+  // Don't show credentials on subsequent views
+  return generateReceiptHTML(payment, student, false, cfg);
 };

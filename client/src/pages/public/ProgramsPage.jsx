@@ -1,12 +1,13 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import api from '../../lib/api'
+import { useSettings } from '../../contexts/SettingsContext'
 import FloatingNav from '../../components/navigation/FloatingNav'
 import CourseCarousel from '../../components/carousel/CourseCarousel'
+import Footer from '../../components/layout/Footer'
 import {
     BookOpen, ArrowUp, ArrowRight, GraduationCap, Heart, Zap, Target,
-    Facebook, Instagram, Youtube, Twitter, Phone, Mail, MapPin,
-    Clock, Users, CheckCircle, Star
+    Phone, Clock, Users, CheckCircle, Star
 } from 'lucide-react'
 
 // Back to Top
@@ -88,17 +89,17 @@ function ProgramDetailCard({ program, index }) {
                     <div className="text-center">
                         <Clock size={18} className="mx-auto text-blue-500 mb-1" />
                         <p className="text-xs text-gray-500">Duration</p>
-                        <p className="text-sm font-semibold text-gray-900">6 Months</p>
+                        <p className="text-sm font-semibold text-gray-900">{program.duration || '—'}</p>
                     </div>
                     <div className="text-center">
                         <Users size={18} className="mx-auto text-orange-500 mb-1" />
                         <p className="text-xs text-gray-500">Batch Size</p>
-                        <p className="text-sm font-semibold text-gray-900">30</p>
+                        <p className="text-sm font-semibold text-gray-900">{program.totalSeats || '—'}</p>
                     </div>
                     <div className="text-center">
                         <Star size={18} className="mx-auto text-yellow-500 mb-1" />
-                        <p className="text-xs text-gray-500">Rating</p>
-                        <p className="text-sm font-semibold text-gray-900">4.9</p>
+                        <p className="text-xs text-gray-500">Mode</p>
+                        <p className="text-sm font-semibold text-gray-900">{program.mode ? program.mode.charAt(0).toUpperCase() + program.mode.slice(1) : '—'}</p>
                     </div>
                 </div>
 
@@ -113,6 +114,7 @@ function ProgramDetailCard({ program, index }) {
 }
 
 const ProgramsPage = () => {
+    const { getPrimaryPhone } = useSettings()
     const [content, setContent] = useState({})
     const [courses, setCourses] = useState([])
     const [loading, setLoading] = useState(true)
@@ -153,11 +155,18 @@ const ProgramsPage = () => {
         ? courses.map(course => ({
             title: course.name || course.title,
             description: course.shortDescription || course.description,
-            badge: course.isFeatured ? 'Popular' : (course.badge || ''),
+            badge: course.featured ? 'Popular' : (course.badge || ''),
             type: course.category?.toLowerCase() || 'default',
-            features: course.features || course.highlights || [],
+            features: course.features || course.studyMaterials?.map(m =>
+                m.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())
+            ) || [],
             rating: course.rating || 4.9,
-            image: course.thumbnail || course.image
+            image: course.image?.url || course.thumbnail,
+            duration: course.duration,
+            totalSeats: course.totalSeats,
+            classSchedule: course.classSchedule,
+            mode: course.mode,
+            pricing: course.pricing
         }))
         : [
             { title: 'Medical Admission 2026', description: 'মেডিকেল ভর্তি পরীক্ষার জন্য সম্পূর্ণ প্রস্তুতি', badge: 'Popular', type: 'medical', features: ['মেধাবী শিক্ষক', 'লাইভ ক্লাস', 'মডেল টেস্ট', 'সলভ ক্লাস'] },
@@ -203,14 +212,6 @@ const ProgramsPage = () => {
                 </div>
             </section>
 
-            {/* Programs Carousel Preview */}
-            <section className="section-cyber bg-gray-50 -mt-12 relative z-10">
-                <div className="container-cyber">
-                    <div className="reveal">
-                        <CourseCarousel courses={programs} />
-                    </div>
-                </div>
-            </section>
 
             {/* Detailed Programs */}
             <section className="section-cyber bg-white">
@@ -226,6 +227,8 @@ const ProgramsPage = () => {
                     </div>
                 </div>
             </section>
+
+
 
             {/* Why Choose Section */}
             <section className="section-cyber bg-gradient-to-b from-gray-50 to-white">
@@ -268,7 +271,7 @@ const ProgramsPage = () => {
                             <span className="font-bangla">এখনই ভর্তি হন</span>
                             <ArrowRight size={20} />
                         </Link>
-                        <a href="tel:09666775566" className="btn-glass bg-white/20 text-white border-white/30">
+                        <a href={`tel:${getPrimaryPhone()}`} className="btn-glass bg-white/20 text-white border-white/30">
                             <Phone size={20} />
                             <span>কল করুন</span>
                         </a>
@@ -277,59 +280,7 @@ const ProgramsPage = () => {
             </section>
 
             {/* Footer */}
-            <footer className="footer-cyber">
-                <div className="container-cyber">
-                    <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
-                        <div>
-                            <Link to="/" className="flex items-center gap-2 text-2xl font-bold mb-4">
-                                <GraduationCap size={32} className="text-blue-500" />
-                                <span className="gradient-text">PARAGON</span>
-                            </Link>
-                            <p className="text-gray-500 text-sm font-bangla">শিক্ষায় শ্রেষ্ঠত্ব অর্জনের বিশ্বস্ত সঙ্গী</p>
-                            <div className="flex gap-3 mt-4">
-                                {[Facebook, Instagram, Youtube, Twitter].map((Icon, i) => (
-                                    <a key={i} href="#" className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center text-gray-500 hover:text-white hover:bg-blue-500 transition-all">
-                                        <Icon size={18} />
-                                    </a>
-                                ))}
-                            </div>
-                        </div>
-
-                        <div>
-                            <h4 className="font-semibold mb-4 text-gray-900">Quick Links</h4>
-                            <ul className="space-y-2 text-gray-500 text-sm">
-                                <li><Link to="/" className="hover:text-blue-500 transition-colors">Home</Link></li>
-                                <li><Link to="/programs" className="hover:text-blue-500 transition-colors">Programs</Link></li>
-                                <li><Link to="/stories" className="hover:text-blue-500 transition-colors">Success Stories</Link></li>
-                                <li><a href="/#contact" className="hover:text-blue-500 transition-colors">Contact</a></li>
-                            </ul>
-                        </div>
-
-                        <div>
-                            <h4 className="font-semibold mb-4 text-gray-900">Programs</h4>
-                            <ul className="space-y-2 text-gray-500 text-sm font-bangla">
-                                <li>মেডিকেল এডমিশন</li>
-                                <li>ইঞ্জিনিয়ারিং এডমিশন</li>
-                                <li>HSC Academic</li>
-                                <li>বিশ্ববিদ্যালয় ভর্তি</li>
-                            </ul>
-                        </div>
-
-                        <div>
-                            <h4 className="font-semibold mb-4 text-gray-900">Contact</h4>
-                            <ul className="space-y-2 text-gray-500 text-sm">
-                                <li className="flex items-center gap-2"><Phone size={14} /> 09666775566</li>
-                                <li className="flex items-center gap-2"><Mail size={14} /> info@paragon.edu.bd</li>
-                                <li className="flex items-center gap-2 font-bangla"><MapPin size={14} /> ঢাকা, বাংলাদেশ</li>
-                            </ul>
-                        </div>
-                    </div>
-
-                    <div className="border-t border-gray-200 pt-6 text-center text-gray-400 text-sm">
-                        <p>© 2026 PARAGON Coaching Center. All rights reserved.</p>
-                    </div>
-                </div>
-            </footer>
+            <Footer />
         </div>
     )
 }

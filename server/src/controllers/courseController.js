@@ -92,11 +92,12 @@ exports.getCourse = async (req, res, next) => {
  */
 exports.getPublishedCourses = async (req, res, next) => {
     try {
-        const { category, featured, limit = 20 } = req.query;
+        const { category, featured, showOnHomepage, limit = 20 } = req.query;
 
         const query = { status: 'published' };
         if (category) query.category = category;
         if (featured === 'true') query.featured = true;
+        if (showOnHomepage === 'true') query.showOnHomepage = true;
 
         const courses = await Course.find(query)
             .populate('faculty', 'name designation photo')

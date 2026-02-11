@@ -113,11 +113,42 @@ const ReceiptView = () => {
             document.body.appendChild(link)
             link.click()
             link.parentNode.removeChild(link)
+            window.URL.revokeObjectURL(url)
 
             toast.success('Download complete', { id: toastId })
         } catch (error) {
             console.error('Download error:', error)
-            toast.error('Failed to download PDF', { id: toastId })
+            // Fallback: open receipt HTML in new window for browser print-to-PDF
+            toast.dismiss(toastId)
+
+            let htmlContent = receiptHtml
+            if (!htmlContent) {
+                try {
+                    const htmlResponse = await api.get(`/receipts/${receiptId}`, { responseType: 'text' })
+                    htmlContent = htmlResponse.data
+                } catch (e) {
+                    console.error('Fallback HTML fetch failed:', e)
+                }
+            }
+
+            if (htmlContent) {
+                toast('Opening print dialog — use "Save as PDF" to download', { icon: '🖨️', duration: 5000 })
+                const printWindow = window.open('', '_blank')
+                if (printWindow) {
+                    printWindow.document.write(htmlContent)
+                    printWindow.document.close()
+                    // Add print style
+                    const style = printWindow.document.createElement('style')
+                    style.textContent = `
+                        body { margin: 0; padding: 0; }
+                        @page { size: A4; margin: 0; }
+                    `
+                    printWindow.document.head.appendChild(style)
+                    printWindow.onload = () => printWindow.print()
+                }
+            } else {
+                toast.error('Failed to download PDF', { id: toastId })
+            }
         }
     }
 

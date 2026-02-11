@@ -64,6 +64,29 @@ const notificationSettingsSchema = new mongoose.Schema({
     dailySummary: { type: Boolean, default: false }
 }, { _id: false });
 
+// SMS settings schema
+const smsSettingsSchema = new mongoose.Schema({
+    enabled: { type: Boolean, default: false },
+    apiKey: { type: String, trim: true },
+    senderId: { type: String, trim: true },
+    resultSmsTemplate: {
+        type: String,
+        default: 'Dear {studentName}, Your {testName} result: {score}/{total}. Highest Score: {highest}. Visit {website} for details. - PARAGON'
+    },
+    websiteUrl: { type: String, trim: true, default: '' }
+}, { _id: false });
+
+// Receipt template schema
+const receiptTemplateSchema = new mongoose.Schema({
+    primaryColor: { type: String, default: '#1a365d' },
+    showLogo: { type: Boolean, default: true },
+    showQRCode: { type: Boolean, default: true },
+    showCredentialsOnFirst: { type: Boolean, default: true },
+    footerNote: { type: String, default: 'This is a computer-generated receipt. Please keep this for your records.' },
+    signatureLeftLabel: { type: String, default: 'Student/Guardian' },
+    signatureRightLabel: { type: String, default: 'Authorized Signature' }
+}, { _id: false });
+
 // Main GlobalSettings schema
 const globalSettingsSchema = new mongoose.Schema({
     // Site info
@@ -100,6 +123,12 @@ const globalSettingsSchema = new mongoose.Schema({
 
     // Notification settings
     notifications: { type: notificationSettingsSchema, default: () => ({}) },
+
+    // SMS settings
+    smsSettings: { type: smsSettingsSchema, default: () => ({}) },
+
+    // Receipt template
+    receiptTemplate: { type: receiptTemplateSchema, default: () => ({}) },
 
     // Tracking
     updatedAt: { type: Date, default: Date.now },

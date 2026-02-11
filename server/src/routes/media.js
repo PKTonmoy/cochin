@@ -5,6 +5,7 @@
 
 const express = require('express');
 const router = express.Router();
+const multer = require('multer');
 const mediaController = require('../controllers/mediaController');
 const { authenticate, authorize } = require('../middleware/auth');
 const { uploadImage } = require('../middleware/upload');
@@ -18,10 +19,33 @@ router.get('/stats', authorize('admin', 'staff'), mediaController.getStats);
 router.get('/folders', authorize('admin', 'staff'), mediaController.getFolders);
 router.get('/:id', authorize('admin', 'staff'), mediaController.getMedia);
 
-// Upload
+// Upload with proper error handling
 router.post('/upload',
     authorize('admin', 'staff'),
-    uploadImage.single('file'),
+    (req, res, next) => {
+        uploadImage.single('file')(req, res, (err) => {
+            if (err instanceof multer.MulterError) {
+                console.error('[Media Upload] Multer error:', err.message, err.code);
+                if (err.code === 'LIMIT_FILE_SIZE') {
+                    return res.status(400).json({
+                        success: false,
+                        message: 'File size too large. Maximum size is 5MB.'
+                    });
+                }
+                return res.status(400).json({
+                    success: false,
+                    message: `Upload error: ${err.message}`
+                });
+            } else if (err) {
+                console.error('[Media Upload] File filter error:', err.message);
+                return res.status(400).json({
+                    success: false,
+                    message: err.message
+                });
+            }
+            next();
+        });
+    },
     mediaController.uploadMedia
 );
 

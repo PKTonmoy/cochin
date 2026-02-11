@@ -18,9 +18,11 @@ import {
     ChevronRight,
     Settings,
     BookOpen,
-    Award
+    Award,
+    ClipboardCheck
 } from 'lucide-react'
 import NotificationBell from '../components/NotificationBell'
+import { useSocketUpdates } from '../hooks/useSocketUpdates'
 
 const StudentLayoutModern = () => {
     const { user, logout } = useAuth()
@@ -35,10 +37,14 @@ const StudentLayoutModern = () => {
         return () => window.removeEventListener('scroll', handleScroll)
     }, [])
 
+    // Initialize real-time updates via Socket.IO for the entire student session
+    useSocketUpdates(user?.id, user?.class, user?.section)
+
     const menuItems = [
         { path: '/student', icon: LayoutDashboard, label: 'Dashboard', exact: true },
         { path: '/student/schedule', icon: Calendar, label: 'My Schedule' },
         { path: '/student/results', icon: FileText, label: 'My Results' },
+        { path: '/student/attendance', icon: ClipboardCheck, label: 'Attendance' },
         { path: '/student/profile', icon: User, label: 'Profile' },
     ]
 

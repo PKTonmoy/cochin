@@ -6,8 +6,11 @@
 const Result = require('../models/Result');
 const Test = require('../models/Test');
 const Student = require('../models/Student');
+const Attendance = require('../models/Attendance');
 const AuditLog = require('../models/AuditLog');
 const { ApiError } = require('../middleware/errorHandler');
+const { emitToClass, emitToStudent } = require('../services/socketService');
+const smsService = require('../services/smsService');
 const ExcelJS = require('exceljs');
 const path = require('path');
 const fs = require('fs');
@@ -17,13 +20,34 @@ const fs = require('fs');
  */
 exports.bulkCreateResults = async (req, res, next) => {
     try {
-        const { results } = req.body;
+        const { results, skipAttendanceCheck = false } = req.body;
 
         if (!results || !Array.isArray(results) || results.length === 0) {
             throw new ApiError('No results provided', 400);
         }
 
-        const savedCount = { created: 0, updated: 0 };
+        // Get unique test IDs from results
+        const testIds = [...new Set(results.map(r => r.testId))];
+
+        // Validate attendance for each test (unless explicitly skipped by admin)
+        if (!skipAttendanceCheck) {
+            for (const testId of testIds) {
+                const attendanceExists = await Attendance.exists({
+                    testId,
+                    type: 'test'
+                });
+
+                if (!attendanceExists) {
+                    const test = await Test.findById(testId);
+                    throw new ApiError(
+                        `Attendance must be marked for test "${test?.testName || testId}" before entering results. Please mark attendance first.`,
+                        400
+                    );
+                }
+            }
+        }
+
+        const savedCount = { created: 0, updated: 0, skipped: 0 };
 
         for (const item of results) {
             const { studentId, testId, marks } = item;
@@ -87,6 +111,26 @@ exports.bulkCreateResults = async (req, res, next) => {
                 });
                 savedCount.created++;
             }
+
+            // Auto-create attendance record if one doesn't exist for this student/test
+            // If a student has a result, they clearly attended the test
+            const existingAttendance = await Attendance.findOne({
+                studentId,
+                testId,
+                type: 'test'
+            });
+            if (!existingAttendance) {
+                await Attendance.create({
+                    studentId,
+                    type: 'test',
+                    testId,
+                    date: test.date || new Date(),
+                    class: student.class,
+                    section: student.section,
+                    status: 'present',
+                    markedBy: req.user.id
+                });
+            }
         }
 
         await AuditLog.log({
@@ -97,6 +141,36 @@ exports.bulkCreateResults = async (req, res, next) => {
             details: { created: savedCount.created, updated: savedCount.updated },
             ipAddress: req.ip
         });
+
+        // Emit real-time update to students
+        if (savedCount.created > 0 || savedCount.updated > 0) {
+            // Get test info for notification
+            const testId = results[0]?.testId;
+            if (testId) {
+                const test = await Test.findById(testId);
+                if (test) {
+                    // Emit to all students in the class
+                    emitToClass(test.class, 'results-updated', {
+                        type: 'new_results',
+                        testId: test._id,
+                        testName: test.testName,
+                        message: `Results for ${test.testName} have been published!`,
+                        timestamp: new Date()
+                    }, test.section);
+
+                    // If test is already published, send SMS for new results
+                    if (test.isPublished && savedCount.created > 0) {
+                        smsService.sendBulkResultSms(testId, req.user.id)
+                            .then(smsResult => {
+                                console.log(`[SMS] Bulk create trigger for "${test.testName}": ${JSON.stringify(smsResult.results || smsResult.reason)}`);
+                            })
+                            .catch(err => {
+                                console.error('[SMS] Error in bulk create trigger:', err.message);
+                            });
+                    }
+                }
+            }
+        }
 
         res.json({
             success: true,
@@ -215,11 +289,6 @@ exports.getTestResults = async (req, res, next) => {
         next(error);
     }
 };
-
-/**
- * Get results for a specific student
- */
-const Attendance = require('../models/Attendance');
 
 /**
  * Get results for a specific student (includes attendance status)
@@ -619,6 +688,17 @@ exports.publishResults = async (req, res, next) => {
             details: { testName: test.testName, resultCount },
             ipAddress: req.ip
         });
+
+        // Trigger SMS notifications when publishing results
+        if (publish) {
+            smsService.sendBulkResultSms(testId, req.user.id)
+                .then(smsResult => {
+                    console.log(`[SMS] Result publish trigger for "${test.testName}": ${JSON.stringify(smsResult.results || smsResult.reason)}`);
+                })
+                .catch(err => {
+                    console.error('[SMS] Error in publish trigger:', err.message);
+                });
+        }
 
         res.json({
             success: true,

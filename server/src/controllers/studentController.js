@@ -406,6 +406,23 @@ exports.getStudentDashboard = async (req, res, next) => {
 };
 
 /**
+ * Get distinct list of classes from students
+ */
+exports.getStudentClasses = async (req, res, next) => {
+    try {
+        const classes = await Student.distinct('class');
+        classes.sort(); // Sort alphabetically/numerically
+
+        res.json({
+            success: true,
+            data: classes
+        });
+    } catch (error) {
+        next(error);
+    }
+};
+
+/**
  * Export students to Excel
  */
 exports.exportStudents = async (req, res, next) => {

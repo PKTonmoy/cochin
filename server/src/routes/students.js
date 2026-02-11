@@ -15,6 +15,7 @@ router.use(authenticate);
 // Admin/Staff routes
 router.get('/', authorize('admin', 'staff'), studentController.getAllStudents);
 router.get('/export', authorize('admin', 'staff'), studentController.exportStudents);
+router.get('/classes-list', authorize('admin', 'staff'), studentController.getStudentClasses);
 router.post('/', authorize('admin', 'staff'), uploadImage.single('photo'), studentController.createStudent);
 router.get('/:id', authorize('admin', 'staff'), studentController.getStudent);
 router.put('/:id', authorize('admin', 'staff'), uploadImage.single('photo'), studentController.updateStudent);

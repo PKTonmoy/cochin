@@ -21,6 +21,11 @@ const attendanceSchema = new mongoose.Schema({
         ref: 'Test'
         // Required only when type is 'test'
     },
+    classId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Class'
+        // Required only when type is 'class' and linked to a session
+    },
     date: {
         type: Date,
         required: true
@@ -57,6 +62,7 @@ attendanceSchema.index({ testId: 1, status: 1 });
 attendanceSchema.index({ class: 1, date: -1 });
 attendanceSchema.index({ date: -1, class: 1 });
 attendanceSchema.index({ type: 1, date: -1 });
+attendanceSchema.index({ classId: 1, status: 1 });
 
 // Prevent duplicate attendance for same student on same date for class type
 attendanceSchema.index(

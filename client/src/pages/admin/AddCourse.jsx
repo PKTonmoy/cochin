@@ -9,6 +9,16 @@ const CATEGORIES = [
     { value: 'medical', label: 'Medical' },
     { value: 'engineering', label: 'Engineering' },
     { value: 'university', label: 'University' },
+    { value: 'ru', label: 'RU' },
+    { value: 'ju', label: 'JU' },
+    { value: 'jnu', label: 'JnU' },
+    { value: 'cu', label: 'CU' },
+    { value: 'gst', label: 'GST' },
+    { value: 'nu', label: 'NU' },
+    { value: 'ku', label: 'KU' },
+    { value: 'sust', label: 'SUST' },
+    { value: 'hust', label: 'HUST' },
+    { value: 'bup', label: 'BUP' },
     { value: 'hsc', label: 'HSC' },
     { value: 'ssc', label: 'SSC' },
     { value: 'foundation', label: 'Foundation' },
@@ -37,6 +47,8 @@ const initialFormState = {
     totalSeats: '',
     eligibility: '',
     pricing: { original: '', discounted: '' },
+    classSchedule: '',
+    mode: 'offline',
     syllabus: [{ subject: '', lectures: 0, topics: [''] }],
     faculty: [],
     studyMaterials: [],
@@ -381,13 +393,51 @@ export default function AddCourse() {
                                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                             />
                         </div>
+
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Class Schedule</label>
+                            <input
+                                type="text"
+                                name="classSchedule"
+                                value={formData.classSchedule}
+                                onChange={handleChange}
+                                placeholder="e.g., সপ্তাহে ৩ দিন"
+                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                            />
+                        </div>
+
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Mode</label>
+                            <select
+                                name="mode"
+                                value={formData.mode}
+                                onChange={handleChange}
+                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                            >
+                                <option value="offline">Offline</option>
+                                <option value="online">Online</option>
+                                <option value="hybrid">Hybrid</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Batch Size (Total Seats)</label>
+                            <input
+                                type="number"
+                                name="totalSeats"
+                                value={formData.totalSeats}
+                                onChange={handleChange}
+                                placeholder="e.g., 30"
+                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                            />
+                        </div>
                     </div>
                 </div>
 
                 {/* Pricing */}
                 <div className="bg-white rounded-lg shadow p-6">
                     <h2 className="text-lg font-semibold mb-4">Pricing</h2>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1">Original Price (BDT)</label>
                             <input
@@ -405,17 +455,6 @@ export default function AddCourse() {
                                 type="number"
                                 name="pricing.discounted"
                                 value={formData.pricing.discounted}
-                                onChange={handleChange}
-                                min={0}
-                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                            />
-                        </div>
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Total Seats</label>
-                            <input
-                                type="number"
-                                name="totalSeats"
-                                value={formData.totalSeats}
                                 onChange={handleChange}
                                 min={0}
                                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"

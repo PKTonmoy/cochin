@@ -3,7 +3,7 @@
  * Shows after student enrollment with receipt preview and actions
  */
 
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { useReactToPrint } from 'react-to-print'
 import { useQuery, useMutation } from '@tanstack/react-query'
 import { format } from 'date-fns'
@@ -31,6 +31,7 @@ export default function ReceiptModal({
 }) {
     const [activeTab, setActiveTab] = useState('summary')
     const [emailSending, setEmailSending] = useState(false)
+    const [pendingPrint, setPendingPrint] = useState(false)
     const printRef = useRef()
 
     // Fetch receipt HTML for preview
@@ -46,19 +47,84 @@ export default function ReceiptModal({
     })
 
     // Print handler
-    const handlePrint = useReactToPrint({
+    const reactToPrint = useReactToPrint({
         contentRef: printRef,
         documentTitle: `Receipt-${paymentData?.receiptId}`,
         onAfterPrint: () => toast.success('Receipt printed successfully!')
     })
 
+    // Effect: trigger print after switching to preview tab
+    useEffect(() => {
+        if (pendingPrint && activeTab === 'preview' && receiptHtml && printRef.current) {
+            setPendingPrint(false)
+            // Small delay to ensure DOM has rendered
+            setTimeout(() => reactToPrint(), 300)
+        }
+    }, [pendingPrint, activeTab, receiptHtml, reactToPrint])
+
+    const handlePrint = () => {
+        if (activeTab !== 'preview') {
+            // Switch to preview tab first, then print after content loads
+            setActiveTab('preview')
+            setPendingPrint(true)
+        } else if (printRef.current) {
+            reactToPrint()
+        }
+    }
+
     // Download PDF
     const handleDownload = async () => {
+        const toastId = toast.loading('Downloading PDF...')
         try {
-            window.open(`${import.meta.env.VITE_API_URL || ''}/api/receipts/${paymentData.receiptId}/pdf`, '_blank')
-            toast.success('Downloading PDF...')
+            const response = await api.get(`/receipts/${paymentData.receiptId}/pdf`, {
+                responseType: 'blob'
+            })
+
+            // Create blob link to download
+            const url = window.URL.createObjectURL(new Blob([response.data]))
+            const link = document.createElement('a')
+            link.href = url
+            link.setAttribute('download', `receipt-${paymentData.receiptId}.pdf`)
+
+            document.body.appendChild(link)
+            link.click()
+            link.parentNode.removeChild(link)
+            window.URL.revokeObjectURL(url)
+
+            toast.success('Download complete', { id: toastId })
         } catch (error) {
-            toast.error('Failed to download PDF')
+            console.error('Download error:', error)
+            // Fallback: open receipt HTML in new window for browser print-to-PDF
+            toast.dismiss(toastId)
+
+            let htmlContent = receiptHtml
+            if (!htmlContent) {
+                try {
+                    const htmlResponse = await api.get(`/receipts/${paymentData.receiptId}`, { responseType: 'text' })
+                    htmlContent = htmlResponse.data
+                } catch (e) {
+                    console.error('Fallback HTML fetch failed:', e)
+                }
+            }
+
+            if (htmlContent) {
+                toast('Opening print dialog — use "Save as PDF" to download', { icon: '🖨️', duration: 5000 })
+                const printWindow = window.open('', '_blank')
+                if (printWindow) {
+                    printWindow.document.write(htmlContent)
+                    printWindow.document.close()
+                    // Add print style
+                    const style = printWindow.document.createElement('style')
+                    style.textContent = `
+                        body { margin: 0; padding: 0; }
+                        @page { size: A4; margin: 0; }
+                    `
+                    printWindow.document.head.appendChild(style)
+                    printWindow.onload = () => printWindow.print()
+                }
+            } else {
+                toast.error('Failed to download PDF', { id: toastId })
+            }
         }
     }
 
@@ -129,8 +195,8 @@ export default function ReceiptModal({
                     <button
                         onClick={() => setActiveTab('summary')}
                         className={`flex-1 py-3 px-4 text-sm font-medium transition-colors ${activeTab === 'summary'
-                                ? 'text-emerald-600 border-b-2 border-emerald-600 bg-emerald-50'
-                                : 'text-gray-500 hover:text-gray-700'
+                            ? 'text-emerald-600 border-b-2 border-emerald-600 bg-emerald-50'
+                            : 'text-gray-500 hover:text-gray-700'
                             }`}
                     >
                         <FileText className="w-4 h-4 inline mr-2" />
@@ -139,8 +205,8 @@ export default function ReceiptModal({
                     <button
                         onClick={() => setActiveTab('preview')}
                         className={`flex-1 py-3 px-4 text-sm font-medium transition-colors ${activeTab === 'preview'
-                                ? 'text-emerald-600 border-b-2 border-emerald-600 bg-emerald-50'
-                                : 'text-gray-500 hover:text-gray-700'
+                            ? 'text-emerald-600 border-b-2 border-emerald-600 bg-emerald-50'
+                            : 'text-gray-500 hover:text-gray-700'
                             }`}
                     >
                         <Eye className="w-4 h-4 inline mr-2" />

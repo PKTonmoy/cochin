@@ -13,9 +13,24 @@ const { ApiError } = require('../middleware/errorHandler');
 exports.getSettings = async (req, res, next) => {
     try {
         const settings = await GlobalSettings.getSettings();
+        const settingsObj = settings.toObject();
+
+        // Inject SMS environment configuration status
+        if (!settingsObj.smsSettings) settingsObj.smsSettings = {};
+
+        if (process.env.BULKSMSBD_API_KEY) {
+            settingsObj.smsSettings.apiKey = '********';
+            settingsObj.smsSettings.isEnvApiKey = true;
+        }
+
+        if (process.env.BULKSMSBD_SENDER_ID) {
+            settingsObj.smsSettings.senderId = process.env.BULKSMSBD_SENDER_ID;
+            settingsObj.smsSettings.isEnvSenderId = true;
+        }
+
         res.json({
             success: true,
-            data: settings
+            data: settingsObj
         });
     } catch (error) {
         next(error);
@@ -30,7 +45,26 @@ exports.updateSettings = async (req, res, next) => {
         const updates = req.body;
         const userId = req.user._id;
 
+        // Prevent overwriting API key with masked value
+        if (updates.smsSettings?.apiKey === '********') {
+            delete updates.smsSettings.apiKey;
+        }
+
         const settings = await GlobalSettings.updateSettings(updates, userId);
+
+        // Retain the env masking in response
+        const settingsObj = settings.toObject();
+        if (process.env.BULKSMSBD_API_KEY) {
+            if (!settingsObj.smsSettings) settingsObj.smsSettings = {};
+            settingsObj.smsSettings.apiKey = '********';
+            settingsObj.smsSettings.isEnvApiKey = true;
+        }
+
+        if (process.env.BULKSMSBD_SENDER_ID) {
+            if (!settingsObj.smsSettings) settingsObj.smsSettings = {};
+            settingsObj.smsSettings.senderId = process.env.BULKSMSBD_SENDER_ID;
+            settingsObj.smsSettings.isEnvSenderId = true;
+        }
 
         // Log the action
         await AuditLog.log({
@@ -44,7 +78,7 @@ exports.updateSettings = async (req, res, next) => {
 
         res.json({
             success: true,
-            data: settings,
+            data: settingsObj,
             message: 'Settings updated successfully'
         });
     } catch (error) {

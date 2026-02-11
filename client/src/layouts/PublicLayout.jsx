@@ -1,27 +1,20 @@
 import { Outlet, Link, useLocation } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
+import { useSettings } from '../contexts/SettingsContext'
 import { Phone, GraduationCap, Sparkles } from 'lucide-react'
 import { useState, useEffect } from 'react'
-import api from '../lib/api'
 
 const PublicLayout = () => {
     const { isAuthenticated, user } = useAuth()
-    const [headerContent, setHeaderContent] = useState({})
+    const { getSiteName, getTagline, getLogo, getPrimaryPhone } = useSettings()
     const [scrolled, setScrolled] = useState(false)
     const location = useLocation()
     const isHomePage = location.pathname === '/'
 
-    useEffect(() => {
-        const fetchHeader = async () => {
-            try {
-                const response = await api.get('/site-content/header')
-                setHeaderContent(response.data.data?.content || {})
-            } catch (error) {
-                console.error('Failed to fetch header:', error)
-            }
-        }
-        fetchHeader()
-    }, [])
+    const siteName = getSiteName()
+    const tagline = getTagline()
+    const logoUrl = getLogo()
+    const phone = getPrimaryPhone()
 
     useEffect(() => {
         const handleScroll = () => setScrolled(window.scrollY > 50)
@@ -49,16 +42,24 @@ const PublicLayout = () => {
                         {/* Logo */}
                         <Link to="/" className="flex items-center gap-3 group">
                             <div className="relative">
-                                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-orange-500 flex items-center justify-center shadow-lg shadow-blue-500/20 group-hover:shadow-blue-500/30 transition-shadow">
-                                    <GraduationCap size={28} className="text-white" />
-                                </div>
+                                {logoUrl ? (
+                                    <img
+                                        src={logoUrl}
+                                        alt={siteName}
+                                        className="w-12 h-12 rounded-xl object-contain shadow-lg shadow-blue-500/20 group-hover:shadow-blue-500/30 transition-shadow"
+                                    />
+                                ) : (
+                                    <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-orange-500 flex items-center justify-center shadow-lg shadow-blue-500/20 group-hover:shadow-blue-500/30 transition-shadow">
+                                        <GraduationCap size={28} className="text-white" />
+                                    </div>
+                                )}
                             </div>
                             <div>
                                 <span className="font-bold text-xl tracking-tight gradient-text">
-                                    {headerContent.name || 'PARAGON'}
+                                    {siteName}
                                 </span>
                                 <span className="block text-[10px] text-gray-400 font-medium uppercase tracking-widest">
-                                    Excellence in Education
+                                    {tagline || 'Excellence in Education'}
                                 </span>
                             </div>
                         </Link>
@@ -77,7 +78,7 @@ const PublicLayout = () => {
                         {/* Actions */}
                         <div className="flex items-center gap-3">
                             <a
-                                href={`tel:${headerContent.phone || '09666775566'}`}
+                                href={`tel:${phone}`}
                                 className="flex items-center gap-3 bg-white rounded-full px-4 py-2 border border-gray-200 hover:border-blue-300 hover:shadow-md transition-all"
                             >
                                 <div className="w-9 h-9 rounded-full bg-gradient-to-br from-blue-500 to-orange-500 flex items-center justify-center shadow-sm">
@@ -85,7 +86,7 @@ const PublicLayout = () => {
                                 </div>
                                 <div className="hidden xl:block">
                                     <p className="text-[10px] text-gray-400 uppercase tracking-wider">Helpline</p>
-                                    <p className="font-bold text-sm text-gray-900">{headerContent.phone || '09666775566'}</p>
+                                    <p className="font-bold text-sm text-gray-900">{phone}</p>
                                 </div>
                             </a>
 
@@ -118,11 +119,15 @@ const PublicLayout = () => {
                     <div className="container-cyber">
                         <div className="border-t border-gray-200 py-6 flex flex-col md:flex-row justify-between items-center gap-4">
                             <div className="flex items-center gap-2">
-                                <GraduationCap size={24} className="text-blue-500" />
-                                <span className="font-bold gradient-text">{headerContent.name || 'PARAGON'}</span>
+                                {logoUrl ? (
+                                    <img src={logoUrl} alt={siteName} className="w-6 h-6 object-contain" />
+                                ) : (
+                                    <GraduationCap size={24} className="text-blue-500" />
+                                )}
+                                <span className="font-bold gradient-text">{siteName}</span>
                             </div>
                             <p className="text-gray-400 text-sm">
-                                © {new Date().getFullYear()} PARAGON Coaching Center. All rights reserved.
+                                © {new Date().getFullYear()} {siteName}. All rights reserved.
                             </p>
                         </div>
                     </div>

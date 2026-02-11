@@ -30,7 +30,7 @@ const topperSchema = new mongoose.Schema({
     exam: {
         type: String,
         required: [true, 'Exam name is required'],
-        enum: ['jee_main', 'jee_advanced', 'neet', 'buet', 'du_ka', 'du_kha', 'du_cha', 'du_gha', 'medical', 'engineering', 'hsc', 'ssc', 'other']
+        enum: ['jee_main', 'jee_advanced', 'neet', 'buet', 'du_ka', 'du_kha', 'du_cha', 'du_gha', 'ru', 'ju', 'jnu', 'cu', 'gst', 'nu', 'ku', 'sust', 'hust', 'bup', 'medical', 'engineering', 'hsc', 'ssc', 'other']
     },
     examName: { type: String }, // Display name if different from enum
     year: {
@@ -59,6 +59,12 @@ const topperSchema = new mongoose.Schema({
         maxlength: [2000, 'Success story cannot exceed 2000 characters']
     },
     videoUrl: { type: String }, // YouTube/Vimeo link
+
+    // Unit (A, B, C, D, E)
+    section: {
+        type: String,
+        enum: ['A', 'B', 'C', 'D', 'E']
+    },
 
     // College/Institution they got into
     institution: { type: String },

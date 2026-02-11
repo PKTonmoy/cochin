@@ -26,6 +26,7 @@ const Faculty = require('./Faculty');
 const Topper = require('./Topper');
 const Testimonial = require('./Testimonial');
 const Media = require('./Media');
+const SmsLog = require('./SmsLog');
 
 module.exports = {
     User,
@@ -49,5 +50,6 @@ module.exports = {
     Faculty,
     Topper,
     Testimonial,
-    Media
+    Media,
+    SmsLog
 };
