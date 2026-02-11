@@ -84,6 +84,17 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 app.use('/receipts', express.static(path.join(__dirname, '../receipts')));
 
+// Serve Frontend in Production
+if (process.env.NODE_ENV === 'production') {
+  // Set static folder
+  app.use(express.static(path.join(__dirname, '../../client/dist')));
+
+  // Any other routes should load the index.html for client-side routing
+  app.get('*', (req, res) => {
+    res.sendFile(path.resolve(__dirname, '../../client/dist', 'index.html'));
+  });
+}
+
 // Health check endpoint
 app.get('/api/health', (req, res) => {
   res.json({
