@@ -20,6 +20,7 @@ import {
     FileText
 } from 'lucide-react'
 import api from '../../lib/api'
+import { CLASSES } from '../../data/classData'
 
 export default function AddClass() {
     const navigate = useNavigate()
@@ -31,7 +32,7 @@ export default function AddClass() {
         defaultValues: {
             title: '',
             subject: '',
-            class: '1st Timer',
+            class: '',
             section: '',
             instructorName: '',
             date: '',
@@ -177,13 +178,10 @@ export default function AddClass() {
                                 Target Class *
                             </label>
                             <select {...register('class', { required: true })} className="input w-full">
-                                <option value="6">Class 6</option>
-                                <option value="7">Class 7</option>
-                                <option value="8">Class 8</option>
-                                <option value="9">Class 9</option>
-                                <option value="10">Class 10</option>
-                                <option value="1st Timer">1st Timer</option>
-                                <option value="2nd Timer">2nd Timer</option>
+                                <option value="">Select Class</option>
+                                {CLASSES.map((cls) => (
+                                    <option key={cls} value={cls}>{cls}</option>
+                                ))}
                             </select>
                         </div>
                         <div>

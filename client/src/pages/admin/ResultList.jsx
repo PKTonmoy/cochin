@@ -23,6 +23,7 @@ import {
     X,
     Save
 } from 'lucide-react'
+import { CLASSES } from '../../data/classData'
 
 const ResultList = () => {
     const queryClient = useQueryClient()
@@ -271,8 +272,8 @@ const ResultList = () => {
                             className="input"
                         >
                             <option value="">All Classes</option>
-                            {['6', '7', '8', '9', '10', '11', '12'].map(c => (
-                                <option key={c} value={c}>Class {c}</option>
+                            {CLASSES.map(c => (
+                                <option key={c} value={c}>{c}</option>
                             ))}
                         </select>
                     </div>
@@ -394,9 +395,9 @@ const ResultList = () => {
                                                 <td>
                                                     <div className="flex items-center gap-3">
                                                         <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs ${result.rank === 1 ? 'bg-yellow-400 text-yellow-900' :
-                                                                result.rank === 2 ? 'bg-gray-300 text-gray-700' :
-                                                                    result.rank === 3 ? 'bg-amber-600 text-white' :
-                                                                        'bg-[var(--primary)] text-white'
+                                                            result.rank === 2 ? 'bg-gray-300 text-gray-700' :
+                                                                result.rank === 3 ? 'bg-amber-600 text-white' :
+                                                                    'bg-[var(--primary)] text-white'
                                                             }`}>
                                                             {result.studentId?.name?.charAt(0)}
                                                         </div>

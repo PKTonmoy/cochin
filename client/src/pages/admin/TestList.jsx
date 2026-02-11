@@ -16,6 +16,7 @@ import {
     BookOpen,
     Calendar
 } from 'lucide-react'
+import { CLASSES } from '../../data/classData'
 
 const TestList = () => {
     const queryClient = useQueryClient()
@@ -168,8 +169,8 @@ const TestList = () => {
                         }}
                     >
                         <option value="">All Classes</option>
-                        {['6', '7', '8', '9', '10', '11', '12'].map(c => (
-                            <option key={c} value={c}>Class {c}</option>
+                        {CLASSES.map(c => (
+                            <option key={c} value={c}>{c}</option>
                         ))}
                     </select>
                     <div className="flex gap-2">
@@ -348,8 +349,8 @@ const TestList = () => {
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-1">Class</label>
                                     <select name="class" defaultValue={editingTest.class} className="input">
-                                        {['6', '7', '8', '9', '10', '11', '12'].map(c => (
-                                            <option key={c} value={c}>Class {c}</option>
+                                        {CLASSES.map(c => (
+                                            <option key={c} value={c}>{c}</option>
                                         ))}
                                     </select>
                                 </div>

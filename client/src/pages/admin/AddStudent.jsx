@@ -6,8 +6,10 @@ import api from '../../lib/api'
 import toast from 'react-hot-toast'
 import { ArrowLeft, Save, Upload } from 'lucide-react'
 import ReceiptModal from '../../components/ReceiptModal'
+import { CLASSES } from '../../data/classData'
 
 const AddStudent = () => {
+    // Force refresh
     const navigate = useNavigate()
     const queryClient = useQueryClient()
     const [photoPreview, setPhotoPreview] = useState(null)
@@ -20,7 +22,7 @@ const AddStudent = () => {
 
     const { register, handleSubmit, watch, formState: { errors } } = useForm({
         defaultValues: {
-            class: '10',
+            class: '',
             gender: 'male',
             totalFee: 0,
             advancePayment: 0,
@@ -192,10 +194,9 @@ const AddStudent = () => {
                                     Class <span className="text-red-500">*</span>
                                 </label>
                                 <select {...register('class', { required: true })} className="input">
-                                    {['6', '7', '8', '9', '10', '1st Timer', '2nd Timer'].map(c => (
-                                        <option key={c} value={c}>
-                                            {c === '1st Timer' || c === '2nd Timer' ? c : `Class ${c}`}
-                                        </option>
+                                    <option value="">Select Class</option>
+                                    {CLASSES.map(c => (
+                                        <option key={c} value={c}>{c}</option>
                                     ))}
                                 </select>
                             </div>

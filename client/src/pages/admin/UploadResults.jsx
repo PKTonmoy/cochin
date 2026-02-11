@@ -17,6 +17,7 @@ import {
     Save,
     Users
 } from 'lucide-react'
+import { CLASSES } from '../../data/classData'
 
 const UploadResults = () => {
     const queryClient = useQueryClient()
@@ -451,8 +452,8 @@ const UploadResults = () => {
                                 className="input"
                             >
                                 <option value="">All Classes</option>
-                                {['6', '7', '8', '9', '10', '11', '12'].map(c => (
-                                    <option key={c} value={c}>Class {c}</option>
+                                {CLASSES.map(c => (
+                                    <option key={c} value={c}>{c}</option>
                                 ))}
                             </select>
                         </div>

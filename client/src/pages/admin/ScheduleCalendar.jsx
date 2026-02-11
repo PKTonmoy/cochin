@@ -10,6 +10,7 @@ import { ArrowLeft, Filter } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import ScheduleCalendar from '../../components/ScheduleCalendar'
 import api from '../../lib/api'
+import { CLASSES } from '../../data/classData'
 
 export default function ScheduleCalendarPage() {
     const navigate = useNavigate()
@@ -90,8 +91,9 @@ export default function ScheduleCalendarPage() {
                             className="input"
                         >
                             <option value="">All Classes</option>
-                            <option value="1st Timer">1st Timer</option>
-                            <option value="2nd Timer">2nd Timer</option>
+                            {CLASSES.map(c => (
+                                <option key={c} value={c}>{c}</option>
+                            ))}
                         </select>
                         <input
                             type="text"

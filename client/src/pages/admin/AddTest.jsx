@@ -5,6 +5,7 @@ import { useForm, useFieldArray } from 'react-hook-form'
 import api from '../../lib/api'
 import toast from 'react-hot-toast'
 import { ArrowLeft, Save, Plus, Trash2 } from 'lucide-react'
+import { CLASSES } from '../../data/classData'
 
 const AddTest = () => {
     const navigate = useNavigate()
@@ -57,8 +58,9 @@ const AddTest = () => {
                     <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">Class *</label>
                         <select {...register('class', { required: true })} className="input">
-                            {['6', '7', '8', '9', '10', '11', '12'].map(c => (
-                                <option key={c} value={c}>Class {c}</option>
+                            <option value="">Select Class</option>
+                            {CLASSES.map(c => (
+                                <option key={c} value={c}>{c}</option>
                             ))}
                         </select>
                     </div>

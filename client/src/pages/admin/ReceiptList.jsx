@@ -27,6 +27,7 @@ import {
     ChevronRight
 } from 'lucide-react'
 import api from '../../lib/api'
+import { CLASSES } from '../../data/classData'
 
 const ReceiptList = () => {
     const queryClient = useQueryClient()
@@ -221,7 +222,7 @@ const ReceiptList = () => {
                                 className="input"
                             >
                                 <option value="">All Classes</option>
-                                {['6', '7', '8', '9', '10', '1st Timer', '2nd Timer'].map(c => (
+                                {CLASSES.map(c => (
                                     <option key={c} value={c}>{c}</option>
                                 ))}
                             </select>
