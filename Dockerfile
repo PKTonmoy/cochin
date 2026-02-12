@@ -1,7 +1,10 @@
 # Stage 1: Build the Client
-FROM node:20-alpine as builder
+FROM node:22-alpine as builder
 
 WORKDIR /app
+
+# Install build dependencies for native modules (python3, make, g++)
+RUN apk add --no-cache python3 make g++
 
 # Copy root package files
 COPY package*.json ./
@@ -22,7 +25,7 @@ COPY . .
 RUN cd client && npm run build
 
 # Stage 2: Production Server
-FROM node:20-alpine as runner
+FROM node:22-alpine as runner
 
 WORKDIR /app
 
