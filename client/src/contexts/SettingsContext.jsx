@@ -89,7 +89,7 @@ export const SettingsProvider = ({ children }) => {
     // Helper functions for common data access
     const getSiteName = () => settings.siteInfo?.name || defaultSettings.siteInfo.name
     const getTagline = () => settings.siteInfo?.tagline || defaultSettings.siteInfo.tagline
-    const getLogo = () => settings.siteInfo?.logo?.url || ''
+    const getLogo = () => settings.siteInfo?.logo?.url || settings.siteInfo?.logo || ''
     const getPrimaryPhone = () => settings.contact?.phones?.[0] || defaultSettings.contact.phones[0]
     const getEmail = () => settings.contact?.email || defaultSettings.contact.email
     const getAddress = () => {

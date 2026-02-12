@@ -183,7 +183,7 @@ export default function VictoryCard({
                                     }}
                                 >
                                     {student.image ? (
-                                        <img src={student.image} alt={student.name} className="w-full h-full object-cover" />
+                                        <img src={student.image?.url || student.image} alt={student.name} className="w-full h-full object-cover" />
                                     ) : (
                                         <div className="w-full h-full flex items-center justify-center" style={{ background: info.gradient }}>
                                             <span className="text-white text-2xl font-bold">{student.name?.charAt(0) || 'S'}</span>

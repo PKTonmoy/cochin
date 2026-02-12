@@ -194,7 +194,7 @@ export default function LandingPage() {
                 m.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())
             ) || [],
             rating: course.rating || 4.9,
-            image: course.image?.url || course.thumbnail,   // Fixed: access image.url
+            image: course.image?.url || course.image || course.thumbnail,   // Fixed: access image.url
             price: course.price,
             discountPrice: course.discountPrice,
             duration: course.duration,
@@ -252,7 +252,7 @@ export default function LandingPage() {
             name: f.name,
             subject: f.subjects?.[0]?.replace('_', ' ')?.replace(/\b\w/g, l => l.toUpperCase()) || f.designation || 'Faculty',
             experience: f.experience?.totalYears ? `${f.experience.totalYears}+ Years` : '5+ Years',
-            image: f.photo?.url || f.image              // Fixed: access photo.url
+            image: f.photo?.url || f.photo || f.image              // Fixed: access photo.url
         }))
         : [
             { name: 'Dr. Mohammad Ali', subject: 'Physics', experience: '15+ Years' },

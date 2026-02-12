@@ -78,8 +78,8 @@ export default function AddFaculty() {
                 qualifications: existingData.qualifications?.length ? existingData.qualifications : [''],
                 achievements: existingData.achievements?.length ? existingData.achievements : ['']
             });
-            if (existingData.photo?.url) {
-                setImagePreview(existingData.photo.url);
+            if (existingData.photo?.url || existingData.photo) {
+                setImagePreview(existingData.photo?.url || existingData.photo);
             }
         }
     }, [existingData]);

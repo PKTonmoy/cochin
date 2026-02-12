@@ -139,7 +139,7 @@ function CourseCard({ course, isCenter }) {
             {/* Course image or icon */}
             {course.image ? (
               <>
-                <img src={course.image} alt={course.title} className="absolute inset-0 w-full h-full object-cover" />
+                <img src={course.image?.url || course.image} alt={course.title} className="absolute inset-0 w-full h-full object-cover" />
                 <div className="absolute inset-0" style={{ background: theme.gradient, opacity: 0.6, mixBlendMode: 'multiply' }} />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
               </>

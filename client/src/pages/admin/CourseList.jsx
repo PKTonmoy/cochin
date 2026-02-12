@@ -196,7 +196,7 @@ export default function CourseList() {
                                             <div className="flex items-center gap-4">
                                                 <div className="w-16 h-12 rounded bg-gradient-to-br from-blue-100 to-purple-100 flex items-center justify-center overflow-hidden">
                                                     {course.image?.url ? (
-                                                        <img src={course.image.url} alt={course.name} className="w-full h-full object-cover" />
+                                                        <img src={course.image?.url || course.image} alt={course.name} className="w-full h-full object-cover" />
                                                     ) : (
                                                         <BookOpen className="w-6 h-6 text-gray-400" />
                                                     )}

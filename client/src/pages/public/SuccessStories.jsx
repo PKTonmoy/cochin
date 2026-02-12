@@ -79,7 +79,7 @@ const SuccessStoriesPage = () => {
             year: topper.year?.toString() || '2024',
             testimonial: topper.successStory || topper.testimonial || topper.quote || '',
             result: topper.rank || (topper.score ? `Score: ${topper.score}` : ''),
-            image: topper.photo?.url || topper.image,          // Fixed: access photo.url
+            image: topper.photo?.url || topper.photo || topper.image,          // Fixed: access photo.url
             institution: topper.institution,
             section: topper.section
         }))

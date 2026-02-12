@@ -169,9 +169,9 @@ export default function FacultyList() {
                         >
                             {/* Photo */}
                             <div className="relative h-48 bg-gradient-to-br from-blue-100 to-purple-100">
-                                {member.photo?.url ? (
+                                {member.photo?.url || member.photo ? (
                                     <img
-                                        src={member.photo.url}
+                                        src={member.photo?.url || member.photo}
                                         alt={member.name}
                                         className="w-full h-full object-cover"
                                     />

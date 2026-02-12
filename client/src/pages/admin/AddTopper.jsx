@@ -95,8 +95,8 @@ export default function AddTopper() {
                 ...existingData,
                 course: existingData.course?._id || existingData.course || ''
             });
-            if (existingData.photo?.url) {
-                setImagePreview(existingData.photo.url);
+            if (existingData.photo?.url || existingData.photo) {
+                setImagePreview(existingData.photo?.url || existingData.photo);
             }
         }
     }, [existingData]);

@@ -105,8 +105,8 @@ export default function AddCourse() {
                 startDate: existingData.startDate ? existingData.startDate.split('T')[0] : '',
                 faculty: existingData.faculty?.map(f => f._id || f) || []
             });
-            if (existingData.image?.url) {
-                setImagePreview(existingData.image.url);
+            if (existingData.image?.url || existingData.image) {
+                setImagePreview(existingData.image?.url || existingData.image);
             }
         }
     }, [existingData]);

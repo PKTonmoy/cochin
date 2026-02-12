@@ -352,10 +352,10 @@ export default function GlobalSettings() {
                                     <div className="flex items-start gap-6">
                                         {/* Logo Preview */}
                                         <div className="flex-shrink-0">
-                                            {formData.siteInfo.logo?.url ? (
+                                            {formData.siteInfo.logo?.url || formData.siteInfo.logo ? (
                                                 <div className="relative group">
                                                     <img
-                                                        src={formData.siteInfo.logo.url}
+                                                        src={formData.siteInfo.logo?.url || formData.siteInfo.logo}
                                                         alt="Site logo"
                                                         className="w-32 h-32 object-contain rounded-xl border-2 border-gray-200 bg-gray-50 p-2"
                                                     />
@@ -398,7 +398,7 @@ export default function GlobalSettings() {
                                                 ) : (
                                                     <>
                                                         <Upload className="w-4 h-4" />
-                                                        {formData.siteInfo.logo?.url ? 'Change Logo' : 'Upload Logo'}
+                                                        {formData.siteInfo.logo?.url || formData.siteInfo.logo ? 'Change Logo' : 'Upload Logo'}
                                                     </>
                                                 )}
                                             </label>
