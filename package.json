@@ -11,7 +11,7 @@
     "build:client": "cd client && npm run build",
     "build:server": "cd server && npm run build",
     "start": "cd server && npm start",
-    "install:all": "echo '--- Installing Root ---' && npm install --legacy-peer-deps --no-audit --no-fund && echo '--- Installing Client ---' && cd client && npm install --legacy-peer-deps --no-audit --no-fund && echo '--- Installing Server ---' && cd ../server && npm install --no-audit --no-fund",
+    "install:all": "echo '--- Installing Root ---' && npm install --legacy-peer-deps --no-audit --no-fund && echo '--- Installing Client ---' && cd client && npm install --legacy-peer-deps --no-audit --no-fund && echo '--- Installing Server ---' && cd ../server && PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true npm install --no-audit --no-fund",
     "test": "cd server && npm test",
     "seed": "cd server && node src/scripts/seed.js"
   },

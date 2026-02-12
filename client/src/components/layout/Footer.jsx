@@ -92,7 +92,18 @@ const Footer = () => {
                 </div>
 
                 <div className="border-t border-gray-200 pt-6 text-center text-gray-400 text-sm">
-                    <p>© {new Date().getFullYear()} {getSiteName()}. All rights reserved.</p>
+                    <p className="mb-2">© {new Date().getFullYear()} {getSiteName()}. All rights reserved.</p>
+                    <p className="flex items-center justify-center gap-1 text-xs font-medium">
+                        Powered by
+                        <a
+                            href="https://www.facebook.com/tonmoy.pramanik.50"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="font-bold bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 bg-clip-text text-transparent hover:scale-105 transition-transform duration-300"
+                        >
+                            Tonmoy Pramanik
+                        </a>
+                    </p>
                 </div>
             </div>
         </footer>
