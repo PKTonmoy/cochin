@@ -44,6 +44,9 @@ const smsRoutes = require('./routes/sms');
 
 const app = express();
 
+// Trust proxy (required for Render/Heroku/Nginx)
+app.set('trust proxy', 1);
+
 // Create HTTP server for Socket.io
 const server = http.createServer(app);
 
