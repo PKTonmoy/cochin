@@ -3,7 +3,7 @@
  * Generates A4 PDF receipts using Puppeteer
  */
 
-const puppeteer = require('puppeteer');
+// const puppeteer = require('puppeteer'); // Removed as per request
 const path = require('path');
 const fs = require('fs');
 const QRCode = require('qrcode');
@@ -537,69 +537,9 @@ const generateReceiptHTML = async (payment, student, showCredentials, cfg) => {
  * @returns {Promise<string>} PDF file URL
  */
 exports.generateReceipt = async (paymentId, showCredentials = false) => {
-  let browser;
-
-  try {
-    const payment = await Payment.findById(paymentId).setOptions({ skipPopulate: true });
-    if (!payment) {
-      throw new Error('Payment not found');
-    }
-
-    const student = await Student.findById(payment.studentId);
-    if (!student) {
-      throw new Error('Student not found');
-    }
-
-    // Get settings from GlobalSettings
-    const cfg = await getSettingsData();
-
-    // Generate HTML
-    const html = await generateReceiptHTML(payment, student, showCredentials, cfg);
-
-    // Launch Puppeteer
-    browser = await puppeteer.launch({
-      headless: 'new',
-      args: ['--no-sandbox', '--disable-setuid-sandbox']
-    });
-
-    const page = await browser.newPage();
-    await page.setContent(html, { waitUntil: 'networkidle0' });
-
-    // Generate PDF
-    const pdfBuffer = await page.pdf({
-      format: 'A4',
-      printBackground: true,
-      margin: {
-        top: '10mm',
-        bottom: '10mm',
-        left: '10mm',
-        right: '10mm'
-      }
-    });
-
-    // Save PDF locally
-    const filename = `receipt-${payment.receiptId}.pdf`;
-    const filepath = path.join(receiptsDir, filename);
-    fs.writeFileSync(filepath, pdfBuffer);
-
-    // Try to upload to Cloudinary
-    let pdfUrl = `/receipts/${filename}`;
-    try {
-      const uploadResult = await uploadPDF(filepath);
-      if (uploadResult.success) {
-        pdfUrl = uploadResult.url;
-      }
-    } catch (uploadErr) {
-      console.error('Cloudinary upload error:', uploadErr);
-      // Fall back to local URL
-    }
-
-    return pdfUrl;
-  } finally {
-    if (browser) {
-      await browser.close();
-    }
-  }
+  // Disabled as per request to remove Puppeteer dependency
+  console.warn('PDF generation is disabled. Returning null.'); // Log warning
+  return null;
 };
 
 /**
