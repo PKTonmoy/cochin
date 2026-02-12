@@ -133,10 +133,18 @@ app.use('/api/media', mediaRoutes);
 app.use('/api/sms', smsRoutes);
 
 // Serve Frontend in Production (Catch-all for SPA)
-if (process.env.NODE_ENV === 'production') {
+const clientBuildPath = path.join(__dirname, '../../client/dist');
+const indexHtmlPath = path.join(clientBuildPath, 'index.html');
+const fs = require('fs');
+
+if (fs.existsSync(indexHtmlPath)) {
+  app.use(express.static(clientBuildPath));
+
   app.get('*', (req, res) => {
-    res.sendFile(path.resolve(__dirname, '../../client/dist', 'index.html'));
+    res.sendFile(indexHtmlPath);
   });
+} else if (process.env.NODE_ENV === 'production') {
+  console.warn('⚠️  Production mode detected but client build not found at:', clientBuildPath);
 }
 
 // 404 handler
