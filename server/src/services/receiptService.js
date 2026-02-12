@@ -145,8 +145,9 @@ const generateReceiptHTML = async (payment, student, showCredentials, cfg) => {
         }
         
         .logo {
-          max-height: 55px;
-          margin-bottom: 8px;
+          max-height: 80px;
+          margin-bottom: 12px;
+          border-radius: 12px;
         }
         
         .coaching-name {
