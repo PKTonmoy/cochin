@@ -13,10 +13,10 @@ COPY server/package*.json server/
 
 # Install all dependencies (including devDependencies for building)
 # We use the root install:all script or install manually to ensure everything is there
-RUN npm install
-# Install client deps specifically if root install doesn't cover it properly (root script does, but let's be safe)
-RUN cd client && npm install
-RUN cd server && npm install
+RUN npm install --legacy-peer-deps
+# Install client deps specifically if root install doesn't cover it properly
+RUN cd client && npm install --legacy-peer-deps
+RUN cd server && npm install --legacy-peer-deps
 
 # Copy source code
 COPY . .
@@ -49,7 +49,7 @@ COPY --from=builder /app/client/dist ./client/dist
 WORKDIR /app/server
 # Remove existing node_modules from the copy to ensure fresh prod install
 RUN rm -rf node_modules
-RUN npm install --omit=dev
+RUN npm install --omit=dev --legacy-peer-deps
 
 # Create necessary directories for runtime (uploads, receipts if stored locally)
 # Note: In production containers (Render), local filesystem is ephemeral. 
