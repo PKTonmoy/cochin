@@ -91,9 +91,52 @@ const uploadPDF = async (filePath, folder = 'paragon/receipts') => {
     }
 };
 
+/**
+ * Upload image buffer to Cloudinary (for memory storage)
+ * @param {Buffer} buffer - File buffer
+ * @param {string} folder - Cloudinary folder name
+ * @returns {Promise<object>} Upload result with URL
+ */
+const uploadImageFromBuffer = async (buffer, folder = 'paragon') => {
+    try {
+        const result = await new Promise((resolve, reject) => {
+            const uploadStream = cloudinary.uploader.upload_stream(
+                {
+                    folder: folder,
+                    resource_type: 'auto',
+                    transformation: [
+                        { quality: 'auto:good' },
+                        { fetch_format: 'auto' }
+                    ]
+                },
+                (error, result) => {
+                    if (error) reject(error);
+                    else resolve(result);
+                }
+            );
+            uploadStream.end(buffer);
+        });
+
+        return {
+            success: true,
+            url: result.secure_url,
+            publicId: result.public_id,
+            width: result.width,
+            height: result.height
+        };
+    } catch (error) {
+        console.error('Cloudinary buffer upload error:', error);
+        return {
+            success: false,
+            error: error.message
+        };
+    }
+};
+
 module.exports = {
     cloudinary,
     uploadImage,
+    uploadImageFromBuffer,
     deleteImage,
     uploadPDF
 };

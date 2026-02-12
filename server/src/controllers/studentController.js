@@ -9,7 +9,7 @@ const Result = require('../models/Result');
 const Schedule = require('../models/Schedule');
 const Test = require('../models/Test');
 const AuditLog = require('../models/AuditLog');
-const { uploadImage } = require('../config/cloudinary');
+const { uploadImage, uploadImageFromBuffer } = require('../config/cloudinary');
 const { ApiError } = require('../middleware/errorHandler');
 const ExcelJS = require('exceljs');
 const path = require('path');
@@ -147,12 +147,11 @@ exports.createStudent = async (req, res, next) => {
         // Upload photo if provided
         let photoUrl = null;
         if (req.file) {
-            const result = await uploadImage(req.file.path, 'paragon/students');
+            // Use buffer upload since we use memory storage
+            const result = await uploadImageFromBuffer(req.file.buffer, 'paragon/students');
             if (result.success) {
                 photoUrl = result.url;
             }
-            // Clean up local file
-            fs.unlinkSync(req.file.path);
         }
 
         // Parse payment amounts
@@ -265,11 +264,10 @@ exports.updateStudent = async (req, res, next) => {
 
         // Upload new photo if provided
         if (req.file) {
-            const result = await uploadImage(req.file.path, 'paragon/students');
+            const result = await uploadImageFromBuffer(req.file.buffer, 'paragon/students');
             if (result.success) {
                 updateFields.photo = result.url;
             }
-            fs.unlinkSync(req.file.path);
         }
 
         // Handle totalFee update - recalculate due
