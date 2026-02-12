@@ -22,6 +22,7 @@ import {
 import { format, addDays, subDays, startOfWeek, endOfWeek, isToday, isSameDay, parseISO } from 'date-fns'
 import api from '../../lib/api'
 import ScheduleCalendar from '../../components/ScheduleCalendar'
+import ScheduleSkeleton from '../../components/skeletons/ScheduleSkeleton'
 
 export default function Schedule() {
     const { user } = useAuth()
@@ -134,6 +135,10 @@ export default function Schedule() {
     const selectedDateEvents = getEventsForDate(selectedDate)
     const isLoading = classesLoading || testsLoading
 
+    if (isLoading) {
+        return <ScheduleSkeleton />
+    }
+
     return (
         <div className="p-4 md:p-6 space-y-4">
             {/* Header */}
@@ -149,8 +154,8 @@ export default function Schedule() {
                         <button
                             onClick={() => setViewMode('agenda')}
                             className={`px-3 py-1.5 rounded-md text-sm flex items-center gap-1 transition-colors ${viewMode === 'agenda'
-                                    ? 'bg-[var(--primary)] text-white'
-                                    : 'text-gray-600 hover:bg-gray-100'
+                                ? 'bg-[var(--primary)] text-white'
+                                : 'text-gray-600 hover:bg-gray-100'
                                 }`}
                         >
                             <List className="w-4 h-4" />
@@ -159,8 +164,8 @@ export default function Schedule() {
                         <button
                             onClick={() => setViewMode('calendar')}
                             className={`px-3 py-1.5 rounded-md text-sm flex items-center gap-1 transition-colors ${viewMode === 'calendar'
-                                    ? 'bg-[var(--primary)] text-white'
-                                    : 'text-gray-600 hover:bg-gray-100'
+                                ? 'bg-[var(--primary)] text-white'
+                                : 'text-gray-600 hover:bg-gray-100'
                                 }`}
                         >
                             <CalendarIcon className="w-4 h-4" />
@@ -226,10 +231,10 @@ export default function Schedule() {
                                     key={index}
                                     onClick={() => setSelectedDate(date)}
                                     className={`flex flex-col items-center py-2 px-1 rounded-xl transition-all ${isSelected
-                                            ? 'bg-[var(--primary)] text-white'
-                                            : isTodayDate
-                                                ? 'bg-[var(--primary)]/10 text-[var(--primary)]'
-                                                : 'hover:bg-gray-100'
+                                        ? 'bg-[var(--primary)] text-white'
+                                        : isTodayDate
+                                            ? 'bg-[var(--primary)]/10 text-[var(--primary)]'
+                                            : 'hover:bg-gray-100'
                                         }`}
                                 >
                                     <span className={`text-[10px] font-medium ${isSelected ? 'text-white/80' : 'text-gray-400'
@@ -271,8 +276,21 @@ export default function Schedule() {
                     </h3>
 
                     {isLoading ? (
-                        <div className="card p-8 text-center">
-                            <div className="spinner mx-auto"></div>
+                        <div className="space-y-3">
+                            {[1, 2, 3].map(i => (
+                                <div key={i} className="card p-4 border-l-4 border-l-gray-200">
+                                    <div className="flex gap-3">
+                                        <div className="w-[50px] flex flex-col items-center">
+                                            <div className="h-4 w-10 bg-gray-200 rounded mb-1 animate-pulse" />
+                                            <div className="h-3 w-8 bg-gray-200 rounded animate-pulse" />
+                                        </div>
+                                        <div className="flex-1 space-y-2">
+                                            <div className="h-3 w-16 rounded-full bg-gray-200 animate-pulse" />
+                                            <div className="h-4 w-3/4 bg-gray-200 rounded animate-pulse" />
+                                        </div>
+                                    </div>
+                                </div>
+                            ))}
                         </div>
                     ) : selectedDateEvents.length === 0 ? (
                         <div className="card p-8 text-center">
@@ -339,14 +357,14 @@ function EventCard({ event }) {
 
     return (
         <div className={`card p-4 border-l-4 ${isCancelled
-                ? 'border-l-red-500 opacity-60'
-                : isCompleted
-                    ? 'border-l-gray-400'
-                    : isOngoing
-                        ? 'border-l-green-500'
-                        : isTest
-                            ? 'border-l-purple-500'
-                            : 'border-l-blue-500'
+            ? 'border-l-red-500 opacity-60'
+            : isCompleted
+                ? 'border-l-gray-400'
+                : isOngoing
+                    ? 'border-l-green-500'
+                    : isTest
+                        ? 'border-l-purple-500'
+                        : 'border-l-blue-500'
             }`}>
             <div className="flex items-start gap-3">
                 {/* Time */}
@@ -365,8 +383,8 @@ function EventCard({ event }) {
                 <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1">
                         <span className={`px-2 py-0.5 text-[10px] font-semibold rounded-full ${isTest
-                                ? 'bg-purple-100 text-purple-700'
-                                : 'bg-blue-100 text-blue-700'
+                            ? 'bg-purple-100 text-purple-700'
+                            : 'bg-blue-100 text-blue-700'
                             }`}>
                             {isTest ? 'TEST' : 'CLASS'}
                         </span>
@@ -487,8 +505,8 @@ function DesktopAgendaView({
                             key={index}
                             onClick={() => setSelectedDate(date)}
                             className={`p-4 rounded-xl cursor-pointer transition-all min-h-[200px] ${isSelected
-                                    ? 'bg-[var(--primary)]/5 ring-2 ring-[var(--primary)]'
-                                    : 'hover:bg-gray-50'
+                                ? 'bg-[var(--primary)]/5 ring-2 ring-[var(--primary)]'
+                                : 'hover:bg-gray-50'
                                 } ${isTodayDate ? 'border-2 border-[var(--primary)]' : 'border border-gray-200'}`}
                         >
                             <div className="text-center mb-3">
@@ -511,8 +529,8 @@ function DesktopAgendaView({
                                         <div
                                             key={event.id || i}
                                             className={`p-2 rounded-lg text-xs ${event.type === 'test'
-                                                    ? 'bg-purple-50 text-purple-700'
-                                                    : 'bg-blue-50 text-blue-700'
+                                                ? 'bg-purple-50 text-purple-700'
+                                                : 'bg-blue-50 text-blue-700'
                                                 }`}
                                         >
                                             <p className="font-medium truncate">{event.title}</p>

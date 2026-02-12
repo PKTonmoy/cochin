@@ -307,11 +307,21 @@ exports.updateStudent = async (req, res, next) => {
  */
 exports.deleteStudent = async (req, res, next) => {
     try {
-        const student = await Student.findByIdAndDelete(req.params.id);
+        const student = await Student.findById(req.params.id);
 
         if (!student) {
             throw new ApiError('Student not found', 404);
         }
+
+        // Delete related data
+        await Promise.all([
+            Payment.deleteMany({ studentId: student._id }),
+            Result.deleteMany({ studentId: student._id }),
+            // Schedule and Test are class-based, not specific to student instance (mostly)
+            // Attendance could be another one if it exists
+        ]);
+
+        await Student.findByIdAndDelete(req.params.id);
 
         await AuditLog.log({
             action: 'student_deleted',

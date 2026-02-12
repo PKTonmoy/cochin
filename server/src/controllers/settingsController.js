@@ -98,7 +98,8 @@ exports.getPublicSettings = async (req, res, next) => {
             siteInfo: settings.siteInfo,
             contact: settings.contact,
             theme: settings.theme,
-            socialMedia: settings.socialMedia
+            socialMedia: settings.socialMedia,
+            receiptTemplate: settings.receiptTemplate // Add receiptTemplate to public settings
         };
 
         res.json({

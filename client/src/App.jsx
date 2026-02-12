@@ -6,6 +6,7 @@ import { useAuth } from './contexts/AuthContext'
 import PublicLayout from './layouts/PublicLayout'
 import AdminLayout from './layouts/AdminLayout'
 import StudentLayout from './layouts/StudentLayoutModern'
+import DynamicMetadata from './components/DynamicMetadata'
 
 // Public pages
 import LandingPage from './pages/public/LandingPage'
@@ -116,100 +117,103 @@ const ProtectedRoute = ({ children, roles }) => {
 
 function App() {
   return (
-    <Routes>
-      {/* Public routes */}
-      <Route element={<PublicLayout />}>
-        <Route path="/" element={<LandingPage />} />
-        <Route path="/login" element={<LoginPage />} />
-        <Route path="/student-login" element={<StudentLoginPage />} />
-        <Route path="/stories" element={<SuccessStoriesPage />} />
-        <Route path="/programs" element={<ProgramsPage />} />
-        <Route path="/page/:slug" element={<DynamicPage />} />
-        <Route path="/preview/:slug" element={<DynamicPage />} />
-        {/* Builder.io Visual Editor Pages */}
-        <Route path="/b/*" element={
-          <BuilderErrorBoundary>
-            <Suspense fallback={
-              <div className="min-h-screen flex items-center justify-center">
-                <div className="spinner"></div>
-              </div>
-            }>
-              <BuilderPage />
-            </Suspense>
-          </BuilderErrorBoundary>
-        } />
-      </Route>
+    <>
+      <DynamicMetadata />
+      <Routes>
+        {/* Public routes */}
+        <Route element={<PublicLayout />}>
+          <Route path="/" element={<LandingPage />} />
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/student-login" element={<StudentLoginPage />} />
+          <Route path="/stories" element={<SuccessStoriesPage />} />
+          <Route path="/programs" element={<ProgramsPage />} />
+          <Route path="/page/:slug" element={<DynamicPage />} />
+          <Route path="/preview/:slug" element={<DynamicPage />} />
+          {/* Builder.io Visual Editor Pages */}
+          <Route path="/b/*" element={
+            <BuilderErrorBoundary>
+              <Suspense fallback={
+                <div className="min-h-screen flex items-center justify-center">
+                  <div className="spinner"></div>
+                </div>
+              }>
+                <BuilderPage />
+              </Suspense>
+            </BuilderErrorBoundary>
+          } />
+        </Route>
 
-      {/* Admin/Staff routes */}
-      <Route
-        path="/admin"
-        element={
-          <ProtectedRoute roles={['admin', 'staff']}>
-            <AdminLayout />
-          </ProtectedRoute>
-        }
-      >
-        <Route index element={<AdminDashboard />} />
-        <Route path="students" element={<StudentList />} />
-        <Route path="students/add" element={<AddStudent />} />
-        <Route path="students/:id/edit" element={<EditStudent />} />
-        <Route path="payments" element={<PaymentList />} />
-        <Route path="tests" element={<TestList />} />
-        <Route path="tests/add" element={<AddTest />} />
-        <Route path="results" element={<ResultList />} />
-        <Route path="upload" element={<UploadResults />} />
-        <Route path="attendance" element={<AttendanceManagement />} />
-        <Route path="batches" element={<UploadBatches />} />
-        <Route path="receipts" element={<ReceiptList />} />
-        <Route path="receipts/:receiptId" element={<ReceiptView />} />
-        <Route path="leads" element={<LeadManagement />} />
-        {/* Class Management Routes */}
-        <Route path="classes" element={<ClassList />} />
-        <Route path="classes/add" element={<AddClass />} />
-        <Route path="schedule-calendar" element={<ScheduleCalendarPage />} />
-        {/* CMS Visual Editor Routes */}
-        <Route path="cms" element={<CMSDashboard />} />
-        <Route path="cms/pages/:slug" element={<PageEditor />} />
-        {/* Workflow Dashboard */}
-        <Route path="workflow" element={<AdminWorkflowDashboard />} />
+        {/* Admin/Staff routes */}
+        <Route
+          path="/admin"
+          element={
+            <ProtectedRoute roles={['admin', 'staff']}>
+              <AdminLayout />
+            </ProtectedRoute>
+          }
+        >
+          <Route index element={<AdminDashboard />} />
+          <Route path="students" element={<StudentList />} />
+          <Route path="students/add" element={<AddStudent />} />
+          <Route path="students/:id/edit" element={<EditStudent />} />
+          <Route path="payments" element={<PaymentList />} />
+          <Route path="tests" element={<TestList />} />
+          <Route path="tests/add" element={<AddTest />} />
+          <Route path="results" element={<ResultList />} />
+          <Route path="upload" element={<UploadResults />} />
+          <Route path="attendance" element={<AttendanceManagement />} />
+          <Route path="batches" element={<UploadBatches />} />
+          <Route path="receipts" element={<ReceiptList />} />
+          <Route path="receipts/:receiptId" element={<ReceiptView />} />
+          <Route path="leads" element={<LeadManagement />} />
+          {/* Class Management Routes */}
+          <Route path="classes" element={<ClassList />} />
+          <Route path="classes/add" element={<AddClass />} />
+          <Route path="schedule-calendar" element={<ScheduleCalendarPage />} />
+          {/* CMS Visual Editor Routes */}
+          <Route path="cms" element={<CMSDashboard />} />
+          <Route path="cms/pages/:slug" element={<PageEditor />} />
+          {/* Workflow Dashboard */}
+          <Route path="workflow" element={<AdminWorkflowDashboard />} />
 
-        {/* CMS Entity Management Routes */}
-        <Route path="faculty" element={<FacultyList />} />
-        <Route path="faculty/add" element={<AddFaculty />} />
-        <Route path="faculty/edit/:id" element={<AddFaculty />} />
-        <Route path="courses" element={<CourseList />} />
-        <Route path="courses/add" element={<AddCourse />} />
-        <Route path="courses/edit/:id" element={<AddCourse />} />
-        <Route path="toppers" element={<TopperList />} />
-        <Route path="toppers/add" element={<AddTopper />} />
-        <Route path="toppers/edit/:id" element={<AddTopper />} />
-        <Route path="testimonials" element={<TestimonialList />} />
-        <Route path="testimonials/add" element={<AddTestimonial />} />
-        <Route path="testimonials/edit/:id" element={<AddTestimonial />} />
-        <Route path="media" element={<MediaLibrary />} />
-        <Route path="settings" element={<GlobalSettings />} />
-        <Route path="sms-management" element={<SMSManagement />} />
-      </Route>
+          {/* CMS Entity Management Routes */}
+          <Route path="faculty" element={<FacultyList />} />
+          <Route path="faculty/add" element={<AddFaculty />} />
+          <Route path="faculty/edit/:id" element={<AddFaculty />} />
+          <Route path="courses" element={<CourseList />} />
+          <Route path="courses/add" element={<AddCourse />} />
+          <Route path="courses/edit/:id" element={<AddCourse />} />
+          <Route path="toppers" element={<TopperList />} />
+          <Route path="toppers/add" element={<AddTopper />} />
+          <Route path="toppers/edit/:id" element={<AddTopper />} />
+          <Route path="testimonials" element={<TestimonialList />} />
+          <Route path="testimonials/add" element={<AddTestimonial />} />
+          <Route path="testimonials/edit/:id" element={<AddTestimonial />} />
+          <Route path="media" element={<MediaLibrary />} />
+          <Route path="settings" element={<GlobalSettings />} />
+          <Route path="sms-management" element={<SMSManagement />} />
+        </Route>
 
-      {/* Student routes */}
-      <Route
-        path="/student"
-        element={
-          <ProtectedRoute roles={['student']}>
-            <StudentLayout />
-          </ProtectedRoute>
-        }
-      >
-        <Route index element={<StudentDashboard />} />
-        <Route path="results" element={<StudentResults />} />
-        <Route path="profile" element={<StudentProfile />} />
-        <Route path="schedule" element={<StudentSchedule />} />
-        <Route path="attendance" element={<StudentAttendanceHistory />} />
-      </Route>
+        {/* Student routes */}
+        <Route
+          path="/student"
+          element={
+            <ProtectedRoute roles={['student']}>
+              <StudentLayout />
+            </ProtectedRoute>
+          }
+        >
+          <Route index element={<StudentDashboard />} />
+          <Route path="results" element={<StudentResults />} />
+          <Route path="profile" element={<StudentProfile />} />
+          <Route path="schedule" element={<StudentSchedule />} />
+          <Route path="attendance" element={<StudentAttendanceHistory />} />
+        </Route>
 
-      {/* Catch all */}
-      <Route path="*" element={<Navigate to="/" replace />} />
-    </Routes>
+        {/* Catch all */}
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    </>
   )
 }
 

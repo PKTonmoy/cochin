@@ -1,26 +1,56 @@
-import { Outlet, Link, useLocation } from 'react-router-dom'
+import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { useSettings } from '../contexts/SettingsContext'
 import { Phone, GraduationCap, Sparkles } from 'lucide-react'
 import { useState, useEffect } from 'react'
+import NavbarSkeleton from '../components/skeletons/NavbarSkeleton'
+import MobileNavSkeleton from '../components/skeletons/MobileNavSkeleton'
+import FloatingNav from '../components/navigation/FloatingNav'
 
 const PublicLayout = () => {
-    const { isAuthenticated, user } = useAuth()
-    const { getSiteName, getTagline, getLogo, getPrimaryPhone } = useSettings()
+    const { isAuthenticated, user, isLoading: authLoading } = useAuth()
+    const { getSiteName, getTagline, getLogo, getPrimaryPhone, isLoading: settingsLoading } = useSettings()
     const [scrolled, setScrolled] = useState(false)
     const location = useLocation()
+    const navigate = useNavigate()
     const isHomePage = location.pathname === '/'
+    // Hide floating nav on auth pages and builder pages
+    const showFloatingNav = !['/login', '/student-login', '/b/'].some(path => location.pathname.startsWith(path))
 
     const siteName = getSiteName()
     const tagline = getTagline()
     const logoUrl = getLogo()
     const phone = getPrimaryPhone()
 
+    const isLoading = settingsLoading // mainly settings determine the navbar content
+
     useEffect(() => {
         const handleScroll = () => setScrolled(window.scrollY > 50)
         window.addEventListener('scroll', handleScroll)
         return () => window.removeEventListener('scroll', handleScroll)
     }, [])
+
+    const handleContactClick = (e) => {
+        e.preventDefault()
+        if (isHomePage) {
+            const element = document.getElementById('contact')
+            if (element) element.scrollIntoView({ behavior: 'smooth' })
+        } else {
+            navigate('/', { state: { scrollTo: 'contact' } })
+        }
+    }
+
+    if (isLoading) {
+        return (
+            <div className="min-h-screen flex flex-col bg-white">
+                <NavbarSkeleton />
+                <MobileNavSkeleton />
+                <main className="flex-1">
+                    <Outlet />
+                </main>
+            </div>
+        )
+    }
 
     return (
         <div className="min-h-screen flex flex-col bg-white">
@@ -72,7 +102,7 @@ const PublicLayout = () => {
                             <Link to="/" className="nav-link-cyber">Home</Link>
                             <Link to="/programs" className="nav-link-cyber font-bangla">প্রোগ্রাম</Link>
                             <Link to="/stories" className="nav-link-cyber font-bangla">সাফল্য</Link>
-                            <a href="#contact" className="nav-link-cyber font-bangla">যোগাযোগ</a>
+                            <button onClick={handleContactClick} className="nav-link-cyber font-bangla">যোগাযোগ</button>
                         </nav>
 
                         {/* Actions */}
@@ -112,6 +142,9 @@ const PublicLayout = () => {
             <main className="flex-1">
                 <Outlet />
             </main>
+
+            {/* Mobile Navigation */}
+            {showFloatingNav && <FloatingNav />}
 
             {/* Minimal Footer for non-landing pages */}
             {!isHomePage && (

@@ -2,13 +2,13 @@ import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import api from '../../lib/api'
 import { useSettings } from '../../contexts/SettingsContext'
-import FloatingNav from '../../components/navigation/FloatingNav'
 import CourseCarousel from '../../components/carousel/CourseCarousel'
 import Footer from '../../components/layout/Footer'
 import {
     BookOpen, ArrowUp, ArrowRight, GraduationCap, Heart, Zap, Target,
     Phone, Clock, Users, CheckCircle, Star
 } from 'lucide-react'
+import ProgramCardSkeleton from '../../components/ProgramCardSkeleton'
 
 // Back to Top
 function BackToTop() {
@@ -188,8 +188,14 @@ const ProgramsPage = () => {
 
     if (loading) {
         return (
-            <div className="min-h-screen flex items-center justify-center bg-white">
-                <div className="spinner"></div>
+            <div className="min-h-screen bg-white pt-32 pb-20">
+                <div className="container-cyber">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                        {[1, 2, 3, 4].map(i => (
+                            <ProgramCardSkeleton key={i} />
+                        ))}
+                    </div>
+                </div>
             </div>
         )
     }
@@ -197,7 +203,6 @@ const ProgramsPage = () => {
     return (
         <div className="bg-white min-h-screen">
             <BackToTop />
-            <FloatingNav />
 
             {/* Hero Section */}
             <section className="relative pt-32 pb-20 bg-gradient-to-br from-blue-600 via-blue-500 to-orange-500 overflow-hidden">

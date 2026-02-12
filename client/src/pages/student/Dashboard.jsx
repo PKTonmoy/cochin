@@ -41,11 +41,7 @@ const StudentDashboard = () => {
     })
 
     if (isLoading) {
-        return (
-            <div className="flex items-center justify-center h-64">
-                <div className="spinner"></div>
-            </div>
-        )
+        return <StudentDashboardSkeleton />
     }
 
     // Get next class and test

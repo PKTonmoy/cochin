@@ -29,6 +29,7 @@ import {
     isToday,
     differenceInDays
 } from 'date-fns'
+import AttendanceSkeleton from '../../components/skeletons/AttendanceSkeleton'
 
 const AttendanceHistory = () => {
     const { user } = useAuth()
@@ -123,11 +124,7 @@ const AttendanceHistory = () => {
     const prevMonth = () => setCurrentMonth(subMonths(currentMonth, 1))
 
     if (isLoading) {
-        return (
-            <div className="p-8 flex justify-center">
-                <div className="spinner"></div>
-            </div>
-        )
+        return <AttendanceSkeleton />
     }
 
     return (

@@ -37,7 +37,7 @@ import { useAuth } from '../../contexts/AuthContext'
 import api from '../../lib/api'
 import AttendanceOverview from '../../components/AttendanceOverview'
 import CountdownTimer from '../../components/CountdownTimer'
-
+import DashboardV2Skeleton from '../../components/skeletons/DashboardV2Skeleton'
 
 
 export default function StudentDashboard() {
@@ -96,14 +96,7 @@ export default function StudentDashboard() {
     const nextTest = dashboardData?.upcomingTests?.[0]
 
     if (isLoading) {
-        return (
-            <div className="min-h-screen flex items-center justify-center bg-[var(--light)]">
-                <div className="text-center">
-                    <div className="w-16 h-16 border-4 border-[var(--primary)]/30 border-t-[var(--primary)] rounded-full animate-spin mx-auto mb-4"></div>
-                    <p className="text-gray-500">Loading your dashboard...</p>
-                </div>
-            </div>
-        )
+        return <DashboardV2Skeleton />
     }
 
     return (

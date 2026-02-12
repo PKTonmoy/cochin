@@ -24,10 +24,11 @@ import {
     CreditCard,
     ChevronRight
 } from 'lucide-react'
+import ProfileSkeleton from '../../components/skeletons/ProfileSkeleton'
 
 const StudentProfile = () => {
     const navigate = useNavigate()
-    const { user, logout, changePassword } = useAuth()
+    const { user, logout, changePassword, isLoading } = useAuth()
     const [showChangePassword, setShowChangePassword] = useState(false)
     const [passwordData, setPasswordData] = useState({
         currentPassword: '',
@@ -63,6 +64,10 @@ const StudentProfile = () => {
     const handleLogout = async () => {
         await logout()
         navigate('/')
+    }
+
+    if (isLoading) {
+        return <ProfileSkeleton />
     }
 
     return (

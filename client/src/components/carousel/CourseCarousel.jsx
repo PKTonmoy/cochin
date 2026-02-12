@@ -399,11 +399,6 @@ export default function CourseCarousel({ courses = [] }) {
         } : {}}
       >
         {/* Hide scrollbar */}
-        {isMobile && (
-          <style>{`
-            div::-webkit-scrollbar { display: none; }
-          `}</style>
-        )}
 
         {courses.map((course, index) => (
           <div
@@ -455,6 +450,13 @@ export default function CourseCarousel({ courses = [] }) {
             <ChevronRight size={16} className="text-slate-500" />
           </button>
         </div>
+      )}
+
+      {/* Hide scrollbar */}
+      {isMobile && (
+        <style>{`
+          div::-webkit-scrollbar { display: none; }
+        `}</style>
       )}
     </div>
   )

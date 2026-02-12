@@ -14,6 +14,7 @@ import {
     Phone,
     AlertTriangle
 } from 'lucide-react'
+import TableSkeleton from '../../components/TableSkeleton'
 
 const StudentList = () => {
     const queryClient = useQueryClient()
@@ -188,11 +189,11 @@ const StudentList = () => {
                 </form>
             </div>
 
-            {/* Table */}
+
             <div className="card overflow-hidden">
                 {isLoading ? (
-                    <div className="flex items-center justify-center h-64">
-                        <div className="spinner"></div>
+                    <div className="p-4">
+                        <TableSkeleton columns={6} rows={10} />
                     </div>
                 ) : (
                     <>

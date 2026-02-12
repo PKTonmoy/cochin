@@ -1,14 +1,19 @@
 import { useState, useEffect } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useLocation } from 'react-router-dom'
 import api from '../../lib/api'
 import { useSettings } from '../../contexts/SettingsContext'
 import { HeroSection3D } from '../../components/hero'
-import FloatingNav from '../../components/navigation/FloatingNav'
 import HolographicStatCard from '../../components/cards/HolographicStatCard'
 import CourseCarousel from '../../components/carousel/CourseCarousel'
 import VictoryCard from '../../components/cards/VictoryCard'
 import StoryCarousel, { StoryPreviews } from '../../components/testimonials/StoryCarousel'
 import Footer from '../../components/layout/Footer'
+import ProgramCardSkeleton from '../../components/ProgramCardSkeleton'
+// Skeletons
+import HeroSkeleton from '../../components/skeletons/HeroSkeleton'
+import VictoryCardSkeleton from '../../components/skeletons/VictoryCardSkeleton'
+import TestimonialCardSkeleton from '../../components/skeletons/TestimonialCardSkeleton'
+import FacultyCardSkeleton from '../../components/skeletons/FacultyCardSkeleton'
 import {
     Users, GraduationCap, Award, Trophy, BookOpen, ArrowRight, Phone, Mail, MapPin,
     MessageCircle, Sparkles, TrendingUp, Target, Clock, ArrowUp
@@ -109,6 +114,23 @@ export default function LandingPage() {
     const [leadPhone, setLeadPhone] = useState('')
     const [leadClass, setLeadClass] = useState('')
     const [submitting, setSubmitting] = useState(false)
+    const location = useLocation()
+
+    useEffect(() => {
+        const scrollToElement = () => {
+            const hash = location.state?.scrollTo || (location.hash ? location.hash.slice(1) : null)
+            if (hash) {
+                const element = document.getElementById(hash)
+                if (element) {
+                    setTimeout(() => {
+                        element.scrollIntoView({ behavior: 'smooth' })
+                    }, 100)
+                }
+            }
+        }
+
+        scrollToElement()
+    }, [location])
 
     const handleLeadSubmit = async (e) => {
         e.preventDefault()
@@ -288,8 +310,24 @@ export default function LandingPage() {
 
     if (loading) {
         return (
-            <div className="min-h-screen flex items-center justify-center bg-white">
-                <div className="spinner" />
+            <div className="bg-white min-h-screen">
+                {/* Hero Skeleton */}
+                <HeroSkeleton />
+
+                {/* Courses Skeleton */}
+                <section className="section-cyber">
+                    <div className="container-cyber">
+                        <div className="section-title mb-10">
+                            <div className="h-8 w-48 bg-gray-200 rounded-full mx-auto mb-4"></div>
+                            <div className="h-10 w-64 bg-gray-200 rounded-xl mx-auto"></div>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                            {[1, 2, 3, 4].map(i => (
+                                <ProgramCardSkeleton key={i} />
+                            ))}
+                        </div>
+                    </div>
+                </section>
             </div>
         )
     }
@@ -298,7 +336,6 @@ export default function LandingPage() {
         <div className="bg-white min-h-screen">
             <ScrollProgress />
             <BackToTop />
-            <FloatingNav />
 
             {/* Hero */}
             <HeroSection3D content={hero} stats={stats} />

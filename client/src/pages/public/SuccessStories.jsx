@@ -2,10 +2,11 @@ import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import api from '../../lib/api'
 import { useSettings } from '../../contexts/SettingsContext'
-import FloatingNav from '../../components/navigation/FloatingNav'
 import StoryCarousel from '../../components/testimonials/StoryCarousel'
 import VictoryCard from '../../components/cards/VictoryCard'
 import Footer from '../../components/layout/Footer'
+import VictoryCardSkeleton from '../../components/skeletons/VictoryCardSkeleton'
+import TestimonialCardSkeleton from '../../components/skeletons/TestimonialCardSkeleton'
 import {
     Trophy, MessageCircle, ArrowUp, ArrowRight, Phone
 } from 'lucide-react'
@@ -105,8 +106,43 @@ const SuccessStoriesPage = () => {
 
     if (loading) {
         return (
-            <div className="min-h-screen flex items-center justify-center bg-white">
-                <div className="spinner"></div>
+            <div className="bg-white min-h-screen">
+                {/* Hero Skeleton - mimicking the gradient header */}
+                <section className="relative pt-32 pb-20 bg-gradient-to-br from-blue-600 via-blue-500 to-orange-500 overflow-hidden">
+                    <div className="container-cyber relative z-10 text-center">
+                        <div className="mx-auto bg-white/20 w-32 h-8 rounded-full mb-6"></div>
+                        <div className="mx-auto bg-white/20 h-16 w-3/4 max-w-2xl text-white mb-6 rounded-xl"></div>
+                        <div className="mx-auto bg-white/20 h-6 w-1/2 max-w-xl text-white/80 rounded.lg"></div>
+                    </div>
+                </section>
+
+                {/* Top Rankers Skeleton */}
+                <section className="section-cyber bg-white -mt-12 relative z-10">
+                    <div className="container-cyber">
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                            {[1, 2, 3].map(i => (
+                                <VictoryCardSkeleton key={i} />
+                            ))}
+                        </div>
+                    </div>
+                </section>
+
+                {/* All Stories Skeleton */}
+                <section className="section-cyber bg-gray-50">
+                    <div className="container-cyber">
+                        <div className="section-title">
+                            <div className="mx-auto bg-gray-200 h-8 w-40 rounded-full mb-4"></div>
+                            <div className="mx-auto bg-gray-200 h-10 w-64 rounded-xl mb-2"></div>
+                            <div className="mx-auto bg-gray-200 h-4 w-48 rounded-lg"></div>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                            {[1, 2, 3, 4, 5, 6].map(i => (
+                                <TestimonialCardSkeleton key={i} />
+                            ))}
+                        </div>
+                    </div>
+                </section>
+                <Footer />
             </div>
         )
     }
@@ -114,7 +150,6 @@ const SuccessStoriesPage = () => {
     return (
         <div className="bg-white min-h-screen">
             <BackToTop />
-            <FloatingNav />
 
             {/* Hero Section */}
             <section className="relative pt-32 pb-20 bg-gradient-to-br from-blue-600 via-blue-500 to-orange-500 overflow-hidden">

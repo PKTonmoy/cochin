@@ -34,6 +34,7 @@ import {
     Zap
 } from 'lucide-react'
 import CountUp from 'react-countup'
+import ResultCardSkeleton from '../../components/skeletons/ResultCardSkeleton'
 
 const StudentResults = () => {
     const { user } = useAuth()
@@ -72,13 +73,15 @@ const StudentResults = () => {
 
     if (isLoading) {
         return (
-            <div className="min-h-[60vh] flex items-center justify-center">
-                <div className="text-center">
-                    <div className="relative">
-                        <div className="w-16 h-16 border-4 border-blue-200 rounded-full animate-spin border-t-[var(--primary)]"></div>
-                        <Sparkles className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-[var(--primary)]" size={24} />
-                    </div>
-                    <p className="text-gray-500 mt-4 font-medium">Loading your results...</p>
+            <div className="min-h-screen pb-8">
+                {/* Header Skeleton */}
+                <div className="relative overflow-hidden rounded-2xl lg:rounded-3xl bg-gray-100 p-6 md:p-8 lg:p-10 mb-6 h-64 animate-pulse"></div>
+
+                {/* Results List Skeleton */}
+                <div className="space-y-4">
+                    {[1, 2, 3, 4].map(i => (
+                        <ResultCardSkeleton key={i} />
+                    ))}
                 </div>
             </div>
         )
@@ -429,9 +432,9 @@ const StudentResults = () => {
                                                 }`}
                                         >
                                             <div className={`w-12 h-12 rounded-xl flex items-center justify-center font-bold shrink-0 ${student.rank === 1 ? 'bg-gradient-to-br from-yellow-400 to-amber-500 text-white shadow-lg shadow-amber-500/30' :
-                                                    student.rank === 2 ? 'bg-gradient-to-br from-gray-300 to-gray-400 text-gray-700' :
-                                                        student.rank === 3 ? 'bg-gradient-to-br from-amber-600 to-orange-600 text-white' :
-                                                            'bg-gray-200 text-gray-600'
+                                                student.rank === 2 ? 'bg-gradient-to-br from-gray-300 to-gray-400 text-gray-700' :
+                                                    student.rank === 3 ? 'bg-gradient-to-br from-amber-600 to-orange-600 text-white' :
+                                                        'bg-gray-200 text-gray-600'
                                                 }`}>
                                                 {student.rank <= 3 ? <Medal size={20} /> : student.rank}
                                             </div>

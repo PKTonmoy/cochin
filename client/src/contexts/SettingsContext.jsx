@@ -1,4 +1,5 @@
-import { createContext, useContext, useState, useEffect } from 'react'
+import { createContext, useContext } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import api from '../lib/api'
 
 const SettingsContext = createContext(null)
@@ -41,6 +42,15 @@ const defaultSettings = {
         linkedin: '',
         twitter: '',
         tiktok: ''
+    },
+    receiptTemplate: {
+        primaryColor: '#1a365d',
+        showLogo: true,
+        showQRCode: true,
+        showCredentialsOnFirst: true,
+        footerNote: 'This is a computer-generated receipt. Please keep this for your records.',
+        signatureLeftLabel: 'Student/Guardian',
+        signatureRightLabel: 'Authorized Signature'
     }
 }
 
@@ -54,37 +64,36 @@ export const useSettings = () => {
 }
 
 export const SettingsProvider = ({ children }) => {
-    const [settings, setSettings] = useState(defaultSettings)
-    const [isLoading, setIsLoading] = useState(true)
-
-    useEffect(() => {
-        const fetchSettings = async () => {
+    const { data: fetchedSettings, isLoading } = useQuery({
+        queryKey: ['public-settings'],
+        queryFn: async () => {
             try {
                 const response = await api.get('/settings/public')
-                if (response.data?.data) {
-                    // Merge with defaults to ensure all fields exist
-                    setSettings(prev => ({
-                        siteInfo: { ...prev.siteInfo, ...response.data.data.siteInfo },
-                        contact: {
-                            ...prev.contact,
-                            ...response.data.data.contact,
-                            address: { ...prev.contact.address, ...response.data.data.contact?.address },
-                            officeHours: { ...prev.contact.officeHours, ...response.data.data.contact?.officeHours }
-                        },
-                        theme: { ...prev.theme, ...response.data.data.theme },
-                        socialMedia: { ...prev.socialMedia, ...response.data.data.socialMedia }
-                    }))
-                }
+                return response.data?.data
             } catch (error) {
                 console.error('Failed to fetch settings:', error)
-                // Keep defaults on error
-            } finally {
-                setIsLoading(false)
+                return null
             }
-        }
+        },
+        staleTime: 1000 * 60 * 5, // 5 minutes
+        retry: 1
+    })
 
-        fetchSettings()
-    }, [])
+    // Merge fetched settings with defaults
+    const settings = {
+        ...defaultSettings,
+        ...(fetchedSettings || {}),
+        siteInfo: { ...defaultSettings.siteInfo, ...(fetchedSettings?.siteInfo || {}) },
+        contact: {
+            ...defaultSettings.contact,
+            ...(fetchedSettings?.contact || {}),
+            address: { ...defaultSettings.contact.address, ...(fetchedSettings?.contact?.address || {}) },
+            officeHours: { ...defaultSettings.contact.officeHours, ...(fetchedSettings?.contact?.officeHours || {}) }
+        },
+        theme: { ...defaultSettings.theme, ...(fetchedSettings?.theme || {}) },
+        socialMedia: { ...defaultSettings.socialMedia, ...(fetchedSettings?.socialMedia || {}) },
+        receiptTemplate: { ...defaultSettings.receiptTemplate, ...(fetchedSettings?.receiptTemplate || {}) }
+    }
 
     // Helper functions for common data access
     const getSiteName = () => settings.siteInfo?.name || defaultSettings.siteInfo.name

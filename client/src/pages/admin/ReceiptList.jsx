@@ -26,6 +26,7 @@ import {
     ChevronLeft,
     ChevronRight
 } from 'lucide-react'
+import TableSkeleton from '../../components/TableSkeleton'
 import api from '../../lib/api'
 import { CLASSES } from '../../data/classData'
 
@@ -264,11 +265,12 @@ const ReceiptList = () => {
                 )}
             </div>
 
+
             {/* Receipts Table */}
             <div className="card overflow-hidden">
                 {isLoading ? (
-                    <div className="flex items-center justify-center h-64">
-                        <div className="spinner"></div>
+                    <div className="p-4">
+                        <TableSkeleton columns={7} rows={10} />
                     </div>
                 ) : data?.payments?.length > 0 ? (
                     <>

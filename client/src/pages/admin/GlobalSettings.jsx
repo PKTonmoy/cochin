@@ -133,6 +133,7 @@ export default function GlobalSettings() {
         },
         onSuccess: () => {
             queryClient.invalidateQueries(['settings']);
+            queryClient.invalidateQueries(['public-settings']);
             toast.success('Settings saved successfully');
             setHasChanges(false);
         },
@@ -521,13 +522,13 @@ export default function GlobalSettings() {
                                                 <input
                                                     type="color"
                                                     value={formData.receiptTemplate.primaryColor}
-                                                    onChange={(e) => handleNestedChange('receiptTemplate', null, 'primaryColor', e.target.value)}
+                                                    onChange={(e) => handleChange('receiptTemplate', 'primaryColor', e.target.value)}
                                                     className="h-10 w-16 border border-gray-300 rounded cursor-pointer"
                                                 />
                                                 <input
                                                     type="text"
                                                     value={formData.receiptTemplate.primaryColor}
-                                                    onChange={(e) => handleNestedChange('receiptTemplate', null, 'primaryColor', e.target.value)}
+                                                    onChange={(e) => handleChange('receiptTemplate', 'primaryColor', e.target.value)}
                                                     className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                                                 />
                                             </div>
@@ -539,7 +540,7 @@ export default function GlobalSettings() {
                                                 <input
                                                     type="checkbox"
                                                     checked={formData.receiptTemplate.showLogo}
-                                                    onChange={(e) => handleNestedChange('receiptTemplate', null, 'showLogo', e.target.checked)}
+                                                    onChange={(e) => handleChange('receiptTemplate', 'showLogo', e.target.checked)}
                                                     className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
                                                 />
                                                 <div>
@@ -552,7 +553,7 @@ export default function GlobalSettings() {
                                                 <input
                                                     type="checkbox"
                                                     checked={formData.receiptTemplate.showQRCode}
-                                                    onChange={(e) => handleNestedChange('receiptTemplate', null, 'showQRCode', e.target.checked)}
+                                                    onChange={(e) => handleChange('receiptTemplate', 'showQRCode', e.target.checked)}
                                                     className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
                                                 />
                                                 <div>
@@ -565,7 +566,7 @@ export default function GlobalSettings() {
                                                 <input
                                                     type="checkbox"
                                                     checked={formData.receiptTemplate.showCredentialsOnFirst}
-                                                    onChange={(e) => handleNestedChange('receiptTemplate', null, 'showCredentialsOnFirst', e.target.checked)}
+                                                    onChange={(e) => handleChange('receiptTemplate', 'showCredentialsOnFirst', e.target.checked)}
                                                     className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
                                                 />
                                                 <div>
@@ -581,7 +582,7 @@ export default function GlobalSettings() {
                                                 <input
                                                     type="text"
                                                     value={formData.receiptTemplate.signatureLeftLabel}
-                                                    onChange={(e) => handleNestedChange('receiptTemplate', null, 'signatureLeftLabel', e.target.value)}
+                                                    onChange={(e) => handleChange('receiptTemplate', 'signatureLeftLabel', e.target.value)}
                                                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                                                 />
                                             </div>
@@ -590,7 +591,7 @@ export default function GlobalSettings() {
                                                 <input
                                                     type="text"
                                                     value={formData.receiptTemplate.signatureRightLabel}
-                                                    onChange={(e) => handleNestedChange('receiptTemplate', null, 'signatureRightLabel', e.target.value)}
+                                                    onChange={(e) => handleChange('receiptTemplate', 'signatureRightLabel', e.target.value)}
                                                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                                                 />
                                             </div>
@@ -600,7 +601,7 @@ export default function GlobalSettings() {
                                             <label className="block text-sm font-medium text-gray-700 mb-1">Footer Note</label>
                                             <textarea
                                                 value={formData.receiptTemplate.footerNote}
-                                                onChange={(e) => handleNestedChange('receiptTemplate', null, 'footerNote', e.target.value)}
+                                                onChange={(e) => handleChange('receiptTemplate', 'footerNote', e.target.value)}
                                                 rows={3}
                                                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 resize-none"
                                             />

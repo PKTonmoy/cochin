@@ -20,6 +20,7 @@ import {
 import CountUp from 'react-countup'
 import { useAuth } from '../../contexts/AuthContext'
 import api from '../../lib/api'
+import ResultsV2Skeleton from '../../components/skeletons/ResultsV2Skeleton'
 
 // Dark mode hook
 const useDarkMode = () => {
@@ -39,11 +40,6 @@ const useDarkMode = () => {
 
     return [isDark, toggle]
 }
-
-// Skeleton loader component
-const Skeleton = ({ className }) => (
-    <div className={`animate-pulse bg-gray-200 dark:bg-gray-700 rounded-lg ${className}`} />
-)
 
 // Circular progress component
 const CircularProgress = ({ value, size = 120, strokeWidth = 8, color = '#3B82F6' }) => {
@@ -212,17 +208,7 @@ export default function StudentResultsV2() {
     const containerClass = isDark ? 'dark bg-gray-900 min-h-screen' : 'bg-gray-50 min-h-screen'
 
     if (isLoading) {
-        return (
-            <div className={containerClass}>
-                <div className="max-w-7xl mx-auto p-4 md:p-6 space-y-6">
-                    <Skeleton className="h-48 w-full" />
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                        {[1, 2, 3, 4].map(i => <Skeleton key={i} className="h-28" />)}
-                    </div>
-                    <Skeleton className="h-64 w-full" />
-                </div>
-            </div>
-        )
+        return <ResultsV2Skeleton />
     }
 
     return (

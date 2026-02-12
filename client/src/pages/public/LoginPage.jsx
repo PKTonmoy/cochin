@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
 import { Eye, EyeOff, Lock, Mail, ArrowRight, Shield, CheckCircle } from 'lucide-react'
+import LoginSkeleton from '../../components/skeletons/LoginSkeleton'
 
 // ... imports
 import { useSettings } from '../../contexts/SettingsContext' // Import useSettings
@@ -9,11 +10,15 @@ import { useSettings } from '../../contexts/SettingsContext' // Import useSettin
 const LoginPage = () => {
     const navigate = useNavigate()
     const { login } = useAuth()
-    const { getLogo, getSiteName } = useSettings() // Get settings
+    const { getLogo, getSiteName, isLoading } = useSettings() // Get settings
     const [formData, setFormData] = useState({ email: '', password: '' })
     const [showPassword, setShowPassword] = useState(false)
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState('')
+
+    if (isLoading) {
+        return <LoginSkeleton />
+    }
 
     const logoUrl = getLogo()
     const siteName = getSiteName()
