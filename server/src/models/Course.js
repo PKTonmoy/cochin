@@ -129,7 +129,7 @@ const courseSchema = new mongoose.Schema({
 });
 
 // Indexes
-courseSchema.index({ slug: 1 }, { unique: true });
+
 courseSchema.index({ category: 1 });
 courseSchema.index({ status: 1 });
 courseSchema.index({ featured: 1, displayOrder: 1 });
