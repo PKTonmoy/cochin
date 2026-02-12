@@ -190,7 +190,8 @@ export default function LandingPage() {
             description: course.shortDescription || course.description,
             badge: course.featured ? 'Popular' : (course.badge || ''),
             type: course.category?.toLowerCase() || 'default',
-            features: course.features || course.studyMaterials?.map(m =>
+            features: course.features || [],
+            studyMaterials: course.studyMaterials?.map(m =>
                 m.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())
             ) || [],
             rating: course.rating || 4.9,

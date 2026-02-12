@@ -200,21 +200,13 @@ function CourseCard({ course, isCenter }) {
               </p>
             )}
 
-            {/* Feature pills */}
-            <div className="flex flex-wrap gap-2 mb-auto">
-              {course.features?.slice(0, 3).map((feature, i) => (
-                <span
-                  key={i}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-semibold font-bangla"
-                  style={{
-                    background: theme.bg,
-                    color: theme.accent,
-                    border: `1px solid ${theme.accent}18`,
-                  }}
-                >
-                  <CheckCircle2 size={11} />
-                  {feature}
-                </span>
+            {/* Features list (Front) - Vertical Style */}
+            <div className="space-y-2 mb-auto pt-1">
+              {(course.features?.length > 0 ? course.features.slice(0, 3) : ['লাইভ ক্লাস', 'মডেল টেস্ট', 'নোট শীট']).map((feature, i) => (
+                <div key={i} className="flex items-center gap-2.5">
+                  <CheckCircle2 size={14} style={{ color: theme.accent }} className="flex-shrink-0" />
+                  <span className="text-[13px] text-slate-600 font-bangla font-medium">{feature}</span>
+                </div>
               ))}
             </div>
 
@@ -292,13 +284,23 @@ function CourseCard({ course, isCenter }) {
             </div>
 
             {/* Features list */}
-            <div className="space-y-2 mb-4 flex-1">
-              {(course.features || ['লাইভ ক্লাস', 'মডেল টেস্ট', 'নোট শীট']).map((f, i) => (
-                <div key={i} className="flex items-center gap-2.5">
-                  <CheckCircle2 size={14} style={{ color: theme.accent }} className="flex-shrink-0" />
-                  <span className="text-[13px] text-slate-600 font-bangla">{f}</span>
+            <div className="space-y-2 mb-4 flex-1 overflow-y-auto custom-scrollbar">
+              {/* Study Materials */}
+              {course.studyMaterials?.length > 0 ? (
+                <div className="pt-0 mt-0">
+                  <p className="text-[10px] uppercase font-bold text-slate-400 mb-1.5">Study Materials</p>
+                  {course.studyMaterials.map((m, i) => (
+                    <div key={`mat-${i}`} className="flex items-center gap-2.5 mb-1 last:mb-0">
+                      <BookOpen size={12} className="text-slate-400 flex-shrink-0" />
+                      <span className="text-[12px] text-slate-600 font-bangla">{m}</span>
+                    </div>
+                  ))}
                 </div>
-              ))}
+              ) : (
+                <div className="flex items-center justify-center h-full text-slate-400 text-xs italic">
+                  No additional materials
+                </div>
+              )}
             </div>
 
             {/* Price */}

@@ -74,12 +74,12 @@ function ProgramDetailCard({ program, index }) {
                 <h3 className="text-xl font-bold text-gray-900 mb-2 font-bangla">{program.title}</h3>
                 <p className="text-gray-600 text-sm mb-4 font-bangla">{program.description}</p>
 
-                {/* Features */}
-                <div className="space-y-2 mb-4">
-                    {program.features?.map((feature, i) => (
-                        <div key={i} className="flex items-center gap-2 text-sm text-gray-600">
-                            <CheckCircle size={16} className="text-green-500 flex-shrink-0" />
-                            <span className="font-bangla">{feature}</span>
+                {/* Features (Vertical Style) */}
+                <div className="space-y-2 mb-4 pt-1">
+                    {(program.features?.length > 0 ? program.features.slice(0, 3) : ['লাইভ ক্লাস', 'মডেল টেস্ট', 'নোট শীট']).map((feature, i) => (
+                        <div key={i} className="flex items-center gap-2.5">
+                            <CheckCircle size={14} className="text-green-500 flex-shrink-0" />
+                            <span className="text-[13px] text-gray-600 font-bangla font-medium">{feature}</span>
                         </div>
                     ))}
                 </div>
@@ -104,10 +104,20 @@ function ProgramDetailCard({ program, index }) {
                 </div>
 
                 {/* CTA */}
-                <button className="btn-cyber w-full mt-4 py-3 text-sm">
-                    <span className="font-bangla">বিস্তারিত দেখুন</span>
-                    <ArrowRight size={16} />
-                </button>
+                {/* Study Materials */}
+                {program.studyMaterials?.length > 0 && (
+                    <div className="mt-4 pt-4 border-t border-gray-100">
+                        <p className="text-xs font-semibold text-gray-500 mb-2 uppercase tracking-wide">Study Materials</p>
+                        <div className="space-y-2">
+                            {program.studyMaterials.map((material, i) => (
+                                <div key={i} className="flex items-center gap-2 text-sm text-gray-600">
+                                    <BookOpen size={14} className="text-blue-500 flex-shrink-0" />
+                                    <span className="font-bangla">{material}</span>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                )}
             </div>
         </div>
     )
@@ -157,7 +167,8 @@ const ProgramsPage = () => {
             description: course.shortDescription || course.description,
             badge: course.featured ? 'Popular' : (course.badge || ''),
             type: course.category?.toLowerCase() || 'default',
-            features: course.features || course.studyMaterials?.map(m =>
+            features: course.features || [],
+            studyMaterials: course.studyMaterials?.map(m =>
                 m.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())
             ) || [],
             rating: course.rating || 4.9,

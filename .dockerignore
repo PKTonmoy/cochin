@@ -1,37 +1,15 @@
-
-# Dependencies
 node_modules
 npm-debug.log
-yarn-error.log
-
-# Git
+Dockerfile
+.dockerignore
 .git
 .gitignore
-
-# Environment variables
+README.md
 .env
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
-
-# Build outputs
+.DS_Store
 dist
 build
-
-# Editor directories
-.idea
+coverage
 .vscode
-*.suo
-*.ntvs
-*.njsproj
-*.sln
-*.sw?
-
-# System files
-.DS_Store
-Thumbs.db
-
-# Optional: Local upload directories if you don't validate them in container
-# uploads/
-# receipts/
+.idea
+*.log
