@@ -1,5 +1,6 @@
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
+import { useSettings } from '../contexts/SettingsContext' // Import useSettings
 import { useState } from 'react'
 import {
     LayoutDashboard,
@@ -28,10 +29,14 @@ import NotificationBell from '../components/NotificationBell'
 
 const AdminLayout = () => {
     const { user, logout } = useAuth()
+    const { getLogo, getSiteName } = useSettings() // Get settings
     const location = useLocation()
     const navigate = useNavigate()
     const [sidebarOpen, setSidebarOpen] = useState(false)
     const [profileDropdownOpen, setProfileDropdownOpen] = useState(false)
+
+    const logoUrl = getLogo()
+    const siteName = getSiteName()
 
     const menuItems = [
         { path: '/admin', icon: LayoutDashboard, label: 'Dashboard', exact: true },
@@ -73,10 +78,18 @@ const AdminLayout = () => {
                 {/* Logo */}
                 <div className="p-6 border-b border-white/10">
                     <Link to="/admin" className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center font-bold text-xl">
-                            P
-                        </div>
-                        <span className="font-bold text-xl">PARAGON</span>
+                        {logoUrl ? (
+                            <img
+                                src={logoUrl}
+                                alt={siteName}
+                                className="w-10 h-10 rounded-full bg-white/10 object-contain p-1"
+                            />
+                        ) : (
+                            <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center font-bold text-xl">
+                                {siteName.charAt(0)}
+                            </div>
+                        )}
+                        <span className="font-bold text-xl uppercase tracking-wider truncat">{siteName}</span>
                     </Link>
                 </div>
 

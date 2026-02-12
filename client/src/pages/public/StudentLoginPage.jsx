@@ -3,15 +3,23 @@ import { useNavigate, Link } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
 import { Eye, EyeOff, Lock, User, ArrowRight, GraduationCap, BookOpen, Trophy, CheckCircle } from 'lucide-react'
 
+// ... imports
+import { useSettings } from '../../contexts/SettingsContext' // Import useSettings
+
 const StudentLoginPage = () => {
     const navigate = useNavigate()
     const { studentLogin } = useAuth()
+    const { getLogo, getSiteName } = useSettings() // Get settings
     const [formData, setFormData] = useState({ roll: '', password: '' })
     const [showPassword, setShowPassword] = useState(false)
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState('')
 
+    const logoUrl = getLogo()
+    const siteName = getSiteName()
+
     const handleSubmit = async (e) => {
+        // ... (existing submit logic)
         e.preventDefault()
         setError('')
         setLoading(true)
@@ -31,7 +39,7 @@ const StudentLoginPage = () => {
         <div className="min-h-screen flex bg-white">
             {/* Left side - Clean illustration area */}
             <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-[#2E86AB] to-[#1a5276] relative overflow-hidden items-center justify-center p-12">
-                {/* Subtle background pattern */}
+                {/* ... (background patterns) */}
                 <div className="absolute inset-0 opacity-5" style={{
                     backgroundImage: 'radial-gradient(circle at 2px 2px, white 1px, transparent 0)',
                     backgroundSize: '32px 32px'
@@ -45,16 +53,18 @@ const StudentLoginPage = () => {
                 <div className="relative z-10 text-center text-white max-w-md">
                     {/* Logo */}
                     <div className="mb-10">
-                        <div className="w-24 h-24 mx-auto mb-6 rounded-2xl bg-white flex items-center justify-center shadow-xl">
-                            <img
-                                src="/assets/logo.png"
-                                alt="Paragon"
-                                className="h-16 w-auto"
-                                onError={(e) => {
-                                    e.target.onerror = null
-                                    e.target.innerHTML = '<span class="text-3xl font-bold text-[#2E86AB]">P</span>'
-                                }}
-                            />
+                        <div className="w-24 h-24 mx-auto mb-6 rounded-2xl bg-white flex items-center justify-center shadow-xl p-2">
+                            {logoUrl ? (
+                                <img
+                                    src={logoUrl}
+                                    alt={siteName}
+                                    className="h-full w-full object-contain"
+                                />
+                            ) : (
+                                <span className="text-3xl font-bold text-[#2E86AB]">
+                                    {siteName.charAt(0)}
+                                </span>
+                            )}
                         </div>
                         <h2 className="text-3xl font-bold mb-3">Student Portal</h2>
                         <p className="text-white/70 text-lg">
@@ -86,15 +96,17 @@ const StudentLoginPage = () => {
                 <div className="w-full max-w-md">
                     {/* Mobile header */}
                     <div className="lg:hidden text-center mb-8">
-                        <img
-                            src="/assets/logo.png"
-                            alt="Paragon Logo"
-                            className="h-14 mx-auto mb-4"
-                            onError={(e) => {
-                                e.target.onerror = null
-                                e.target.style.display = 'none'
-                            }}
-                        />
+                        {logoUrl ? (
+                            <img
+                                src={logoUrl}
+                                alt={siteName}
+                                className="h-16 mx-auto mb-4 object-contain"
+                            />
+                        ) : (
+                            <div className="w-16 h-16 mx-auto mb-4 rounded-xl bg-[#2E86AB] flex items-center justify-center text-white font-bold text-2xl">
+                                {siteName.charAt(0)}
+                            </div>
+                        )}
                         <h1 className="text-2xl font-bold text-[#1e3a5f]">Student Login</h1>
                     </div>
 
