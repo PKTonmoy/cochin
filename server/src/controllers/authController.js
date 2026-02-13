@@ -32,13 +32,16 @@ const generateTokens = (user, role) => {
 /**
  * Admin/Staff Login
  */
+// Admin/Staff Login
 exports.login = async (req, res, next) => {
     try {
-        const { email, password } = req.body;
+        let { email, password } = req.body;
 
         if (!email || !password) {
             throw new ApiError('Email and password are required', 400);
         }
+
+        email = email.trim();
 
         const user = await User.findOne({ email: email.toLowerCase() });
 
@@ -110,15 +113,19 @@ exports.login = async (req, res, next) => {
  */
 exports.studentLogin = async (req, res, next) => {
     try {
-        const { roll, password } = req.body;
+        let { roll, password } = req.body;
 
         if (!roll || !password) {
             throw new ApiError('Roll number and password are required', 400);
         }
 
-        const student = await Student.findOne({ roll: roll.toUpperCase() });
+        roll = roll.trim().toUpperCase();
+        console.log(`Student login attempt: ${roll}`);
+
+        const student = await Student.findOne({ roll });
 
         if (!student) {
+            console.log(`Student not found: ${roll}`);
             throw new ApiError('Invalid credentials', 401);
         }
 
