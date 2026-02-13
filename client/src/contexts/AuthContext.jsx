@@ -19,7 +19,7 @@ export const AuthProvider = ({ children }) => {
     // Load user from token on mount
     useEffect(() => {
         const loadUser = async () => {
-            const token = localStorage.getItem('accessToken')
+            const token = localStorage.getItem('accessToken') || sessionStorage.getItem('accessToken')
             if (!token) {
                 setIsLoading(false)
                 return
@@ -31,6 +31,8 @@ export const AuthProvider = ({ children }) => {
             } catch (error) {
                 localStorage.removeItem('accessToken')
                 localStorage.removeItem('refreshToken')
+                sessionStorage.removeItem('accessToken')
+                sessionStorage.removeItem('refreshToken')
             } finally {
                 setIsLoading(false)
             }
@@ -40,13 +42,14 @@ export const AuthProvider = ({ children }) => {
     }, [])
 
     // Admin/Staff login
-    const login = useCallback(async (email, password) => {
+    const login = useCallback(async (email, password, rememberMe = true) => {
         try {
             const response = await api.post('/auth/login', { email, password })
             const { user: userData, accessToken, refreshToken } = response.data.data
 
-            localStorage.setItem('accessToken', accessToken)
-            localStorage.setItem('refreshToken', refreshToken)
+            const storage = rememberMe ? localStorage : sessionStorage
+            storage.setItem('accessToken', accessToken)
+            storage.setItem('refreshToken', refreshToken)
             setUser(userData)
 
             toast.success(`Welcome back, ${userData.name}!`)
@@ -80,12 +83,16 @@ export const AuthProvider = ({ children }) => {
     // Logout
     const logout = useCallback(async () => {
         try {
+            // Need to remove from header before calling logout endpoint if relying on it, 
+            // but usually we just clear local state.
             await api.post('/auth/logout')
         } catch (error) {
             // Ignore logout errors
         } finally {
             localStorage.removeItem('accessToken')
             localStorage.removeItem('refreshToken')
+            sessionStorage.removeItem('accessToken')
+            sessionStorage.removeItem('refreshToken')
             setUser(null)
             toast.success('Logged out successfully')
         }
@@ -111,14 +118,20 @@ export const AuthProvider = ({ children }) => {
     // Refresh token
     const refreshToken = useCallback(async () => {
         try {
-            const token = localStorage.getItem('refreshToken')
+            const token = localStorage.getItem('refreshToken') || sessionStorage.getItem('refreshToken')
             if (!token) throw new Error('No refresh token')
 
             const response = await api.post('/auth/refresh-token', { refreshToken: token })
             const { accessToken, refreshToken: newRefreshToken } = response.data.data
 
-            localStorage.setItem('accessToken', accessToken)
-            localStorage.setItem('refreshToken', newRefreshToken)
+            // Detect which storage was used
+            if (localStorage.getItem('refreshToken')) {
+                localStorage.setItem('accessToken', accessToken)
+                localStorage.setItem('refreshToken', newRefreshToken)
+            } else {
+                sessionStorage.setItem('accessToken', accessToken)
+                sessionStorage.setItem('refreshToken', newRefreshToken)
+            }
 
             return accessToken
         } catch (error) {

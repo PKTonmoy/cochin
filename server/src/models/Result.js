@@ -128,13 +128,7 @@ resultSchema.pre('save', function (next) {
 /**
  * Populate references on find
  */
-resultSchema.pre(/^find/, function (next) {
-    if (!this.getOptions().skipPopulate) {
-        this.populate('testId', 'testName testCode class date subjects totalMaxMarks')
-            .populate('studentId', 'roll name class section');
-    }
-    next();
-});
+
 
 const Result = mongoose.model('Result', resultSchema);
 

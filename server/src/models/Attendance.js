@@ -57,6 +57,9 @@ const attendanceSchema = new mongoose.Schema({
 
 // Indexes for efficient queries
 attendanceSchema.index({ studentId: 1, type: 1, date: -1 });
+attendanceSchema.index({ class: 1, date: -1 }); // Class attendance by date
+attendanceSchema.index({ class: 1, section: 1, date: -1 }); // Section attendance
+attendanceSchema.index({ date: -1 }); // Global attendance by date
 // Prevent duplicate attendance for same student on same date for class type
 attendanceSchema.index(
     { studentId: 1, type: 1, date: 1 },

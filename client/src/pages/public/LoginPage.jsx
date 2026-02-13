@@ -12,6 +12,7 @@ const LoginPage = () => {
     const { login } = useAuth()
     const { getLogo, getSiteName, isLoading } = useSettings() // Get settings
     const [formData, setFormData] = useState({ email: '', password: '' })
+    const [rememberMe, setRememberMe] = useState(false) // Added rememberMe state
     const [showPassword, setShowPassword] = useState(false)
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState('')
@@ -29,7 +30,7 @@ const LoginPage = () => {
         setError('')
         setLoading(true)
 
-        const result = await login(formData.email, formData.password)
+        const result = await login(formData.email, formData.password, rememberMe)
 
         setLoading(false)
 
@@ -139,7 +140,7 @@ const LoginPage = () => {
                                 <input
                                     type="email"
                                     className="w-full pl-12 pr-4 py-4 rounded-xl border-2 border-gray-200 bg-gray-50 text-gray-900 placeholder-gray-400 focus:border-[#2E86AB] focus:bg-white focus:outline-none transition-all"
-                                    placeholder="admin@paragon.com"
+                                    placeholder="Enter your email"
                                     value={formData.email}
                                     onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                                     required
@@ -156,7 +157,7 @@ const LoginPage = () => {
                                 <input
                                     type={showPassword ? 'text' : 'password'}
                                     className="w-full pl-12 pr-12 py-4 rounded-xl border-2 border-gray-200 bg-gray-50 text-gray-900 placeholder-gray-400 focus:border-[#2E86AB] focus:bg-white focus:outline-none transition-all"
-                                    placeholder="••••••••"
+                                    placeholder="Enter your password"
                                     value={formData.password}
                                     onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                                     required
@@ -176,12 +177,12 @@ const LoginPage = () => {
                                 <input
                                     type="checkbox"
                                     className="w-4 h-4 rounded border-gray-300 text-[#2E86AB] focus:ring-[#2E86AB]"
+                                    checked={rememberMe}
+                                    onChange={(e) => setRememberMe(e.target.checked)}
                                 />
                                 <span className="text-sm text-gray-600">Remember me</span>
                             </label>
-                            <a href="#" className="text-sm text-[#2E86AB] hover:underline font-medium">
-                                Forgot password?
-                            </a>
+
                         </div>
 
                         <button
@@ -229,13 +230,7 @@ const LoginPage = () => {
                         </Link>
                     </div>
 
-                    {/* Demo credentials */}
-                    <div className="mt-6 p-4 bg-gray-50 rounded-xl border border-gray-200">
-                        <p className="text-xs text-gray-500 text-center">
-                            <span className="font-medium">Demo:</span>{' '}
-                            <code className="text-gray-700">admin@paragon.com</code> / <code className="text-gray-700">admin123</code>
-                        </p>
-                    </div>
+
                 </div>
             </div>
         </div>

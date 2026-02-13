@@ -210,7 +210,9 @@ exports.getAllResults = async (req, res, next) => {
         let resultsQuery = Result.find(query)
             .sort(sort)
             .skip(skip)
-            .limit(parseInt(limit));
+            .limit(parseInt(limit))
+            .populate('testId', 'testName testCode class date subjects totalMaxMarks') // Added populates
+            .populate('studentId', 'roll name class section');
 
         // Filter by class requires a join
         if (classFilter) {
@@ -258,6 +260,7 @@ exports.getTestResults = async (req, res, next) => {
 
         const results = await Result.find({ testId })
             .sort(sort)
+            .populate('testId', 'testName testCode class date subjects totalMaxMarks') // Added testId populate
             .populate('studentId', 'roll name class section');
 
         // Calculate ranks

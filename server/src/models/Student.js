@@ -126,6 +126,7 @@ const studentSchema = new mongoose.Schema({
 // Indexes for faster queries
 // Primary lookup indexes
 studentSchema.index({ phone: 1 }); // Phone search
+studentSchema.index({ guardianPhone: 1 }); // Guardian phone search
 studentSchema.index({ email: 1 }, { sparse: true }); // Email lookup (sparse for optional field)
 
 // Compound indexes for common query patterns
@@ -137,6 +138,7 @@ studentSchema.index({ class: 1, enrollmentDate: -1 }); // Recent enrollments by 
 // Payment/Fee related queries
 studentSchema.index({ status: 1, dueAmount: -1 }); // Students with dues
 studentSchema.index({ dueAmount: -1 }); // Sort by due amount
+studentSchema.index({ paymentDeadline: 1 }); // Upcoming deadlines
 
 // Date-based queries
 studentSchema.index({ enrollmentDate: -1 }); // Recent enrollments

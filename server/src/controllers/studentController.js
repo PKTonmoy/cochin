@@ -56,7 +56,8 @@ exports.getAllStudents = async (req, res, next) => {
                 .sort(sort)
                 .skip(skip)
                 .limit(parseInt(limit))
-                .populate('createdBy', 'name email'),
+                .populate('createdBy', 'name email')
+                .lean(), // Use lean for performance
             Student.countDocuments(query)
         ]);
 
@@ -369,25 +370,27 @@ exports.getStudentDashboard = async (req, res, next) => {
             section: student.section || { $exists: true },
             dayOfWeek: { $gte: dayOfWeek },
             isActive: true
-        }).sort({ dayOfWeek: 1, startTime: 1 });
+        }).sort({ dayOfWeek: 1, startTime: 1 }).lean();
 
         // Get upcoming tests
         const upcomingTests = await Test.find({
             class: student.class,
             date: { $gte: today },
             isPublished: true
-        }).sort({ date: 1 }).limit(5);
+        }).sort({ date: 1 }).limit(5).lean();
 
         // Get recent results
         const recentResults = await Result.find({
             studentId: student._id
-        }).sort({ createdAt: -1 }).limit(10);
+        }).sort({ createdAt: -1 }).limit(10)
+            .populate('testId', 'testName testCode date') // Explicit populate since hook removed
+            .lean();
 
         // Get payment info
         const payments = await Payment.find({
             studentId: student._id,
             isVerified: true
-        }).sort({ paymentDate: -1 }).limit(5);
+        }).sort({ paymentDate: -1 }).limit(5).lean();
 
         res.json({
             success: true,
