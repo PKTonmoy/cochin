@@ -107,7 +107,7 @@ exports.getUpcomingTests = async (req, res, next) => {
         const tests = await Test.find(query)
             .sort({ date: 1 })
             .limit(10)
-            .select('testName testCode class date subjects totalMaxMarks');
+            .select('testName testCode class date startTime endTime subjects totalMaxMarks');
 
         res.json({
             success: true,

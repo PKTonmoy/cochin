@@ -6,7 +6,6 @@
 import { useEffect, useState } from 'react'
 import { useParams, useLocation } from 'react-router-dom'
 import { BuilderComponent, useIsPreviewing } from '@builder.io/react'
-import { Helmet } from 'react-helmet-async'
 import { builder } from '../../lib/builder'
 
 const BuilderPage = () => {
@@ -86,12 +85,12 @@ const BuilderPage = () => {
         <>
             {/* SEO - Builder.io pages can have their own meta tags */}
             {content?.data && (
-                <Helmet>
+                <>
                     {content.data.title && <title>{content.data.title} | PARAGON</title>}
                     {content.data.description && (
                         <meta name="description" content={content.data.description} />
                     )}
-                </Helmet>
+                </>
             )}
 
             {/* Builder.io Content */}

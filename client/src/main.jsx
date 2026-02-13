@@ -5,7 +5,6 @@ import { QueryClient } from '@tanstack/react-query'
 import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client'
 import { createSyncStoragePersister } from '@tanstack/query-sync-storage-persister'
 import { Toaster } from 'react-hot-toast'
-import { HelmetProvider } from 'react-helmet-async'
 import { AuthProvider } from './contexts/AuthContext'
 import { SettingsProvider } from './contexts/SettingsContext'
 import App from './App.jsx'
@@ -28,42 +27,40 @@ const persister = createSyncStoragePersister({
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
-    <HelmetProvider>
-      <BrowserRouter>
-        <PersistQueryClientProvider
-          client={queryClient}
-          persistOptions={{ persister }}
-        >
-          <AuthProvider>
-            <SettingsProvider>
-              <App />
-              <Toaster
-                position="top-right"
-                toastOptions={{
-                  duration: 4000,
-                  style: {
-                    background: '#1a365d',
-                    color: '#fff',
-                    borderRadius: '8px',
+    <BrowserRouter>
+      <PersistQueryClientProvider
+        client={queryClient}
+        persistOptions={{ persister }}
+      >
+        <AuthProvider>
+          <SettingsProvider>
+            <App />
+            <Toaster
+              position="top-right"
+              toastOptions={{
+                duration: 4000,
+                style: {
+                  background: '#1a365d',
+                  color: '#fff',
+                  borderRadius: '8px',
+                },
+                success: {
+                  iconTheme: {
+                    primary: '#38a169',
+                    secondary: '#fff',
                   },
-                  success: {
-                    iconTheme: {
-                      primary: '#38a169',
-                      secondary: '#fff',
-                    },
+                },
+                error: {
+                  iconTheme: {
+                    primary: '#e53e3e',
+                    secondary: '#fff',
                   },
-                  error: {
-                    iconTheme: {
-                      primary: '#e53e3e',
-                      secondary: '#fff',
-                    },
-                  },
-                }}
-              />
-            </SettingsProvider>
-          </AuthProvider>
-        </PersistQueryClientProvider>
-      </BrowserRouter>
-    </HelmetProvider>
+                },
+              }}
+            />
+          </SettingsProvider>
+        </AuthProvider>
+      </PersistQueryClientProvider>
+    </BrowserRouter>
   </StrictMode>,
 )

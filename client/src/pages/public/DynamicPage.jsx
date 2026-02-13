@@ -5,7 +5,6 @@
 
 import { useEffect, useState } from 'react'
 import { useParams, useLocation } from 'react-router-dom'
-import { Helmet } from 'react-helmet-async'
 import api from '../../lib/api'
 
 // Import block components for rendering
@@ -119,21 +118,19 @@ const DynamicPage = ({ defaultSlug }) => {
     return (
         <>
             {/* SEO Meta Tags */}
-            <Helmet>
-                <title>{page.seo?.title || page.pageName} | PARAGON</title>
-                {page.seo?.description && (
-                    <meta name="description" content={page.seo.description} />
-                )}
-                {page.seo?.keywords?.length > 0 && (
-                    <meta name="keywords" content={page.seo.keywords.join(', ')} />
-                )}
-                {page.seo?.ogImage && (
-                    <meta property="og:image" content={page.seo.ogImage} />
-                )}
-                {page.seo?.noIndex && (
-                    <meta name="robots" content="noindex, nofollow" />
-                )}
-            </Helmet>
+            <title>{page.seo?.title || page.pageName} | PARAGON</title>
+            {page.seo?.description && (
+                <meta name="description" content={page.seo.description} />
+            )}
+            {page.seo?.keywords?.length > 0 && (
+                <meta name="keywords" content={page.seo.keywords.join(', ')} />
+            )}
+            {page.seo?.ogImage && (
+                <meta property="og:image" content={page.seo.ogImage} />
+            )}
+            {page.seo?.noIndex && (
+                <meta name="robots" content="noindex, nofollow" />
+            )}
 
             {/* Preview Banner */}
             {page.isPreview && (

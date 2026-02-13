@@ -4,7 +4,6 @@
  */
 
 import { useState, useEffect } from 'react'
-import { Helmet } from 'react-helmet-async'
 import api from '../../lib/api'
 import LandingPage from './LandingPage'
 
@@ -78,15 +77,13 @@ const HomePage = () => {
     return (
         <>
             {/* SEO Meta Tags */}
-            <Helmet>
-                <title>{cmsPage.seo?.title || cmsPage.pageName || 'PARAGON Coaching Center'}</title>
-                {cmsPage.seo?.description && (
-                    <meta name="description" content={cmsPage.seo.description} />
-                )}
-                {cmsPage.seo?.keywords?.length > 0 && (
-                    <meta name="keywords" content={cmsPage.seo.keywords.join(', ')} />
-                )}
-            </Helmet>
+            <title>{cmsPage.seo?.title || cmsPage.pageName || 'PARAGON Coaching Center'}</title>
+            {cmsPage.seo?.description && (
+                <meta name="description" content={cmsPage.seo.description} />
+            )}
+            {cmsPage.seo?.keywords?.length > 0 && (
+                <meta name="keywords" content={cmsPage.seo.keywords.join(', ')} />
+            )}
 
             {/* Page Content */}
             <main className="cms-home-page">

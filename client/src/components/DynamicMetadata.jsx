@@ -1,5 +1,4 @@
 import { useEffect } from 'react'
-import { Helmet } from 'react-helmet-async'
 import { useSettings } from '../contexts/SettingsContext'
 
 export default function DynamicMetadata() {
@@ -18,6 +17,12 @@ export default function DynamicMetadata() {
     const faviconUrl = getUrl(settings?.siteInfo?.favicon) ||
         getUrl(settings?.siteInfo?.logo) ||
         '/vite.svg'
+
+    // Set default document title
+    useEffect(() => {
+        const defaultTitle = `${siteName} - ${tagline || 'Excellence in Education'}`
+        document.title = defaultTitle
+    }, [siteName, tagline])
 
     // Update favicon reactively (with rounded effect)
     useEffect(() => {
@@ -77,16 +82,14 @@ export default function DynamicMetadata() {
 
     }, [faviconUrl])
 
+    // React 19 native: meta tags rendered as JSX are automatically hoisted to <head>
     return (
-        <Helmet
-            defaultTitle={`${siteName} - ${tagline || 'Excellence in Education'}`}
-            titleTemplate={`%s | ${siteName}`}
-        >
+        <>
             <meta name="application-name" content={siteName} />
             <meta name="apple-mobile-web-app-title" content={siteName} />
             {settings?.siteInfo?.description && (
                 <meta name="description" content={settings.siteInfo.description} />
             )}
-        </Helmet>
+        </>
     )
 }

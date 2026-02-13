@@ -3,11 +3,12 @@
  * Full calendar view for classes and tests with FullCalendar
  */
 
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import FullCalendar from '@fullcalendar/react'
 import dayGridPlugin from '@fullcalendar/daygrid'
 import timeGridPlugin from '@fullcalendar/timegrid'
 import interactionPlugin from '@fullcalendar/interaction'
+import listPlugin from '@fullcalendar/list'
 import { useQuery } from '@tanstack/react-query'
 import { format } from 'date-fns'
 import { X, Calendar, Clock, MapPin, User, Video, FileText, ExternalLink } from 'lucide-react'
@@ -118,16 +119,37 @@ export default function ScheduleCalendar({
         }
     }
 
+    const [isMobile, setIsMobile] = useState(window.innerWidth < 768)
+
+    // Handle window resize for responsive calendar view
+    useEffect(() => {
+        const handleResize = () => {
+            const mobile = window.innerWidth < 768
+            setIsMobile(mobile)
+            if (calendarRef.current) {
+                const calendarApi = calendarRef.current.getApi()
+                if (mobile && calendarApi.view.type === 'timeGridWeek') {
+                    calendarApi.changeView('timeGridDay')
+                } else if (!mobile && calendarApi.view.type === 'timeGridDay') {
+                    calendarApi.changeView('timeGridWeek')
+                }
+            }
+        }
+
+        window.addEventListener('resize', handleResize)
+        return () => window.removeEventListener('resize', handleResize)
+    }, [])
+
     return (
-        <div className="schedule-calendar">
+        <div className="schedule-calendar h-full">
             <FullCalendar
                 ref={calendarRef}
-                plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
-                initialView="timeGridWeek"
+                plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin, listPlugin]}
+                initialView={window.innerWidth < 768 ? 'timeGridDay' : 'timeGridWeek'}
                 headerToolbar={{
-                    left: 'prev,next today',
+                    left: isMobile ? 'prev,next' : 'prev,next today',
                     center: 'title',
-                    right: 'dayGridMonth,timeGridWeek,timeGridDay'
+                    right: isMobile ? 'timeGridDay' : 'dayGridMonth,timeGridWeek,timeGridDay'
                 }}
                 events={allEvents}
                 eventClick={handleEventClick}
@@ -140,25 +162,28 @@ export default function ScheduleCalendar({
                 allDaySlot={false}
                 weekends={true}
                 nowIndicator={true}
-                height={height}
+                height="100%"
+                expandRows={true}
+                stickyHeaderDates={true}
+                dayMaxEvents={true}
                 eventTimeFormat={{
-                    hour: '2-digit',
+                    hour: 'numeric',
                     minute: '2-digit',
-                    hour12: true
+                    meridiem: 'short'
                 }}
                 slotLabelFormat={{
-                    hour: '2-digit',
+                    hour: 'numeric',
                     minute: '2-digit',
-                    hour12: true
+                    meridiem: 'short'
                 }}
                 loading={(isLoading) => {
                     // Handle loading state
                 }}
                 eventContent={(arg) => (
-                    <div className="p-1 overflow-hidden">
-                        <div className="font-medium text-xs truncate">{arg.event.title}</div>
+                    <div className="p-1 overflow-hidden h-full flex flex-col">
+                        <div className="font-bold text-xs truncate leading-tight">{arg.event.title}</div>
                         {arg.event.extendedProps.room && (
-                            <div className="text-xs opacity-75 truncate">
+                            <div className="text-[10px] opacity-90 truncate mt-0.5">
                                 {arg.event.extendedProps.room}
                             </div>
                         )}
@@ -326,10 +351,10 @@ function EventDetailsModal({ event, onClose }) {
                     {/* Status */}
                     <div className="pt-2 border-t border-gray-200 dark:border-gray-700">
                         <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${event.status === 'scheduled' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400' :
-                                event.status === 'ongoing' ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' :
-                                    event.status === 'completed' ? 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-400' :
-                                        event.status === 'cancelled' ? 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400' :
-                                            'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400'
+                            event.status === 'ongoing' ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' :
+                                event.status === 'completed' ? 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-400' :
+                                    event.status === 'cancelled' ? 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400' :
+                                        'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400'
                             }`}>
                             {event.status?.charAt(0).toUpperCase() + event.status?.slice(1)}
                         </span>

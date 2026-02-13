@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react'
 import { Link, useLocation } from 'react-router-dom'
-import { Helmet } from 'react-helmet-async'
 import api from '../../lib/api'
 import { useSettings } from '../../contexts/SettingsContext'
 import { HeroSection3D } from '../../components/hero'
@@ -339,10 +338,8 @@ export default function LandingPage() {
             <BackToTop />
 
             {/* Hero */}
-            <Helmet>
-                <title>{settings?.siteInfo?.name ? `${settings.siteInfo.name} - ${settings.siteInfo.tagline || 'Transform Your Future'}` : 'PARAGON - Transform Your Future'}</title>
-                <meta name="description" content={settings?.siteInfo?.description || 'Paragon Coaching Center - Excellence in Education'} />
-            </Helmet>
+            <title>{settings?.siteInfo?.name ? `${settings.siteInfo.name} - ${settings.siteInfo.tagline || 'Transform Your Future'}` : 'PARAGON - Transform Your Future'}</title>
+            <meta name="description" content={settings?.siteInfo?.description || 'Paragon Coaching Center - Excellence in Education'} />
             <HeroSection3D
                 content={hero}
                 stats={stats}

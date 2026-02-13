@@ -1,6 +1,6 @@
 /**
  * Premium Student Results Page V2
- * Features: Dark mode, charts, analytics, filtering, responsive
+ * Features: Charts, analytics, filtering, responsive
  */
 
 import { useState, useMemo } from 'react'
@@ -15,31 +15,12 @@ import {
     ChevronRight, ChevronDown, BarChart3, Users, Medal, Sparkles,
     ArrowUp, ArrowDown, ArrowLeft, Download, Share2, Calendar,
     Clock, BookOpen, AlertCircle, GraduationCap, Zap, Search,
-    Filter, Moon, Sun, X
+    Filter, X
 } from 'lucide-react'
 import CountUp from 'react-countup'
 import { useAuth } from '../../contexts/AuthContext'
 import api from '../../lib/api'
 import ResultsV2Skeleton from '../../components/skeletons/ResultsV2Skeleton'
-
-// Dark mode hook
-const useDarkMode = () => {
-    const [isDark, setIsDark] = useState(() => {
-        if (typeof window !== 'undefined') {
-            return localStorage.getItem('results-dark-mode') === 'true'
-        }
-        return false
-    })
-
-    const toggle = () => {
-        setIsDark(prev => {
-            localStorage.setItem('results-dark-mode', String(!prev))
-            return !prev
-        })
-    }
-
-    return [isDark, toggle]
-}
 
 // Circular progress component
 const CircularProgress = ({ value, size = 120, strokeWidth = 8, color = '#3B82F6' }) => {
@@ -53,7 +34,7 @@ const CircularProgress = ({ value, size = 120, strokeWidth = 8, color = '#3B82F6
                 <circle
                     cx={size / 2} cy={size / 2} r={radius}
                     fill="none" strokeWidth={strokeWidth}
-                    className="stroke-gray-200 dark:stroke-gray-700"
+                    className="stroke-gray-200"
                 />
                 <circle
                     cx={size / 2} cy={size / 2} r={radius}
@@ -64,7 +45,7 @@ const CircularProgress = ({ value, size = 120, strokeWidth = 8, color = '#3B82F6
                 />
             </svg>
             <div className="absolute inset-0 flex items-center justify-center">
-                <span className="text-2xl font-bold dark:text-white">
+                <span className="text-2xl font-bold">
                     <CountUp end={value} duration={1.5} decimals={1} />%
                 </span>
             </div>
@@ -74,10 +55,10 @@ const CircularProgress = ({ value, size = 120, strokeWidth = 8, color = '#3B82F6
 
 // Performance badge
 const PerformanceBadge = ({ percentage }) => {
-    const config = percentage >= 90 ? { label: 'Excellent', bg: 'bg-emerald-100 dark:bg-emerald-900/30', text: 'text-emerald-700 dark:text-emerald-400' }
-        : percentage >= 75 ? { label: 'Good', bg: 'bg-blue-100 dark:bg-blue-900/30', text: 'text-blue-700 dark:text-blue-400' }
-            : percentage >= 60 ? { label: 'Average', bg: 'bg-yellow-100 dark:bg-yellow-900/30', text: 'text-yellow-700 dark:text-yellow-400' }
-                : { label: 'Needs Work', bg: 'bg-red-100 dark:bg-red-900/30', text: 'text-red-700 dark:text-red-400' }
+    const config = percentage >= 90 ? { label: 'Excellent', bg: 'bg-emerald-100', text: 'text-emerald-700' }
+        : percentage >= 75 ? { label: 'Good', bg: 'bg-blue-100', text: 'text-blue-700' }
+            : percentage >= 60 ? { label: 'Average', bg: 'bg-yellow-100', text: 'text-yellow-700' }
+                : { label: 'Needs Work', bg: 'bg-red-100', text: 'text-red-700' }
 
     return (
         <span className={`px-2 py-1 rounded-full text-xs font-medium ${config.bg} ${config.text}`}>
@@ -107,7 +88,6 @@ const GradeBadge = ({ grade }) => {
 
 export default function StudentResultsV2() {
     const { user } = useAuth()
-    const [isDark, toggleDark] = useDarkMode()
     const [selectedResult, setSelectedResult] = useState(null)
     const [showMeritList, setShowMeritList] = useState(false)
     const [searchQuery, setSearchQuery] = useState('')
@@ -205,7 +185,7 @@ export default function StudentResultsV2() {
         return items
     }, [data, searchQuery, filters])
 
-    const containerClass = isDark ? 'dark bg-gray-900 min-h-screen' : 'bg-gray-50 min-h-screen'
+    const containerClass = 'bg-gray-50 min-h-screen'
 
     if (isLoading) {
         return <ResultsV2Skeleton />
@@ -218,59 +198,54 @@ export default function StudentResultsV2() {
                 {/* Header */}
                 <div className="flex items-center justify-between">
                     <div>
-                        <h1 className="text-3xl font-bold text-gray-900 dark:text-white">My Results</h1>
-                        <p className="text-gray-500 dark:text-gray-400 mt-1">Track your academic progress</p>
-                    </div>
-                    <div className="flex items-center gap-3">
-                        <button onClick={toggleDark} className="p-2 rounded-lg bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors">
-                            {isDark ? <Sun className="w-5 h-5 text-yellow-500" /> : <Moon className="w-5 h-5 text-gray-600" />}
-                        </button>
+                        <h1 className="text-3xl font-bold text-gray-900">My Results</h1>
+                        <p className="text-gray-500 mt-1">Track your academic progress</p>
                     </div>
                 </div>
 
                 {/* Quick Stats */}
                 <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                    <div className="bg-white dark:bg-gray-800 rounded-2xl p-5 shadow-sm border border-gray-100 dark:border-gray-700">
+                    <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
                         <div className="flex items-center gap-4">
-                            <div className="w-12 h-12 rounded-xl bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
-                                <FileText className="text-blue-600 dark:text-blue-400" size={24} />
+                            <div className="w-12 h-12 rounded-xl bg-blue-100 flex items-center justify-center">
+                                <FileText className="text-blue-600" size={24} />
                             </div>
                             <div>
-                                <p className="text-2xl font-bold text-gray-900 dark:text-white"><CountUp end={stats.count} /></p>
-                                <p className="text-sm text-gray-500 dark:text-gray-400">Tests Taken</p>
+                                <p className="text-2xl font-bold text-gray-900"><CountUp end={stats.count} /></p>
+                                <p className="text-sm text-gray-500">Tests Taken</p>
                             </div>
                         </div>
                     </div>
-                    <div className="bg-white dark:bg-gray-800 rounded-2xl p-5 shadow-sm border border-gray-100 dark:border-gray-700">
+                    <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
                         <div className="flex items-center gap-4">
-                            <div className="w-12 h-12 rounded-xl bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center">
-                                <TrendingUp className="text-emerald-600 dark:text-emerald-400" size={24} />
+                            <div className="w-12 h-12 rounded-xl bg-emerald-100 flex items-center justify-center">
+                                <TrendingUp className="text-emerald-600" size={24} />
                             </div>
                             <div>
-                                <p className="text-2xl font-bold text-gray-900 dark:text-white"><CountUp end={stats.avg} decimals={1} />%</p>
-                                <p className="text-sm text-gray-500 dark:text-gray-400">Average Score</p>
+                                <p className="text-2xl font-bold text-gray-900"><CountUp end={stats.avg} decimals={1} />%</p>
+                                <p className="text-sm text-gray-500">Average Score</p>
                             </div>
                         </div>
                     </div>
-                    <div className="bg-white dark:bg-gray-800 rounded-2xl p-5 shadow-sm border border-gray-100 dark:border-gray-700">
+                    <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
                         <div className="flex items-center gap-4">
-                            <div className="w-12 h-12 rounded-xl bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center">
-                                <Trophy className="text-amber-600 dark:text-amber-400" size={24} />
+                            <div className="w-12 h-12 rounded-xl bg-amber-100 flex items-center justify-center">
+                                <Trophy className="text-amber-600" size={24} />
                             </div>
                             <div>
-                                <p className="text-2xl font-bold text-gray-900 dark:text-white"><CountUp end={stats.best} decimals={1} />%</p>
-                                <p className="text-sm text-gray-500 dark:text-gray-400">Best Score</p>
+                                <p className="text-2xl font-bold text-gray-900"><CountUp end={stats.best} decimals={1} />%</p>
+                                <p className="text-sm text-gray-500">Best Score</p>
                             </div>
                         </div>
                     </div>
-                    <div className="bg-white dark:bg-gray-800 rounded-2xl p-5 shadow-sm border border-gray-100 dark:border-gray-700">
+                    <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
                         <div className="flex items-center gap-4">
-                            <div className="w-12 h-12 rounded-xl bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center">
-                                <Star className="text-purple-600 dark:text-purple-400" size={24} />
+                            <div className="w-12 h-12 rounded-xl bg-purple-100 flex items-center justify-center">
+                                <Star className="text-purple-600" size={24} />
                             </div>
                             <div>
-                                <p className="text-lg font-bold text-gray-900 dark:text-white capitalize">{stats.bestSubject?.replace('_', ' ') || '-'}</p>
-                                <p className="text-sm text-gray-500 dark:text-gray-400">Best Subject</p>
+                                <p className="text-lg font-bold text-gray-900 capitalize">{stats.bestSubject?.replace('_', ' ') || '-'}</p>
+                                <p className="text-sm text-gray-500">Best Subject</p>
                             </div>
                         </div>
                     </div>
@@ -280,8 +255,8 @@ export default function StudentResultsV2() {
                 {stats.count > 0 && (
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                         {/* Trend Chart */}
-                        <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-sm border border-gray-100 dark:border-gray-700">
-                            <h3 className="font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+                        <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
+                            <h3 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
                                 <TrendingUp size={20} className="text-blue-500" />
                                 Performance Trend
                             </h3>
@@ -294,12 +269,12 @@ export default function StudentResultsV2() {
                                                 <stop offset="95%" stopColor="#3B82F6" stopOpacity={0} />
                                             </linearGradient>
                                         </defs>
-                                        <CartesianGrid strokeDasharray="3 3" stroke={isDark ? '#374151' : '#E5E7EB'} />
-                                        <XAxis dataKey="date" stroke={isDark ? '#9CA3AF' : '#6B7280'} fontSize={12} />
-                                        <YAxis stroke={isDark ? '#9CA3AF' : '#6B7280'} fontSize={12} domain={[0, 100]} />
+                                        <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
+                                        <XAxis dataKey="date" stroke="#6B7280" fontSize={12} />
+                                        <YAxis stroke="#6B7280" fontSize={12} domain={[0, 100]} />
                                         <Tooltip
                                             contentStyle={{
-                                                backgroundColor: isDark ? '#1F2937' : '#FFF',
+                                                backgroundColor: '#FFF',
                                                 border: 'none',
                                                 borderRadius: '8px',
                                                 boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'
@@ -313,17 +288,17 @@ export default function StudentResultsV2() {
 
                         {/* Subject Radar */}
                         {subjectData.length > 0 && (
-                            <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-sm border border-gray-100 dark:border-gray-700">
-                                <h3 className="font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+                            <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
+                                <h3 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
                                     <Target size={20} className="text-purple-500" />
                                     Subject Analysis
                                 </h3>
                                 <div className="h-64">
                                     <ResponsiveContainer width="100%" height="100%">
                                         <RadarChart data={subjectData}>
-                                            <PolarGrid stroke={isDark ? '#374151' : '#E5E7EB'} />
-                                            <PolarAngleAxis dataKey="subject" tick={{ fill: isDark ? '#9CA3AF' : '#6B7280', fontSize: 11 }} />
-                                            <PolarRadiusAxis angle={30} domain={[0, 100]} tick={{ fill: isDark ? '#9CA3AF' : '#6B7280', fontSize: 10 }} />
+                                            <PolarGrid stroke="#E5E7EB" />
+                                            <PolarAngleAxis dataKey="subject" tick={{ fill: '#6B7280', fontSize: 11 }} />
+                                            <PolarRadiusAxis angle={30} domain={[0, 100]} tick={{ fill: '#6B7280', fontSize: 10 }} />
                                             <Radar name="Score" dataKey="value" stroke="#8B5CF6" fill="#8B5CF6" fillOpacity={0.3} strokeWidth={2} />
                                         </RadarChart>
                                     </ResponsiveContainer>
@@ -334,7 +309,7 @@ export default function StudentResultsV2() {
                 )}
 
                 {/* Search & Filters */}
-                <div className="bg-white dark:bg-gray-800 rounded-2xl p-4 shadow-sm border border-gray-100 dark:border-gray-700">
+                <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
                     <div className="flex flex-col md:flex-row gap-3">
                         <div className="relative flex-1">
                             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
@@ -343,13 +318,13 @@ export default function StudentResultsV2() {
                                 value={searchQuery}
                                 onChange={(e) => setSearchQuery(e.target.value)}
                                 placeholder="Search tests..."
-                                className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-gray-200 bg-gray-50 text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                             />
                         </div>
                         <select
                             value={filters.performance}
                             onChange={(e) => setFilters(p => ({ ...p, performance: e.target.value }))}
-                            className="px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white"
+                            className="px-4 py-2.5 rounded-xl border border-gray-200 bg-gray-50 text-gray-900"
                         >
                             <option value="">All Performance</option>
                             <option value="excellent">Excellent (90%+)</option>
@@ -369,14 +344,14 @@ export default function StudentResultsV2() {
                                 <div
                                     key={idx}
                                     onClick={() => setSelectedResult(item)}
-                                    className="group bg-white dark:bg-gray-800 rounded-2xl p-5 cursor-pointer shadow-sm border border-gray-100 dark:border-gray-700 hover:shadow-lg hover:border-blue-200 dark:hover:border-blue-800 transition-all"
+                                    className="group bg-white rounded-2xl p-5 cursor-pointer shadow-sm border border-gray-100 hover:shadow-lg hover:border-blue-200 transition-all"
                                 >
                                     <div className="flex items-center gap-4">
                                         <GradeBadge grade={result.grade} />
                                         <div className="flex-1 min-w-0">
-                                            <h3 className="font-semibold text-gray-900 dark:text-white truncate">{test?.testName}</h3>
+                                            <h3 className="font-semibold text-gray-900 truncate">{test?.testName}</h3>
                                             <div className="flex items-center gap-2 mt-1">
-                                                <span className="text-sm text-gray-500 dark:text-gray-400 flex items-center gap-1">
+                                                <span className="text-sm text-gray-500 flex items-center gap-1">
                                                     <Calendar size={12} />
                                                     {new Date(test?.date).toLocaleDateString()}
                                                 </span>
@@ -384,10 +359,10 @@ export default function StudentResultsV2() {
                                             </div>
                                         </div>
                                         <div className="text-right">
-                                            <p className="text-2xl font-bold text-gray-900 dark:text-white">
+                                            <p className="text-2xl font-bold text-gray-900">
                                                 {result.totalMarks}<span className="text-gray-400 text-base">/{result.maxMarks}</span>
                                             </p>
-                                            <p className="text-sm text-gray-500 dark:text-gray-400">{result.percentage}%</p>
+                                            <p className="text-sm text-gray-500">{result.percentage}%</p>
                                         </div>
                                         <ChevronRight className="text-gray-400 group-hover:text-blue-500 transition-colors" />
                                     </div>
@@ -400,10 +375,10 @@ export default function StudentResultsV2() {
 
                 {/* Empty State */}
                 {filteredResults.length === 0 && (
-                    <div className="bg-white dark:bg-gray-800 rounded-2xl p-12 text-center shadow-sm border border-gray-100 dark:border-gray-700">
-                        <FileText className="w-16 h-16 mx-auto text-gray-300 dark:text-gray-600 mb-4" />
-                        <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">No Results Found</h3>
-                        <p className="text-gray-500 dark:text-gray-400">Your test results will appear here.</p>
+                    <div className="bg-white rounded-2xl p-12 text-center shadow-sm border border-gray-100">
+                        <FileText className="w-16 h-16 mx-auto text-gray-300 mb-4" />
+                        <h3 className="text-xl font-semibold text-gray-900 mb-2">No Results Found</h3>
+                        <p className="text-gray-500">Your test results will appear here.</p>
                     </div>
                 )}
 
