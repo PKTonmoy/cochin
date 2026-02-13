@@ -57,18 +57,13 @@ const attendanceSchema = new mongoose.Schema({
 
 // Indexes for efficient queries
 attendanceSchema.index({ studentId: 1, type: 1, date: -1 });
-attendanceSchema.index({ studentId: 1, testId: 1 }, { unique: true, sparse: true });
-attendanceSchema.index({ testId: 1, status: 1 });
-attendanceSchema.index({ class: 1, date: -1 });
-attendanceSchema.index({ date: -1, class: 1 });
-attendanceSchema.index({ type: 1, date: -1 });
-attendanceSchema.index({ classId: 1, status: 1 });
-
 // Prevent duplicate attendance for same student on same date for class type
 attendanceSchema.index(
     { studentId: 1, type: 1, date: 1 },
     { unique: true, partialFilterExpression: { type: 'class' } }
 );
+
+attendanceSchema.index({ studentId: 1, testId: 1 }, { unique: true, sparse: true });
 
 const Attendance = mongoose.model('Attendance', attendanceSchema);
 

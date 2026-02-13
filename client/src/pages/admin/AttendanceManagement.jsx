@@ -24,8 +24,10 @@ import {
     Minus,
     History,
     Pencil,
-    Info
+    Info,
+    LayoutGrid
 } from 'lucide-react'
+import { CLASSES } from '../../data/classData'
 
 // ─── Stats Dashboard Bar ────────────────────────────────────────────
 const StatsDashboard = () => {
@@ -193,8 +195,8 @@ const MarkAttendanceTab = () => {
         },
         onSuccess: (data) => {
             toast.success(data.message || 'Attendance saved!')
-            queryClient.invalidateQueries(['existing-attendance'])
-            queryClient.invalidateQueries(['attendance-stats'])
+            queryClient.invalidateQueries({ queryKey: ['existing-attendance'] })
+            queryClient.invalidateQueries({ queryKey: ['attendance-stats'] })
         },
         onError: (error) => {
             toast.error(error.response?.data?.message || 'Failed to save attendance')
@@ -202,8 +204,9 @@ const MarkAttendanceTab = () => {
     })
 
     const presentCount = Object.values(attendance).filter(s => s === 'present').length
-    const absentCount = Object.values(attendance).filter(s => s === 'absent').length
     const lateCount = Object.values(attendance).filter(s => s === 'late').length
+    // Students with no selection default to absent
+    const absentCount = (filteredStudents?.length || 0) - presentCount - lateCount
     const isReady = mode === 'class' ? (selectedDate && selectedClass) : selectedTest
 
     return (
@@ -248,8 +251,8 @@ const MarkAttendanceTab = () => {
                                     className="input"
                                 >
                                     <option value="">Select Class</option>
-                                    {['6', '7', '8', '9', '10', '11', '12'].map(c => (
-                                        <option key={c} value={c}>Class {c}</option>
+                                    {CLASSES.map(c => (
+                                        <option key={c} value={c}>{c}</option>
                                     ))}
                                 </select>
                             </div>
@@ -279,8 +282,8 @@ const MarkAttendanceTab = () => {
                                     className="input"
                                 >
                                     <option value="">All Classes</option>
-                                    {['6', '7', '8', '9', '10', '11', '12'].map(c => (
-                                        <option key={c} value={c}>Class {c}</option>
+                                    {CLASSES.map(c => (
+                                        <option key={c} value={c}>{c}</option>
                                     ))}
                                 </select>
                             </div>
@@ -392,7 +395,7 @@ const MarkAttendanceTab = () => {
                                                             onClick={() => toggleAttendance(student._id, 'present')}
                                                             className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${attendance[student._id] === 'present'
                                                                 ? 'bg-green-500 text-white shadow-sm'
-                                                                : 'bg-gray-100 text-gray-600 hover:bg-green-100'
+                                                                : 'bg-gray-100 text-gray-500 hover:bg-green-100'
                                                                 }`}
                                                         >
                                                             <CheckCircle size={14} className="inline mr-1" />
@@ -410,9 +413,9 @@ const MarkAttendanceTab = () => {
                                                         </button>
                                                         <button
                                                             onClick={() => toggleAttendance(student._id, 'absent')}
-                                                            className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${attendance[student._id] === 'absent'
+                                                            className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${attendance[student._id] === 'absent' || !attendance[student._id]
                                                                 ? 'bg-red-500 text-white shadow-sm'
-                                                                : 'bg-gray-100 text-gray-600 hover:bg-red-100'
+                                                                : 'bg-gray-100 text-gray-500 hover:bg-red-100'
                                                                 }`}
                                                         >
                                                             <XCircle size={14} className="inline mr-1" />
@@ -517,8 +520,8 @@ const AttendanceHistoryTab = ({ onEditSession }) => {
                         className="input"
                     >
                         <option value="">All Classes</option>
-                        {['6', '7', '8', '9', '10', '11', '12'].map(c => (
-                            <option key={c} value={c}>Class {c}</option>
+                        {CLASSES.map(c => (
+                            <option key={c} value={c}>{c}</option>
                         ))}
                     </select>
                 </div>
@@ -677,7 +680,7 @@ const AttendanceEditorTab = ({ initialSession, onBack }) => {
 
     // Fetch attendance records for the selected session
     const sessionReady = editType === 'class'
-        ? (editDate && editClass)
+        ? !!(editDate && editClass)
         : !!editTest
 
     const { data: sessionRecords, isLoading: loadingRecords } = useQuery({
@@ -732,7 +735,7 @@ const AttendanceEditorTab = ({ initialSession, onBack }) => {
     const loadSession = () => {
         if (sessionReady) {
             setEditorMode('loaded')
-            queryClient.invalidateQueries(['editor-records'])
+            queryClient.invalidateQueries({ queryKey: ['editor-records'] })
         }
     }
 
@@ -758,9 +761,9 @@ const AttendanceEditorTab = ({ initialSession, onBack }) => {
         },
         onSuccess: (data) => {
             toast.success(data.message || 'Attendance updated successfully!')
-            queryClient.invalidateQueries(['attendance-history'])
-            queryClient.invalidateQueries(['attendance-stats'])
-            queryClient.invalidateQueries(['editor-records'])
+            queryClient.invalidateQueries({ queryKey: ['attendance-history'] })
+            queryClient.invalidateQueries({ queryKey: ['attendance-stats'] })
+            queryClient.invalidateQueries({ queryKey: ['editor-records'] })
             setConfirmSave(false)
             if (onBack) onBack()
         },
@@ -822,8 +825,8 @@ const AttendanceEditorTab = ({ initialSession, onBack }) => {
                                         className="input"
                                     >
                                         <option value="">Select Class</option>
-                                        {['6', '7', '8', '9', '10', '11', '12'].map(c => (
-                                            <option key={c} value={c}>Class {c}</option>
+                                        {CLASSES.map(c => (
+                                            <option key={c} value={c}>{c}</option>
                                         ))}
                                     </select>
                                 </div>

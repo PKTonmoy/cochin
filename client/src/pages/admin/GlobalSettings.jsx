@@ -168,8 +168,8 @@ export default function GlobalSettings() {
             return api.put('/settings', payload);
         },
         onSuccess: () => {
-            queryClient.invalidateQueries(['settings']);
-            queryClient.invalidateQueries(['public-settings']);
+            queryClient.invalidateQueries({ queryKey: ['settings'] });
+            queryClient.invalidateQueries({ queryKey: ['public-settings'] });
             toast.success('Settings saved successfully');
             setHasChanges(false);
         },

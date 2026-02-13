@@ -17,7 +17,6 @@ import {
     MapPin,
     User,
     Video,
-    MoreVertical,
     Edit,
     Trash2,
     XCircle,
@@ -42,9 +41,14 @@ export default function ClassList() {
         search: ''
     })
     const [showFilters, setShowFilters] = useState(false)
-    const [actionMenu, setActionMenu] = useState(null)
     const [cancelModal, setCancelModal] = useState(null)
     const [cancelReason, setCancelReason] = useState('')
+    const [editModal, setEditModal] = useState(null)
+    const [rescheduleModal, setRescheduleModal] = useState(null)
+
+    // Form states for edit/reschedule
+    const [editForm, setEditForm] = useState({})
+    const [rescheduleForm, setRescheduleForm] = useState({})
 
     // Fetch classes
     const { data, isLoading } = useQuery({
@@ -91,6 +95,30 @@ export default function ClassList() {
 
     const classes = data?.classes || []
     const pagination = data?.pagination || { page: 1, pages: 1, total: 0 }
+
+    const updateMutation = useMutation({
+        mutationFn: ({ id, data }) => api.put(`/classes/${id}`, data),
+        onSuccess: () => {
+            toast.success('Class updated successfully')
+            queryClient.invalidateQueries({ queryKey: ['classes'] })
+            setEditModal(false)
+        },
+        onError: (error) => {
+            toast.error(error.response?.data?.message || 'Failed to update class')
+        }
+    })
+
+    const rescheduleMutation = useMutation({
+        mutationFn: ({ id, data }) => api.put(`/classes/${id}/reschedule`, data),
+        onSuccess: () => {
+            toast.success('Class rescheduled successfully')
+            queryClient.invalidateQueries({ queryKey: ['classes'] })
+            setRescheduleModal(false)
+        },
+        onError: (error) => {
+            toast.error(error.response?.data?.message || 'Failed to reschedule class')
+        }
+    })
 
     const getStatusBadge = (status) => {
         const styles = {
@@ -142,6 +170,16 @@ export default function ClassList() {
                             className="input pl-10 w-full"
                         />
                     </div>
+                    <select
+                        value={filters.class}
+                        onChange={(e) => setFilters(f => ({ ...f, class: e.target.value }))}
+                        className="input w-auto min-w-[180px]"
+                    >
+                        <option value="">All Classes</option>
+                        {CLASSES.map((cls) => (
+                            <option key={cls} value={cls}>{cls}</option>
+                        ))}
+                    </select>
                     <button
                         onClick={() => setShowFilters(!showFilters)}
                         className={`btn ${showFilters ? 'btn-primary' : 'btn-outline'} flex items-center gap-2`}
@@ -152,17 +190,7 @@ export default function ClassList() {
                 </div>
 
                 {showFilters && (
-                    <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mt-4 pt-4 border-t border-gray-200">
-                        <select
-                            value={filters.class}
-                            onChange={(e) => setFilters(f => ({ ...f, class: e.target.value }))}
-                            className="input"
-                        >
-                            <option value="">All Classes</option>
-                            {CLASSES.map((cls) => (
-                                <option key={cls} value={cls}>{cls}</option>
-                            ))}
-                        </select>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4 pt-4 border-t border-gray-200">
                         <input
                             type="text"
                             placeholder="Subject"
@@ -270,55 +298,56 @@ export default function ClassList() {
                                                 </span>
                                             </td>
                                             <td className="text-right">
-                                                <div className="relative">
+                                                <div className="flex items-center justify-end gap-2">
                                                     <button
-                                                        onClick={() => setActionMenu(actionMenu === cls._id ? null : cls._id)}
-                                                        className="p-2 hover:bg-gray-100 rounded-lg"
+                                                        onClick={() => {
+                                                            setEditForm(cls)
+                                                            setEditModal(true)
+                                                        }}
+                                                        className="p-2 hover:bg-gray-100 rounded-lg text-gray-600 hover:text-blue-600 transition-colors"
+                                                        title="Edit Class"
                                                     >
-                                                        <MoreVertical className="w-4 h-4" />
+                                                        <Edit className="w-4 h-4" />
                                                     </button>
-                                                    {actionMenu === cls._id && (
-                                                        <div className="absolute right-0 mt-1 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-10">
-                                                            <Link
-                                                                to={`/admin/classes/${cls._id}/edit`}
-                                                                className="flex items-center gap-2 px-4 py-2 text-sm hover:bg-gray-50"
-                                                            >
-                                                                <Edit className="w-4 h-4" />
-                                                                Edit
-                                                            </Link>
-                                                            <Link
-                                                                to={`/admin/classes/${cls._id}/reschedule`}
-                                                                className="flex items-center gap-2 px-4 py-2 text-sm hover:bg-gray-50"
-                                                            >
-                                                                <RefreshCw className="w-4 h-4" />
-                                                                Reschedule
-                                                            </Link>
-                                                            {cls.status !== 'cancelled' && cls.status !== 'completed' && (
-                                                                <button
-                                                                    onClick={() => {
-                                                                        setCancelModal(cls)
-                                                                        setActionMenu(null)
-                                                                    }}
-                                                                    className="flex items-center gap-2 px-4 py-2 text-sm hover:bg-gray-50 w-full text-left text-orange-600"
-                                                                >
-                                                                    <XCircle className="w-4 h-4" />
-                                                                    Cancel
-                                                                </button>
-                                                            )}
-                                                            <button
-                                                                onClick={() => {
-                                                                    if (confirm('Are you sure you want to delete this class?')) {
-                                                                        deleteMutation.mutate(cls._id)
-                                                                    }
-                                                                    setActionMenu(null)
-                                                                }}
-                                                                className="flex items-center gap-2 px-4 py-2 text-sm hover:bg-gray-50 w-full text-left text-red-600"
-                                                            >
-                                                                <Trash2 className="w-4 h-4" />
-                                                                Delete
-                                                            </button>
-                                                        </div>
+
+                                                    <button
+                                                        onClick={() => {
+                                                            setRescheduleForm({
+                                                                _id: cls._id,
+                                                                date: cls.date.split('T')[0],
+                                                                startTime: cls.startTime,
+                                                                endTime: cls.endTime,
+                                                                room: cls.room
+                                                            })
+                                                            setRescheduleModal(true)
+                                                        }}
+                                                        className="p-2 hover:bg-gray-100 rounded-lg text-gray-600 hover:text-yellow-600 transition-colors"
+                                                        title="Reschedule Class"
+                                                    >
+                                                        <RefreshCw className="w-4 h-4" />
+                                                    </button>
+
+                                                    {cls.status !== 'cancelled' && cls.status !== 'completed' && (
+                                                        <button
+                                                            onClick={() => setCancelModal(cls)}
+                                                            className="p-2 hover:bg-red-50 rounded-lg text-gray-600 hover:text-orange-600 transition-colors"
+                                                            title="Cancel Class"
+                                                        >
+                                                            <XCircle className="w-4 h-4" />
+                                                        </button>
                                                     )}
+
+                                                    <button
+                                                        onClick={() => {
+                                                            if (window.confirm('Are you sure you want to delete this class?')) {
+                                                                deleteMutation.mutate(cls._id)
+                                                            }
+                                                        }}
+                                                        className="p-2 hover:bg-red-50 rounded-lg text-gray-600 hover:text-red-600 transition-colors"
+                                                        title="Delete Class"
+                                                    >
+                                                        <Trash2 className="w-4 h-4" />
+                                                    </button>
                                                 </div>
                                             </td>
                                         </tr>
@@ -358,8 +387,8 @@ export default function ClassList() {
 
             {/* Cancel Modal */}
             {cancelModal && (
-                <div className="modal-overlay">
-                    <div className="modal-content max-w-md w-full p-6">
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+                    <div className="bg-white rounded-lg max-w-md w-full p-6 animate-scaleIn">
                         <h3 className="text-lg font-semibold mb-4 text-[var(--primary)]">Cancel Class</h3>
                         <p className="text-gray-600 mb-4">
                             Are you sure you want to cancel "{cancelModal.title}"? Students will be notified.
@@ -387,6 +416,150 @@ export default function ClassList() {
                             >
                                 {cancelMutation.isPending ? 'Cancelling...' : 'Cancel Class'}
                             </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Edit Modal */}
+            {editModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 overflow-y-auto">
+                    <div className="bg-white rounded-lg max-w-2xl w-full p-6 animate-scaleIn my-8">
+                        <div className="flex justify-between items-center mb-6">
+                            <h3 className="text-lg font-semibold text-[var(--primary)]">Edit Class</h3>
+                            <button onClick={() => setEditModal(false)} className="text-gray-400 hover:text-gray-600">
+                                <XCircle className="w-5 h-5" />
+                            </button>
+                        </div>
+
+                        <div className="space-y-4">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Title</label>
+                                    <input
+                                        type="text"
+                                        value={editForm.title || ''}
+                                        onChange={(e) => setEditForm({ ...editForm, title: e.target.value })}
+                                        className="input w-full"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Subject</label>
+                                    <input
+                                        type="text"
+                                        value={editForm.subject || ''}
+                                        onChange={(e) => setEditForm({ ...editForm, subject: e.target.value })}
+                                        className="input w-full"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Instructor</label>
+                                    <input
+                                        type="text"
+                                        value={editForm.instructorName || ''}
+                                        onChange={(e) => setEditForm({ ...editForm, instructorName: e.target.value })}
+                                        className="input w-full"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Room</label>
+                                    <input
+                                        type="text"
+                                        value={editForm.room || ''}
+                                        onChange={(e) => setEditForm({ ...editForm, room: e.target.value })}
+                                        className="input w-full"
+                                    />
+                                </div>
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                                <textarea
+                                    value={editForm.description || ''}
+                                    onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
+                                    className="input w-full h-24"
+                                />
+                            </div>
+
+                            <div className="flex justify-end gap-2 pt-4 border-t">
+                                <button onClick={() => setEditModal(false)} className="btn btn-outline">Cancel</button>
+                                <button
+                                    onClick={() => updateMutation.mutate({ id: editForm._id, data: editForm })}
+                                    disabled={updateMutation.isPending}
+                                    className="btn btn-primary"
+                                >
+                                    {updateMutation.isPending ? 'Saving...' : 'Save Changes'}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Reschedule Modal */}
+            {rescheduleModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+                    <div className="bg-white rounded-lg max-w-md w-full p-6 animate-scaleIn">
+                        <div className="flex justify-between items-center mb-6">
+                            <h3 className="text-lg font-semibold text-[var(--primary)]">Reschedule Class</h3>
+                            <button onClick={() => setRescheduleModal(false)} className="text-gray-400 hover:text-gray-600">
+                                <XCircle className="w-5 h-5" />
+                            </button>
+                        </div>
+
+                        <div className="space-y-4">
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">New Date</label>
+                                <input
+                                    type="date"
+                                    value={rescheduleForm.date || ''}
+                                    onChange={(e) => setRescheduleForm({ ...rescheduleForm, date: e.target.value })}
+                                    className="input w-full"
+                                />
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Start Time</label>
+                                    <input
+                                        type="time"
+                                        value={rescheduleForm.startTime || ''}
+                                        onChange={(e) => setRescheduleForm({ ...rescheduleForm, startTime: e.target.value })}
+                                        className="input w-full"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">End Time</label>
+                                    <input
+                                        type="time"
+                                        value={rescheduleForm.endTime || ''}
+                                        onChange={(e) => setRescheduleForm({ ...rescheduleForm, endTime: e.target.value })}
+                                        className="input w-full"
+                                    />
+                                </div>
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Room (Optional)</label>
+                                <input
+                                    type="text"
+                                    value={rescheduleForm.room || ''}
+                                    onChange={(e) => setRescheduleForm({ ...rescheduleForm, room: e.target.value })}
+                                    className="input w-full"
+                                    placeholder="Leave empty to keep current room"
+                                />
+                            </div>
+
+                            <div className="flex justify-end gap-2 pt-4 border-t">
+                                <button onClick={() => setRescheduleModal(false)} className="btn btn-outline">Cancel</button>
+                                <button
+                                    onClick={() => rescheduleMutation.mutate({ id: rescheduleForm._id, data: rescheduleForm })}
+                                    disabled={rescheduleMutation.isPending}
+                                    className="btn btn-primary"
+                                >
+                                    {rescheduleMutation.isPending ? 'Rescheduling...' : 'Confirm Reschedule'}
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>

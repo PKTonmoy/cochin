@@ -224,8 +224,8 @@ const AttendanceHistory = () => {
                                     bgColor = 'bg-amber-100'
                                     textColor = 'text-amber-700'
                                 } else if (day.status === 'absent') {
-                                    bgColor = 'bg-red-100'
-                                    textColor = 'text-red-700'
+                                    bgColor = 'bg-red-200'
+                                    textColor = 'text-red-800 font-bold'
                                 }
 
                                 if (isToday(day.date)) {

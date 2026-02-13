@@ -19,6 +19,7 @@ import DynamicPage from './pages/public/DynamicPage'
 // Admin pages
 import AdminDashboard from './pages/admin/Dashboard'
 import StudentList from './pages/admin/StudentList'
+import StudentDetails from './pages/admin/StudentDetails'
 import AddStudent from './pages/admin/AddStudent'
 import EditStudent from './pages/admin/EditStudent'
 import PaymentList from './pages/admin/PaymentList'
@@ -154,6 +155,7 @@ function App() {
         >
           <Route index element={<AdminDashboard />} />
           <Route path="students" element={<StudentList />} />
+          <Route path="students/:id" element={<StudentDetails />} />
           <Route path="students/add" element={<AddStudent />} />
           <Route path="students/:id/edit" element={<EditStudent />} />
           <Route path="payments" element={<PaymentList />} />
