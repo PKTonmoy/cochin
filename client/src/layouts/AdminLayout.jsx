@@ -40,24 +40,31 @@ const AdminLayout = () => {
 
     const menuItems = [
         { path: '/admin', icon: LayoutDashboard, label: 'Dashboard', exact: true },
+
+        { type: 'divider', label: 'Student Management' },
         { path: '/admin/students', icon: Users, label: 'Students' },
-        { path: '/admin/classes', icon: BookOpen, label: 'Classes' },
         { path: '/admin/payments', icon: CreditCard, label: 'Payments' },
         { path: '/admin/receipts', icon: FileText, label: 'Receipts' },
+
+        { type: 'divider', label: 'Academic Management' },
+        { path: '/admin/classes', icon: BookOpen, label: 'Classes' },
         { path: '/admin/tests', icon: ClipboardList, label: 'Tests' },
-        { path: '/admin/results', icon: FileText, label: 'Results' },
         { path: '/admin/attendance', icon: Calendar, label: 'Attendance' },
         { path: '/admin/upload', icon: Upload, label: 'Upload Results' },
-        { path: '/admin/batches', icon: Database, label: 'Upload History' },
+        { path: '/admin/results', icon: FileText, label: 'Results' },
+
+        { type: 'divider', label: 'Content & Communication' },
         { path: '/admin/leads', icon: MessageCircle, label: 'Leads & Inquiries' },
         { path: '/admin/sms-management', icon: MessageSquare, label: 'SMS', adminOnly: true },
-        { type: 'divider', label: 'Content Management' },
         { path: '/admin/cms', icon: Layout, label: 'Pages & CMS' },
         { path: '/admin/faculty', icon: GraduationCap, label: 'Faculty' },
         { path: '/admin/courses', icon: BookOpen, label: 'Courses' },
         { path: '/admin/toppers', icon: Award, label: 'Toppers' },
         { path: '/admin/testimonials', icon: MessageSquareQuote, label: 'Testimonials' },
         { path: '/admin/media', icon: Image, label: 'Media Library' },
+
+        { type: 'divider', label: 'System' },
+        { path: '/admin/batches', icon: Database, label: 'Upload History' },
         { path: '/admin/settings', icon: Settings, label: 'Settings', adminOnly: true },
     ]
 
