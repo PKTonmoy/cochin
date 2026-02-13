@@ -211,8 +211,18 @@ function CourseCard({ course, isCenter }) {
             </div>
 
             {/* Footer */}
-            <div className="flex items-center justify-center pt-4 mt-3 border-t border-slate-100">
-              <span className="text-[10px] font-medium text-slate-400/70 tracking-wide uppercase">Tap to see details</span>
+            <div className="mt-auto pt-4">
+              <div
+                className="w-full py-3 rounded-xl flex items-center justify-center gap-2 group/btn relative overflow-hidden transition-all duration-300 transform hover:-translate-y-1 hover:shadow-lg"
+                style={{
+                  background: theme.gradient,
+                  boxShadow: `0 4px 12px ${theme.glow}`,
+                }}
+              >
+                <div className="absolute inset-0 -translate-x-full group-hover/btn:translate-x-full transition-transform duration-1000 bg-gradient-to-r from-transparent via-white/30 to-transparent" />
+                <span className="text-white text-xs font-bold uppercase tracking-wider relative z-10">Tap to see details</span>
+                <ArrowRight size={14} className="text-white relative z-10 transition-transform group-hover/btn:translate-x-1" />
+              </div>
             </div>
           </div>
         </div>

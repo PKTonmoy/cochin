@@ -1,13 +1,15 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
-    Save, RefreshCw, Globe, Phone, Palette, Search, Share2, Bell, ExternalLink, Upload, X, Image, FileText
+    Save, RefreshCw, Globe, Phone, Palette, Search, Share2, Bell, ExternalLink, Upload, X, Image, FileText,
+    Layout, BookOpen, Sparkles, Trophy, MessageCircle, Users
 } from 'lucide-react';
 import api from '../../lib/api';
 import { toast } from 'react-hot-toast';
 
 const TABS = [
     { id: 'site', label: 'Site Info', icon: Globe },
+    { id: 'landing', label: 'Landing Page', icon: Layout },
     { id: 'contact', label: 'Contact', icon: Phone },
     { id: 'receipt', label: 'Receipt', icon: FileText },
     { id: 'theme', label: 'Theme', icon: Palette },
@@ -20,7 +22,40 @@ const initialSettings = {
     siteInfo: {
         name: '',
         tagline: '',
+        mobileCoachingName: '',
+        heroAnimatedTexts: [],
+        heroTitleLine1: '',
+        heroTitleLine2: '',
+        heroBadge: '#1 Coaching Center in Bangladesh',
         description: '',
+        landingPage: {
+            programs: {
+                badge: 'Our Programs',
+                titleLine1: 'আমাদের',
+                titleLine2: 'প্রোগ্রামসমূহ',
+                description: 'আপনার লক্ষ্য অনুযায়ী সেরা প্রোগ্রাম নির্বাচন করুন'
+            },
+            whyChooseUs: {
+                badge: 'Why Choose Us',
+                titleLine1: 'কেন',
+                titleLine2: 'প্যারাগন?'
+            },
+            hallOfFame: {
+                badge: 'Hall of Fame',
+                titleLine1: 'আমাদের',
+                titleLine2: 'সফল শিক্ষার্থী'
+            },
+            successStories: {
+                badge: 'Success Stories',
+                titleLine1: 'সফল শিক্ষার্থীদের',
+                titleLine2: 'মতামত'
+            },
+            faculty: {
+                badge: 'Our Team',
+                titleLine1: 'আমাদের',
+                titleLine2: 'শিক্ষকমণ্ডলী'
+            }
+        },
         logo: { url: '', publicId: '' },
         favicon: { url: '', publicId: '' },
         establishedYear: new Date().getFullYear()
@@ -77,6 +112,7 @@ export default function GlobalSettings() {
     const [activeTab, setActiveTab] = useState('site');
     const [formData, setFormData] = useState(initialSettings);
     const [keywordInput, setKeywordInput] = useState('');
+    const [animatedTextInput, setAnimatedTextInput] = useState('');
     const [hasChanges, setHasChanges] = useState(false);
     const [uploadingLogo, setUploadingLogo] = useState(false);
     const logoInputRef = useRef(null);
@@ -326,6 +362,97 @@ export default function GlobalSettings() {
                                         />
                                     </div>
                                     <div className="md:col-span-2">
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">Mobile Coaching Name</label>
+                                        <input
+                                            type="text"
+                                            value={formData.siteInfo.mobileCoachingName || ''}
+                                            onChange={(e) => handleChange('siteInfo', 'mobileCoachingName', e.target.value)}
+                                            placeholder="Displayed on mobile hero section (e.g. PARAGON ACADEMY)"
+                                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                                        />
+                                    </div>
+                                    <div className="md:col-span-2">
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">Hero Badge Text</label>
+                                        <input
+                                            type="text"
+                                            value={formData.siteInfo.heroBadge || ''}
+                                            onChange={(e) => handleChange('siteInfo', 'heroBadge', e.target.value)}
+                                            placeholder="e.g. #1 Coaching Center in Bangladesh"
+                                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">Hero Title Line 1</label>
+                                        <input
+                                            type="text"
+                                            value={formData.siteInfo.heroTitleLine1 || ''}
+                                            onChange={(e) => handleChange('siteInfo', 'heroTitleLine1', e.target.value)}
+                                            placeholder="e.g. Transform Your"
+                                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">Hero Title Line 2</label>
+                                        <input
+                                            type="text"
+                                            value={formData.siteInfo.heroTitleLine2 || ''}
+                                            onChange={(e) => handleChange('siteInfo', 'heroTitleLine2', e.target.value)}
+                                            placeholder="e.g. Future Today"
+                                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                                        />
+                                    </div>
+                                    <div className="md:col-span-2">
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">Hero Animated Texts</label>
+                                        <p className="text-xs text-gray-500 mb-2">These texts animate (typewriter effect) on the hero section. Add at least 2 for best effect.</p>
+                                        <div className="flex gap-2 mb-3">
+                                            <input
+                                                type="text"
+                                                value={animatedTextInput}
+                                                onChange={(e) => setAnimatedTextInput(e.target.value)}
+                                                onKeyDown={(e) => {
+                                                    if (e.key === 'Enter') {
+                                                        e.preventDefault();
+                                                        if (animatedTextInput.trim()) {
+                                                            handleChange('siteInfo', 'heroAnimatedTexts', [...(formData.siteInfo.heroAnimatedTexts || []), animatedTextInput.trim()]);
+                                                            setAnimatedTextInput('');
+                                                        }
+                                                    }
+                                                }}
+                                                placeholder="e.g. Engineering Excellence"
+                                                className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                                            />
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    if (animatedTextInput.trim()) {
+                                                        handleChange('siteInfo', 'heroAnimatedTexts', [...(formData.siteInfo.heroAnimatedTexts || []), animatedTextInput.trim()]);
+                                                        setAnimatedTextInput('');
+                                                    }
+                                                }}
+                                                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
+                                            >
+                                                Add
+                                            </button>
+                                        </div>
+                                        <div className="flex flex-wrap gap-2">
+                                            {(formData.siteInfo.heroAnimatedTexts || []).map((text, idx) => (
+                                                <span key={idx} className="inline-flex items-center gap-1 px-3 py-1.5 bg-blue-50 text-blue-700 rounded-full text-sm font-medium">
+                                                    {text}
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => handleChange('siteInfo', 'heroAnimatedTexts', formData.siteInfo.heroAnimatedTexts.filter((_, i) => i !== idx))}
+                                                        className="ml-1 text-blue-400 hover:text-red-500 transition-colors"
+                                                    >
+                                                        <X className="w-3.5 h-3.5" />
+                                                    </button>
+                                                </span>
+                                            ))}
+                                        </div>
+                                        {(formData.siteInfo.heroAnimatedTexts || []).length === 0 && (
+                                            <p className="text-xs text-gray-400 mt-2 italic">No animated texts added. Defaults will be used (Engineering Excellence, Medical Mastery, etc.)</p>
+                                        )}
+                                    </div>
+                                    <div className="md:col-span-2">
                                         <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
                                         <textarea
                                             value={formData.siteInfo.description}
@@ -408,6 +535,210 @@ export default function GlobalSettings() {
                                             </p>
                                         </div>
                                     </div>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Landing Page Settings */}
+                        {activeTab === 'landing' && (
+                            <div className="space-y-8">
+                                {/* Programs Section */}
+                                <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
+                                    <h3 className="font-medium text-gray-900 mb-4 flex items-center gap-2">
+                                        <BookOpen className="w-4 h-4" /> Programs Section
+                                    </h3>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 mb-1">Badge Text</label>
+                                            <input
+                                                type="text"
+                                                value={formData.siteInfo.landingPage?.programs?.badge || ''}
+                                                onChange={(e) => handleChange('siteInfo', 'landingPage', { ...formData.siteInfo.landingPage, programs: { ...formData.siteInfo.landingPage?.programs, badge: e.target.value } })}
+                                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                                            <input
+                                                type="text"
+                                                value={formData.siteInfo.landingPage?.programs?.description || ''}
+                                                onChange={(e) => handleChange('siteInfo', 'landingPage', { ...formData.siteInfo.landingPage, programs: { ...formData.siteInfo.landingPage?.programs, description: e.target.value } })}
+                                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 mb-1">Title Part 1 (Black)</label>
+                                            <input
+                                                type="text"
+                                                value={formData.siteInfo.landingPage?.programs?.titleLine1 || ''}
+                                                onChange={(e) => handleChange('siteInfo', 'landingPage', { ...formData.siteInfo.landingPage, programs: { ...formData.siteInfo.landingPage?.programs, titleLine1: e.target.value } })}
+                                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 mb-1">Title Part 2 (Gradient)</label>
+                                            <input
+                                                type="text"
+                                                value={formData.siteInfo.landingPage?.programs?.titleLine2 || ''}
+                                                onChange={(e) => handleChange('siteInfo', 'landingPage', { ...formData.siteInfo.landingPage, programs: { ...formData.siteInfo.landingPage?.programs, titleLine2: e.target.value } })}
+                                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Why Choose Us Section */}
+                                <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
+                                    <h3 className="font-medium text-gray-900 mb-4 flex items-center gap-2">
+                                        <Sparkles className="w-4 h-4" /> Why Choose Us Section
+                                    </h3>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <div className="md:col-span-2">
+                                            <label className="block text-sm font-medium text-gray-700 mb-1">Badge Text</label>
+                                            <input
+                                                type="text"
+                                                value={formData.siteInfo.landingPage?.whyChooseUs?.badge || ''}
+                                                onChange={(e) => handleChange('siteInfo', 'landingPage', { ...formData.siteInfo.landingPage, whyChooseUs: { ...formData.siteInfo.landingPage?.whyChooseUs, badge: e.target.value } })}
+                                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 mb-1">Title Part 1 (Black)</label>
+                                            <input
+                                                type="text"
+                                                value={formData.siteInfo.landingPage?.whyChooseUs?.titleLine1 || ''}
+                                                onChange={(e) => handleChange('siteInfo', 'landingPage', { ...formData.siteInfo.landingPage, whyChooseUs: { ...formData.siteInfo.landingPage?.whyChooseUs, titleLine1: e.target.value } })}
+                                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 mb-1">Title Part 2 (Gradient)</label>
+                                            <input
+                                                type="text"
+                                                value={formData.siteInfo.landingPage?.whyChooseUs?.titleLine2 || ''}
+                                                onChange={(e) => handleChange('siteInfo', 'landingPage', { ...formData.siteInfo.landingPage, whyChooseUs: { ...formData.siteInfo.landingPage?.whyChooseUs, titleLine2: e.target.value } })}
+                                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Hall of Fame Section */}
+                                <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
+                                    <h3 className="font-medium text-gray-900 mb-4 flex items-center gap-2">
+                                        <Trophy className="w-4 h-4" /> Hall of Fame Section
+                                    </h3>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <div className="md:col-span-2">
+                                            <label className="block text-sm font-medium text-gray-700 mb-1">Badge Text</label>
+                                            <input
+                                                type="text"
+                                                value={formData.siteInfo.landingPage?.hallOfFame?.badge || ''}
+                                                onChange={(e) => handleChange('siteInfo', 'landingPage', { ...formData.siteInfo.landingPage, hallOfFame: { ...formData.siteInfo.landingPage?.hallOfFame, badge: e.target.value } })}
+                                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 mb-1">Title Part 1 (Black)</label>
+                                            <input
+                                                type="text"
+                                                value={formData.siteInfo.landingPage?.hallOfFame?.titleLine1 || ''}
+                                                onChange={(e) => handleChange('siteInfo', 'landingPage', { ...formData.siteInfo.landingPage, hallOfFame: { ...formData.siteInfo.landingPage?.hallOfFame, titleLine1: e.target.value } })}
+                                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 mb-1">Title Part 2 (Gradient)</label>
+                                            <input
+                                                type="text"
+                                                value={formData.siteInfo.landingPage?.hallOfFame?.titleLine2 || ''}
+                                                onChange={(e) => handleChange('siteInfo', 'landingPage', { ...formData.siteInfo.landingPage, hallOfFame: { ...formData.siteInfo.landingPage?.hallOfFame, titleLine2: e.target.value } })}
+                                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Success Stories Section */}
+                                <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
+                                    <h3 className="font-medium text-gray-900 mb-4 flex items-center gap-2">
+                                        <MessageCircle className="w-4 h-4" /> Success Stories Section
+                                    </h3>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <div className="md:col-span-2">
+                                            <label className="block text-sm font-medium text-gray-700 mb-1">Badge Text</label>
+                                            <input
+                                                type="text"
+                                                value={formData.siteInfo.landingPage?.successStories?.badge || ''}
+                                                onChange={(e) => handleChange('siteInfo', 'landingPage', { ...formData.siteInfo.landingPage, successStories: { ...formData.siteInfo.landingPage?.successStories, badge: e.target.value } })}
+                                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 mb-1">Title Part 1 (Black)</label>
+                                            <input
+                                                type="text"
+                                                value={formData.siteInfo.landingPage?.successStories?.titleLine1 || ''}
+                                                onChange={(e) => handleChange('siteInfo', 'landingPage', { ...formData.siteInfo.landingPage, successStories: { ...formData.siteInfo.landingPage?.successStories, titleLine1: e.target.value } })}
+                                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 mb-1">Title Part 2 (Gradient)</label>
+                                            <input
+                                                type="text"
+                                                value={formData.siteInfo.landingPage?.successStories?.titleLine2 || ''}
+                                                onChange={(e) => handleChange('siteInfo', 'landingPage', { ...formData.siteInfo.landingPage, successStories: { ...formData.siteInfo.landingPage?.successStories, titleLine2: e.target.value } })}
+                                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Faculty Section */}
+                                <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
+                                    <h3 className="font-medium text-gray-900 mb-4 flex items-center gap-2">
+                                        <Users className="w-4 h-4" /> Faculty Section
+                                    </h3>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <div className="md:col-span-2">
+                                            <label className="block text-sm font-medium text-gray-700 mb-1">Badge Text</label>
+                                            <input
+                                                type="text"
+                                                value={formData.siteInfo.landingPage?.faculty?.badge || ''}
+                                                onChange={(e) => handleChange('siteInfo', 'landingPage', { ...formData.siteInfo.landingPage, faculty: { ...formData.siteInfo.landingPage?.faculty, badge: e.target.value } })}
+                                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 mb-1">Title Part 1 (Black)</label>
+                                            <input
+                                                type="text"
+                                                value={formData.siteInfo.landingPage?.faculty?.titleLine1 || ''}
+                                                onChange={(e) => handleChange('siteInfo', 'landingPage', { ...formData.siteInfo.landingPage, faculty: { ...formData.siteInfo.landingPage?.faculty, titleLine1: e.target.value } })}
+                                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 mb-1">Title Part 2 (Gradient)</label>
+                                            <input
+                                                type="text"
+                                                value={formData.siteInfo.landingPage?.faculty?.titleLine2 || ''}
+                                                onChange={(e) => handleChange('siteInfo', 'landingPage', { ...formData.siteInfo.landingPage, faculty: { ...formData.siteInfo.landingPage?.faculty, titleLine2: e.target.value } })}
+                                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="flex justify-end pt-4">
+                                    <button
+                                        type="submit"
+                                        disabled={saveMutation.isLoading || !hasChanges}
+                                        className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
+                                    >
+                                        {saveMutation.isLoading ? 'Saving...' : 'Save Changes'}
+                                    </button>
                                 </div>
                             </div>
                         )}

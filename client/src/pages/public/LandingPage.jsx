@@ -101,7 +101,7 @@ function FacultyCard({ faculty, index }) {
 
 // Main Component
 export default function LandingPage() {
-    const { getPrimaryPhone, getEmail, getAddress } = useSettings()
+    const { settings, getPrimaryPhone, getEmail, getAddress } = useSettings()
     const [content, setContent] = useState({})
     const [courses, setCourses] = useState([])
     const [faculty, setFaculty] = useState([])
@@ -338,7 +338,15 @@ export default function LandingPage() {
             <BackToTop />
 
             {/* Hero */}
-            <HeroSection3D content={hero} stats={stats} />
+            <HeroSection3D
+                content={hero}
+                stats={stats}
+                mobileName={settings?.siteInfo?.mobileCoachingName}
+                animatedTexts={settings?.siteInfo?.heroAnimatedTexts}
+                titleLine1={settings?.siteInfo?.heroTitleLine1}
+                titleLine2={settings?.siteInfo?.heroTitleLine2}
+                heroBadge={settings?.siteInfo?.heroBadge}
+            />
 
             {/* Courses */}
             <section id="programs" className="section-cyber relative" style={{
@@ -353,10 +361,10 @@ export default function LandingPage() {
                     <div className="section-title reveal">
                         <div className="badge">
                             <BookOpen size={16} />
-                            <span>Our Programs</span>
+                            <span>{settings?.siteInfo?.landingPage?.programs?.badge || 'Our Programs'}</span>
                         </div>
-                        <h2 className="font-bangla">আমাদের <span className="gradient-text">প্রোগ্রামসমূহ</span></h2>
-                        <p className="font-bangla">আপনার লক্ষ্য অনুযায়ী সেরা প্রোগ্রাম নির্বাচন করুন</p>
+                        <h2 className="font-bangla">{settings?.siteInfo?.landingPage?.programs?.titleLine1 || 'আমাদের'} <span className="gradient-text">{settings?.siteInfo?.landingPage?.programs?.titleLine2 || 'প্রোগ্রামসমূহ'}</span></h2>
+                        <p className="font-bangla">{settings?.siteInfo?.landingPage?.programs?.description || 'আপনার লক্ষ্য অনুযায়ী সেরা প্রোগ্রাম নির্বাচন করুন'}</p>
                     </div>
                     <CourseCarousel courses={displayCourses} />
                 </div>
@@ -368,9 +376,9 @@ export default function LandingPage() {
                     <div className="section-title reveal">
                         <div className="badge">
                             <Sparkles size={16} />
-                            <span>Why Choose Us</span>
+                            <span>{settings?.siteInfo?.landingPage?.whyChooseUs?.badge || 'Why Choose Us'}</span>
                         </div>
-                        <h2 className="font-bangla">কেন <span className="gradient-text">প্যারাগন?</span></h2>
+                        <h2 className="font-bangla">{settings?.siteInfo?.landingPage?.whyChooseUs?.titleLine1 || 'কেন'} <span className="gradient-text">{settings?.siteInfo?.landingPage?.whyChooseUs?.titleLine2 || 'প্যারাগন?'}</span></h2>
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                         {features.map((f, i) => <FeatureCard key={i} feature={f} index={i} />)}
@@ -384,9 +392,9 @@ export default function LandingPage() {
                     <div className="section-title reveal">
                         <div className="badge">
                             <Trophy size={16} />
-                            <span>Hall of Fame</span>
+                            <span>{settings?.siteInfo?.landingPage?.hallOfFame?.badge || 'Hall of Fame'}</span>
                         </div>
-                        <h2 className="font-bangla">আমাদের <span className="gradient-text">সফল শিক্ষার্থী</span></h2>
+                        <h2 className="font-bangla">{settings?.siteInfo?.landingPage?.hallOfFame?.titleLine1 || 'আমাদের'} <span className="gradient-text">{settings?.siteInfo?.landingPage?.hallOfFame?.titleLine2 || 'সফল শিক্ষার্থী'}</span></h2>
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                         {topRankers.map((s, i) => (
@@ -413,9 +421,9 @@ export default function LandingPage() {
                     <div className="section-title reveal">
                         <div className="badge">
                             <MessageCircle size={16} />
-                            <span>Success Stories</span>
+                            <span>{settings?.siteInfo?.landingPage?.successStories?.badge || 'Success Stories'}</span>
                         </div>
-                        <h2 className="font-bangla">সফল শিক্ষার্থীদের <span className="gradient-text">মতামত</span></h2>
+                        <h2 className="font-bangla">{settings?.siteInfo?.landingPage?.successStories?.titleLine1 || 'সফল শিক্ষার্থীদের'} <span className="gradient-text">{settings?.siteInfo?.landingPage?.successStories?.titleLine2 || 'মতামত'}</span></h2>
                     </div>
                     <div className="reveal">
                         <StoryPreviews testimonials={testimonials} onOpen={(i) => { setStoryIndex(i); setStoryOpen(true) }} />
@@ -431,9 +439,9 @@ export default function LandingPage() {
                     <div className="section-title reveal">
                         <div className="badge">
                             <Users size={16} />
-                            <span>Our Team</span>
+                            <span>{settings?.siteInfo?.landingPage?.faculty?.badge || 'Our Team'}</span>
                         </div>
-                        <h2 className="font-bangla">আমাদের <span className="gradient-text">শিক্ষকমণ্ডলী</span></h2>
+                        <h2 className="font-bangla">{settings?.siteInfo?.landingPage?.faculty?.titleLine1 || 'আমাদের'} <span className="gradient-text">{settings?.siteInfo?.landingPage?.faculty?.titleLine2 || 'শিক্ষকমণ্ডলী'}</span></h2>
                     </div>
                     <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                         {displayFaculty.map((f, i) => <FacultyCard key={i} faculty={f} index={i} />)}

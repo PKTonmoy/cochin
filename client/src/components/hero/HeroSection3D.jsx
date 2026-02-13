@@ -78,31 +78,31 @@ function TypewriterText({ texts, className }) {
 }
 
 // Main Hero Component
-export function HeroSection3D({ content, stats }) {
+export function HeroSection3D({ content, stats, mobileName, animatedTexts, titleLine1, titleLine2, heroBadge }) {
     const heroRef = useRef(null)
 
-    const subtitles = [
+    const defaultSubtitles = [
         'Engineering Excellence',
         'Medical Mastery',
         'Academic Success',
         'Future Leaders'
     ]
 
+    const subtitles = (animatedTexts && animatedTexts.length > 0) ? animatedTexts : defaultSubtitles
+
     useEffect(() => {
-        // GSAP animations
         const ctx = gsap.context(() => {
             gsap.from('.hero-animate', {
-                y: 60,
                 opacity: 0,
-                duration: 1,
-                stagger: 0.15,
-                ease: 'power3.out',
-                delay: 0.3
+                duration: 0.6,
+                stagger: 0.1,
+                ease: 'power2.out',
             })
         }, heroRef)
 
         return () => ctx.revert()
     }, [])
+
 
     const scrollToPrograms = () => {
         const element = document.getElementById('programs')
@@ -132,14 +132,42 @@ export function HeroSection3D({ content, stats }) {
                 <div className="hero-animate inline-flex items-center gap-2 px-4 py-2 bg-blue-50 border border-blue-200 rounded-full mb-6">
                     <SparklesIcon size={16} className="text-blue-500" />
                     <span className="text-sm font-semibold text-blue-600">
-                        {content.badge || '#1 Coaching Center in Bangladesh'}
+                        {heroBadge || '#1 Coaching Center in Bangladesh'}
                     </span>
                 </div>
 
                 {/* Main Title */}
                 <h1 className="hero-animate hero-title">
-                    <span className="block text-gray-900">Transform Your</span>
-                    <span className="block gradient-text">Future Today</span>
+                    {mobileName && (
+                        <div className="relative inline-block md:hidden mb-6">
+                            {/* Organic blob background - matches theme */}
+                            <div className="absolute -inset-6 sm:-inset-8 -z-10 flex items-center justify-center">
+                                <div
+                                    className="w-full h-full animate-morph"
+                                    style={{
+                                        background: 'radial-gradient(ellipse at 45% 50%, rgba(59, 130, 246, 0.15) 0%, rgba(96, 165, 250, 0.12) 40%, rgba(191, 219, 254, 0.18) 70%, transparent 100%)',
+                                        borderRadius: '60% 40% 45% 55% / 55% 45% 55% 45%',
+                                        filter: 'blur(2px)',
+                                        transform: 'scale(1.4) rotate(-3deg)',
+                                    }}
+                                />
+                            </div>
+                            {/* Subtle inner glow */}
+                            <div
+                                className="absolute -inset-4 sm:-inset-6 -z-10"
+                                style={{
+                                    background: 'radial-gradient(ellipse at center, rgba(59, 130, 246, 0.08) 0%, transparent 70%)',
+                                    borderRadius: '50%',
+                                    filter: 'blur(8px)',
+                                }}
+                            />
+                            <span className="relative block text-3xl sm:text-4xl font-extrabold gradient-text font-bangla tracking-wide py-3 px-4 z-10">
+                                {mobileName}
+                            </span>
+                        </div>
+                    )}
+                    <span className="block text-gray-900">{titleLine1 || 'Transform Your'}</span>
+                    <span className="block gradient-text">{titleLine2 || 'Future Today'}</span>
                 </h1>
 
                 {/* Typewriter Subtitle */}

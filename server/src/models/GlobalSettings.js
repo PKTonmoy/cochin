@@ -93,6 +93,39 @@ const globalSettingsSchema = new mongoose.Schema({
     siteInfo: {
         name: { type: String, default: 'PARAGON Coaching Center' },
         tagline: { type: String, default: 'Transform Your Future' },
+        mobileCoachingName: { type: String, default: '' },
+        heroAnimatedTexts: [{ type: String }],
+        heroTitleLine1: { type: String, default: '' },
+        heroTitleLine2: { type: String, default: '' },
+        heroBadge: { type: String, default: '#1 Coaching Center in Bangladesh' },
+        landingPage: {
+            programs: {
+                badge: { type: String, default: 'Our Programs' },
+                titleLine1: { type: String, default: 'আমাদের' },
+                titleLine2: { type: String, default: 'প্রোগ্রামসমূহ' },
+                description: { type: String, default: 'আপনার লক্ষ্য অনুযায়ী সেরা প্রোগ্রাম নির্বাচন করুন' }
+            },
+            whyChooseUs: {
+                badge: { type: String, default: 'Why Choose Us' },
+                titleLine1: { type: String, default: 'কেন' },
+                titleLine2: { type: String, default: 'প্যারাগন?' }
+            },
+            hallOfFame: {
+                badge: { type: String, default: 'Hall of Fame' },
+                titleLine1: { type: String, default: 'আমাদের' },
+                titleLine2: { type: String, default: 'সফল শিক্ষার্থী' }
+            },
+            successStories: {
+                badge: { type: String, default: 'Success Stories' },
+                titleLine1: { type: String, default: 'সফল শিক্ষার্থীদের' },
+                titleLine2: { type: String, default: 'মতামত' }
+            },
+            faculty: {
+                badge: { type: String, default: 'Our Team' },
+                titleLine1: { type: String, default: 'আমাদের' },
+                titleLine2: { type: String, default: 'শিক্ষকমণ্ডলী' }
+            }
+        },
         logo: {
             url: { type: String },
             publicId: { type: String }
