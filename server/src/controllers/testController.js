@@ -5,6 +5,7 @@
 
 const Test = require('../models/Test');
 const Result = require('../models/Result');
+const Student = require('../models/Student');
 const AuditLog = require('../models/AuditLog');
 const { ApiError } = require('../middleware/errorHandler');
 
@@ -26,8 +27,31 @@ exports.getAllTests = async (req, res, next) => {
 
         const query = {};
 
-        if (classFilter) query.class = classFilter;
-        if (isPublished !== undefined) query.isPublished = isPublished === 'true';
+        // Role-based filtering
+        if (req.user.role === 'student') {
+            // Students can only see published tests
+            query.isPublished = true;
+
+            // Restrict to student's class
+            const student = await Student.findById(req.user.id);
+            if (student) {
+                query.class = student.class;
+            } else {
+                // If student not found (shouldn't happen), return empty or error?
+                // Returning empty is safer fallback
+                return res.json({
+                    success: true,
+                    data: {
+                        tests: [],
+                        pagination: { page: 1, limit: parseInt(limit), total: 0, pages: 0 }
+                    }
+                });
+            }
+        } else {
+            // Admin/Staff can filter by published status
+            if (isPublished !== undefined) query.isPublished = isPublished === 'true';
+            if (classFilter) query.class = classFilter;
+        }
 
         if (fromDate || toDate) {
             query.date = {};

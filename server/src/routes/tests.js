@@ -14,7 +14,7 @@ router.get('/upcoming', optionalAuth, testController.getUpcomingTests);
 // Protected routes
 router.use(authenticate);
 
-router.get('/', authorize('admin', 'staff'), testController.getAllTests);
+router.get('/', authorize('admin', 'staff', 'student'), testController.getAllTests);
 router.post('/', authorize('admin', 'staff'), testController.createTest);
 router.get('/:id', authorize('admin', 'staff'), testController.getTest);
 router.put('/:id', authorize('admin', 'staff'), testController.updateTest);
