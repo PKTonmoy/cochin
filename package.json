@@ -31,5 +31,8 @@
   "dependencies": {
     "@builder.io/react": "^9.1.0",
     "react-intersection-observer": "^10.0.2"
+  },
+  "engines": {
+    "node": ">=18.0.0"
   }
 }

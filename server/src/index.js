@@ -56,6 +56,15 @@ connectDB();
 // Initialize Socket.io
 initializeSocket(server);
 
+// Check for required environment variables
+const requiredEnv = ['MONGODB_URI', 'JWT_SECRET'];
+const missingEnv = requiredEnv.filter(env => !process.env[env]);
+
+if (missingEnv.length > 0) {
+  console.warn('⚠️  WARNING: Mising critical environment variables:', missingEnv.join(', '));
+  console.warn('⚠️  Application may not function correctly.');
+}
+
 // Initialize cron jobs (only in production or if explicitly enabled)
 if (process.env.NODE_ENV !== 'test') {
   initializeCronJobs();
