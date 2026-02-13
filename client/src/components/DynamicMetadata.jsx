@@ -1,4 +1,5 @@
 import { useEffect } from 'react'
+import { Helmet } from 'react-helmet-async'
 import { useSettings } from '../contexts/SettingsContext'
 
 export default function DynamicMetadata() {
@@ -6,9 +7,6 @@ export default function DynamicMetadata() {
 
     const siteName = settings?.siteInfo?.name || 'PARAGON'
     const tagline = settings?.siteInfo?.tagline
-
-    // Construct title
-    const title = tagline ? `${siteName} - ${tagline}` : siteName
 
     // Get URL safely (handle object vs string)
     const getUrl = (obj) => {
@@ -20,11 +18,6 @@ export default function DynamicMetadata() {
     const faviconUrl = getUrl(settings?.siteInfo?.favicon) ||
         getUrl(settings?.siteInfo?.logo) ||
         '/vite.svg'
-
-    // Update document title reactively
-    useEffect(() => {
-        document.title = title
-    }, [title])
 
     // Update favicon reactively (with rounded effect)
     useEffect(() => {
@@ -82,24 +75,18 @@ export default function DynamicMetadata() {
         }
         img.src = faviconUrl
 
-        // Update meta tags
-        const updateMeta = (name, content) => {
-            let meta = document.querySelector(`meta[name="${name}"]`)
-            if (!meta) {
-                meta = document.createElement('meta')
-                meta.name = name
-                document.head.appendChild(meta)
-            }
-            meta.content = content
-        }
+    }, [faviconUrl])
 
-        updateMeta('application-name', siteName)
-        updateMeta('apple-mobile-web-app-title', siteName)
-
-        if (settings?.siteInfo?.description) {
-            updateMeta('description', settings.siteInfo.description)
-        }
-    }, [faviconUrl, siteName, settings?.siteInfo?.description])
-
-    return null // No JSX needed — all changes via DOM manipulation
+    return (
+        <Helmet
+            defaultTitle={`${siteName} - ${tagline || 'Excellence in Education'}`}
+            titleTemplate={`%s | ${siteName}`}
+        >
+            <meta name="application-name" content={siteName} />
+            <meta name="apple-mobile-web-app-title" content={siteName} />
+            {settings?.siteInfo?.description && (
+                <meta name="description" content={settings.siteInfo.description} />
+            )}
+        </Helmet>
+    )
 }
