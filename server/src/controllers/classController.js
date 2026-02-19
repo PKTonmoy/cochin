@@ -603,7 +603,8 @@ exports.getCalendarEvents = async (req, res, next) => {
             date: {
                 $gte: new Date(start),
                 $lte: new Date(end)
-            }
+            },
+            status: { $nin: ['cancelled'] }
         };
 
         if (classFilter) query.class = classFilter;
