@@ -16,7 +16,7 @@ export default function DynamicMetadata() {
 
     const faviconUrl = getUrl(settings?.siteInfo?.favicon) ||
         getUrl(settings?.siteInfo?.logo) ||
-        '/vite.svg'
+        null
 
     // Set default document title
     useEffect(() => {
