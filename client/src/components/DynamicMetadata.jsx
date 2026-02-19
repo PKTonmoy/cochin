@@ -85,6 +85,8 @@ export default function DynamicMetadata() {
         <>
             <meta name="application-name" content={siteName} />
             <meta name="apple-mobile-web-app-title" content={siteName} />
+            <meta name="theme-color" content="#2563eb" media="(prefers-color-scheme: light)" />
+            <meta name="theme-color" content="#1e3a8a" media="(prefers-color-scheme: dark)" />
             {settings?.siteInfo?.description && (
                 <meta name="description" content={settings.siteInfo.description} />
             )}
