@@ -46,38 +46,36 @@ export default function DynamicMetadata() {
 
         if (!faviconUrl) return
 
-        // Try to create a rounded favicon using Canvas
+        // Set the favicon URL immediately so it always appears,
+        // even if the Canvas rounding below fails due to CORS
+        setFavicon(faviconUrl)
+
+        // Then attempt to create a rounded version as an enhancement
         const img = new Image()
-        img.crossOrigin = 'anonymous' // Attempt to load cross-origin images
+        img.crossOrigin = 'anonymous'
         img.onload = () => {
             try {
                 const canvas = document.createElement('canvas')
                 const ctx = canvas.getContext('2d')
-                const size = 64 // Standard favicon size
+                const size = 64
                 canvas.width = size
                 canvas.height = size
 
-                // Draw rounded circle
                 ctx.beginPath()
                 ctx.arc(size / 2, size / 2, size / 2, 0, Math.PI * 2)
                 ctx.closePath()
                 ctx.clip()
 
-                // Draw image
                 ctx.drawImage(img, 0, 0, size, size)
 
-                // Set rounded favicon
+                // Upgrade to rounded favicon
                 setFavicon(canvas.toDataURL())
             } catch (e) {
-                // If canvas gets tainted or error, fallback to original URL
-                console.warn('Failed to generate rounded favicon, using original:', e)
-                setFavicon(faviconUrl)
+                // Canvas tainted by CORS — original URL is already set, nothing to do
+                console.warn('Rounded favicon unavailable (CORS), using original URL')
             }
         }
-        img.onerror = () => {
-            // If image fails to load, fallback to original URL (might be .ico or other format)
-            setFavicon(faviconUrl)
-        }
+        // onerror: original URL is already set, no action needed
         img.src = faviconUrl
 
     }, [faviconUrl])

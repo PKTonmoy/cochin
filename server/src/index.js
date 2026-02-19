@@ -75,8 +75,9 @@ app.use(helmet({
   contentSecurityPolicy: {
     directives: {
       ...helmet.contentSecurityPolicy.getDefaultDirectives(),
-      "img-src": ["'self'", "data:", "https://res.cloudinary.com"],
+      "img-src": ["'self'", "data:", "blob:", "https://res.cloudinary.com"],
       "script-src": ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
+      "connect-src": ["'self'", "https://res.cloudinary.com", "wss:", "ws:"],
     },
   },
   crossOriginResourcePolicy: { policy: "cross-origin" }

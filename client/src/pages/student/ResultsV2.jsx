@@ -1,10 +1,13 @@
 /**
  * Premium Student Results Page V2
- * Features: Charts, analytics, filtering, responsive
+ * Features: Charts, analytics, filtering, responsive, PDF export
  */
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useCallback } from 'react'
 import { useQuery } from '@tanstack/react-query'
+import { jsPDF } from 'jspdf'
+import autoTable from 'jspdf-autotable'
+import { format, parseISO } from 'date-fns'
 import {
     LineChart, Line, AreaChart, Area, RadarChart, Radar,
     PolarGrid, PolarAngleAxis, PolarRadiusAxis,
@@ -19,6 +22,7 @@ import {
 } from 'lucide-react'
 import CountUp from 'react-countup'
 import { useAuth } from '../../contexts/AuthContext'
+import { useSettings } from '../../contexts/SettingsContext'
 import api from '../../lib/api'
 import ResultsV2Skeleton from '../../components/skeletons/ResultsV2Skeleton'
 
@@ -88,6 +92,8 @@ const GradeBadge = ({ grade }) => {
 
 export default function StudentResultsV2() {
     const { user } = useAuth()
+    const { settings } = useSettings()
+    const siteName = settings?.siteInfo?.name || 'Institute'
     const [selectedResult, setSelectedResult] = useState(null)
     const [showMeritList, setShowMeritList] = useState(false)
     const [searchQuery, setSearchQuery] = useState('')
@@ -185,6 +191,224 @@ export default function StudentResultsV2() {
         return items
     }, [data, searchQuery, filters])
 
+    // ─── PDF Export ──────────────────────────────────────────────────
+    const handleExportPDF = useCallback(() => {
+        if (!stats?.results?.length) return
+
+        const doc = new jsPDF()
+        const pageWidth = doc.internal.pageSize.getWidth()
+        const pageHeight = doc.internal.pageSize.getHeight()
+        const margin = 16
+        const centerX = pageWidth / 2
+        let y = 0
+
+        // Color palette
+        const primary = [37, 99, 235]         // Rich blue
+        const darkText = [15, 23, 42]
+        const bodyText = [51, 65, 85]
+        const mutedText = [100, 116, 139]
+        const lightBg = [248, 250, 252]
+        const greenBg = [220, 252, 231]
+        const greenText = [21, 128, 61]
+        const redBg = [254, 226, 226]
+        const redText = [185, 28, 28]
+        const amberBg = [254, 243, 199]
+        const amberText = [180, 83, 9]
+        const blueBg = [219, 234, 254]
+        const blueText = [29, 78, 216]
+
+        // ── Compact Header Banner ──
+        doc.setFillColor(...primary)
+        doc.rect(0, 0, pageWidth, 40, 'F')
+
+        // Institution name — centered
+        doc.setTextColor(255, 255, 255)
+        doc.setFontSize(18)
+        doc.setFont('helvetica', 'bold')
+        doc.text(siteName, centerX, 12, { align: 'center' })
+
+        // Subtitle — centered
+        doc.setFontSize(10)
+        doc.setFont('helvetica', 'normal')
+        doc.text('Academic Results Report', centerX, 20, { align: 'center' })
+
+        // Student name — centered
+        doc.setFontSize(10)
+        doc.setFont('helvetica', 'bold')
+        doc.text(`${user?.name || 'Student'}`, centerX, 29, { align: 'center' })
+
+        // Roll & class — centered
+        doc.setFontSize(8)
+        doc.setFont('helvetica', 'normal')
+        doc.setTextColor(220, 225, 240)
+        const studentMeta = `Roll: ${user?.roll || 'N/A'}  |  Class: ${user?.class || 'N/A'}${user?.section ? ` (${user.section})` : ''}`
+        doc.text(studentMeta, centerX, 36, { align: 'center' })
+
+        // Generated date — below header
+        doc.setFontSize(8)
+        doc.setTextColor(...mutedText)
+        doc.text(`Generated: ${format(new Date(), 'dd MMM yyyy, hh:mm a')}`, centerX, 48, { align: 'center' })
+
+        y = 54
+
+        // ── Summary Statistics Box ──
+        const boxWidth = pageWidth - 2 * margin
+        doc.setDrawColor(220, 225, 235)
+        doc.setFillColor(...lightBg)
+        doc.roundedRect(margin, y, boxWidth, 28, 3, 3, 'FD')
+
+        const statCount = 4
+        const statBoxW = boxWidth / statCount
+        const summaryStats = [
+            { label: 'TESTS TAKEN', value: String(stats.count) },
+            { label: 'AVERAGE', value: `${stats.avg.toFixed(1)}%` },
+            { label: 'BEST SCORE', value: `${stats.best.toFixed(1)}%` },
+            { label: 'BEST SUBJECT', value: (stats.bestSubject?.replace('_', ' ') || '—').toUpperCase() }
+        ]
+
+        summaryStats.forEach((stat, i) => {
+            const x = margin + i * statBoxW + statBoxW / 2
+
+            doc.setTextColor(...darkText)
+            doc.setFontSize(14)
+            doc.setFont('helvetica', 'bold')
+            doc.text(stat.value, x, y + 12, { align: 'center' })
+
+            doc.setTextColor(...mutedText)
+            doc.setFontSize(6.5)
+            doc.setFont('helvetica', 'normal')
+            doc.text(stat.label, x, y + 20, { align: 'center' })
+
+            // Vertical divider between stats (not after last)
+            if (i < statCount - 1) {
+                doc.setDrawColor(210, 215, 225)
+                doc.setLineWidth(0.3)
+                doc.line(margin + (i + 1) * statBoxW, y + 5, margin + (i + 1) * statBoxW, y + 23)
+            }
+        })
+
+        y += 36
+
+        // ── Section Title ──
+        doc.setFillColor(...primary)
+        doc.rect(margin, y, 3, 10, 'F')
+        doc.setTextColor(...darkText)
+        doc.setFontSize(11)
+        doc.setFont('helvetica', 'bold')
+        doc.text('Detailed Test Results', margin + 7, y + 7)
+        y += 14
+
+        // ── Results Table ──
+        const sortedResults = stats.results.slice().sort((a, b) => new Date(b.test?.date) - new Date(a.test?.date))
+        const tableBody = sortedResults.map(item => {
+            const r = item.data
+            const t = item.test
+            const testDate = t?.date ? format(new Date(t.date), 'dd MMM yyyy') : '-'
+            const subjects = r.subjectMarks
+                ? Object.entries(r.subjectMarks).map(([s, m]) => `${s}: ${m}`).join(', ')
+                : '-'
+            return [
+                testDate,
+                t?.testName || '-',
+                r.grade || '-',
+                `${r.totalMarks || 0}/${r.maxMarks || 0}`,
+                `${r.percentage || 0}%`,
+                subjects
+            ]
+        })
+
+        autoTable(doc, {
+            startY: y,
+            head: [['Date', 'Test Name', 'Grade', 'Marks', '%', 'Subject Breakdown']],
+            body: tableBody,
+            margin: { left: margin, right: margin },
+            styles: {
+                fontSize: 7.5,
+                cellPadding: 4,
+                lineColor: [226, 232, 240],
+                lineWidth: 0.3,
+                textColor: bodyText,
+                font: 'helvetica',
+                overflow: 'linebreak'
+            },
+            headStyles: {
+                fillColor: primary,
+                textColor: [255, 255, 255],
+                fontStyle: 'bold',
+                fontSize: 8,
+                cellPadding: 5
+            },
+            alternateRowStyles: {
+                fillColor: [248, 250, 252]
+            },
+            columnStyles: {
+                0: { cellWidth: 24 },
+                1: { cellWidth: 'auto' },
+                2: { cellWidth: 22, halign: 'center' },
+                3: { cellWidth: 22, halign: 'center' },
+                4: { cellWidth: 18, halign: 'center' },
+                5: { cellWidth: 'auto', fontSize: 7 }
+            },
+            // Color-code Grade and Percentage cells
+            didParseCell: function (data) {
+                if (data.section !== 'body') return
+                // Grade column
+                if (data.column.index === 2) {
+                    const g = data.cell.raw
+                    if (g === 'A+' || g === 'A') {
+                        data.cell.styles.fillColor = greenBg
+                        data.cell.styles.textColor = greenText
+                        data.cell.styles.fontStyle = 'bold'
+                    } else if (g === 'A-' || g === 'B+' || g === 'B') {
+                        data.cell.styles.fillColor = blueBg
+                        data.cell.styles.textColor = blueText
+                        data.cell.styles.fontStyle = 'bold'
+                    } else if (g === 'C' || g === 'D') {
+                        data.cell.styles.fillColor = amberBg
+                        data.cell.styles.textColor = amberText
+                        data.cell.styles.fontStyle = 'bold'
+                    } else if (g === 'F') {
+                        data.cell.styles.fillColor = redBg
+                        data.cell.styles.textColor = redText
+                        data.cell.styles.fontStyle = 'bold'
+                    }
+                }
+                // Percentage column
+                if (data.column.index === 4) {
+                    const pct = parseFloat(data.cell.raw)
+                    if (pct >= 90) {
+                        data.cell.styles.textColor = greenText
+                        data.cell.styles.fontStyle = 'bold'
+                    } else if (pct < 60) {
+                        data.cell.styles.textColor = redText
+                        data.cell.styles.fontStyle = 'bold'
+                    }
+                }
+            }
+        })
+
+        // ── Premium Footer on every page ──
+        const totalPages = doc.internal.getNumberOfPages()
+        for (let i = 1; i <= totalPages; i++) {
+            doc.setPage(i)
+            const pH = doc.internal.pageSize.getHeight()
+
+            // Footer separator line
+            doc.setDrawColor(220, 225, 235)
+            doc.line(margin, pH - 16, pageWidth - margin, pH - 16)
+
+            // Footer text
+            doc.setFontSize(7)
+            doc.setTextColor(...mutedText)
+            doc.setFont('helvetica', 'italic')
+            doc.text(`${siteName}  •  Academic Results Report  •  Confidential`, margin, pH - 9)
+            doc.setFont('helvetica', 'normal')
+            doc.text(`Page ${i} of ${totalPages}`, pageWidth - margin, pH - 9, { align: 'right' })
+        }
+
+        doc.save(`Results_${user?.name?.replace(/\s+/g, '_') || 'Student'}_${format(new Date(), 'yyyy-MM-dd')}.pdf`)
+    }, [stats, user, siteName])
+
     const containerClass = 'bg-gray-50 min-h-screen'
 
     if (isLoading) {
@@ -201,6 +425,15 @@ export default function StudentResultsV2() {
                         <h1 className="text-3xl font-bold text-gray-900">My Results</h1>
                         <p className="text-gray-500 mt-1">Track your academic progress</p>
                     </div>
+                    <button
+                        onClick={handleExportPDF}
+                        className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white border border-gray-200 text-sm font-medium text-gray-700 hover:bg-gray-50 hover:border-[var(--primary)] hover:text-[var(--primary)] transition-all shadow-sm active:scale-[0.97]"
+                        aria-label="Export results report as PDF"
+                    >
+                        <Download size={16} />
+                        <span className="hidden sm:inline">Export Report</span>
+                        <span className="sm:hidden">Export</span>
+                    </button>
                 </div>
 
                 {/* Quick Stats */}

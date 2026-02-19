@@ -16,6 +16,7 @@ router.use(authenticate);
 // Admin/Staff routes
 router.get('/', authorize('admin', 'staff'), mediaController.getAllMedia);
 router.get('/stats', authorize('admin', 'staff'), mediaController.getStats);
+router.get('/cloudinary-usage', authorize('admin'), mediaController.getCloudinaryUsage);
 router.get('/folders', authorize('admin', 'staff'), mediaController.getFolders);
 router.get('/:id', authorize('admin', 'staff'), mediaController.getMedia);
 

@@ -1,7 +1,25 @@
-import { useState, useMemo } from 'react'
+/**
+ * Premium Student Attendance Dashboard
+ * 
+ * Features:
+ * - Quick stats with animated progress ring
+ * - Interactive color-coded calendar (present/absent/late/pending/future)
+ * - SVG bar chart for monthly attendance trends
+ * - SVG donut chart for class vs test breakdown
+ * - Filterable attendance list with deduplication (same-day class+test = 1 count)
+ * - Auto-absent logic for past dates without admin records
+ * - Export as detailed PDF report
+ * - Attendance alert banner when below 75%
+ * - Fully responsive mobile layout
+ */
+
+import { useState, useMemo, useCallback } from 'react'
 import { useQuery } from '@tanstack/react-query'
+import { jsPDF } from 'jspdf'
+import autoTable from 'jspdf-autotable'
 import api from '../../lib/api'
 import { useAuth } from '../../contexts/AuthContext'
+import { useSettings } from '../../contexts/SettingsContext'
 import {
     Calendar as CalendarIcon,
     Clock,
@@ -10,32 +28,230 @@ import {
     AlertCircle,
     BarChart3,
     TrendingUp,
+    TrendingDown,
     Filter,
     ChevronLeft,
     ChevronRight,
     Flame,
-    Award
+    Award,
+    Download,
+    AlertTriangle,
+    BookOpen,
+    FileText,
+    ChevronDown,
+    ChevronUp,
+    Target,
+    Users,
+    PieChart
 } from 'lucide-react'
 import {
     format,
     startOfMonth,
     endOfMonth,
     eachDayOfInterval,
-    isSameMonth,
     isSameDay,
     addMonths,
     subMonths,
     parseISO,
     isToday,
-    differenceInDays
+    isBefore,
+    startOfDay,
+    getMonth,
+    getYear,
+    isAfter,
+    endOfDay
 } from 'date-fns'
 import AttendanceSkeleton from '../../components/skeletons/AttendanceSkeleton'
 
+// ─── Attendance Threshold ───────────────────────────────────────────
+const ATTENDANCE_THRESHOLD = 75
+
+// ─── Circular Progress Ring Component ───────────────────────────────
+const ProgressRing = ({ percentage, size = 80, strokeWidth = 6, color = 'var(--primary)' }) => {
+    const radius = (size - strokeWidth) / 2
+    const circumference = 2 * Math.PI * radius
+    const offset = circumference - (percentage / 100) * circumference
+
+    return (
+        <svg width={size} height={size} className="transform -rotate-90">
+            <circle
+                cx={size / 2}
+                cy={size / 2}
+                r={radius}
+                fill="none"
+                stroke="currentColor"
+                strokeWidth={strokeWidth}
+                className="text-gray-100"
+            />
+            <circle
+                cx={size / 2}
+                cy={size / 2}
+                r={radius}
+                fill="none"
+                stroke={color}
+                strokeWidth={strokeWidth}
+                strokeDasharray={circumference}
+                strokeDashoffset={offset}
+                strokeLinecap="round"
+                className="transition-all duration-1000 ease-out"
+            />
+        </svg>
+    )
+}
+
+// ─── SVG Mini Bar Chart (Monthly Trends) ────────────────────────────
+const MonthlyTrendChart = ({ monthlyData }) => {
+    const [hoveredBar, setHoveredBar] = useState(null)
+    const maxVal = Math.max(...monthlyData.map(m => m.percentage), 1)
+    const barWidth = 32
+    const chartHeight = 140
+    const gap = 8
+
+    return (
+        <div className="relative overflow-x-auto pb-2">
+            <svg
+                width={Math.max(monthlyData.length * (barWidth + gap), 200)}
+                height={chartHeight + 40}
+                className="mx-auto block"
+                role="img"
+                aria-label="Monthly attendance trend chart"
+            >
+                {monthlyData.map((month, i) => {
+                    const barHeight = (month.percentage / 100) * chartHeight
+                    const x = i * (barWidth + gap) + gap
+                    const y = chartHeight - barHeight
+                    const isHovered = hoveredBar === i
+
+                    return (
+                        <g key={month.label}
+                            onMouseEnter={() => setHoveredBar(i)}
+                            onMouseLeave={() => setHoveredBar(null)}
+                            className="cursor-pointer"
+                        >
+                            {/* Background bar */}
+                            <rect
+                                x={x}
+                                y={0}
+                                width={barWidth}
+                                height={chartHeight}
+                                rx={6}
+                                fill="#f1f5f9"
+                            />
+                            {/* Value bar */}
+                            <rect
+                                x={x}
+                                y={y}
+                                width={barWidth}
+                                height={barHeight}
+                                rx={6}
+                                fill={month.percentage >= ATTENDANCE_THRESHOLD
+                                    ? (isHovered ? 'var(--primary-dark)' : 'var(--primary)')
+                                    : (isHovered ? '#dc2626' : '#ef4444')
+                                }
+                                className="transition-all duration-300"
+                                opacity={isHovered ? 1 : 0.85}
+                            />
+                            {/* Percentage label on hover */}
+                            {isHovered && (
+                                <text
+                                    x={x + barWidth / 2}
+                                    y={y - 8}
+                                    textAnchor="middle"
+                                    className="text-xs font-bold fill-gray-700"
+                                    fontSize="11"
+                                >
+                                    {month.percentage}%
+                                </text>
+                            )}
+                            {/* Month label */}
+                            <text
+                                x={x + barWidth / 2}
+                                y={chartHeight + 18}
+                                textAnchor="middle"
+                                className="fill-gray-400"
+                                fontSize="11"
+                                fontWeight="500"
+                            >
+                                {month.label}
+                            </text>
+                        </g>
+                    )
+                })}
+            </svg>
+        </div>
+    )
+}
+
+// ─── SVG Donut Chart (Class vs Test breakdown) ──────────────────────
+const DonutChart = ({ classCount, testCount }) => {
+    const total = classCount + testCount
+    if (total === 0) return null
+
+    const classPerc = (classCount / total) * 100
+    const testPerc = (testCount / total) * 100
+    const radius = 50
+    const circumference = 2 * Math.PI * radius
+    const classOffset = circumference - (classPerc / 100) * circumference
+    const testArcLength = (testPerc / 100) * circumference
+
+    return (
+        <div className="flex items-center justify-center gap-6">
+            <div className="relative">
+                <svg width={120} height={120} className="transform -rotate-90">
+                    {/* Class arc */}
+                    <circle
+                        cx={60} cy={60} r={radius}
+                        fill="none"
+                        stroke="var(--primary)"
+                        strokeWidth={12}
+                        strokeDasharray={circumference}
+                        strokeDashoffset={classOffset}
+                        strokeLinecap="round"
+                        className="transition-all duration-700"
+                    />
+                    {/* Test arc */}
+                    <circle
+                        cx={60} cy={60} r={radius}
+                        fill="none"
+                        stroke="var(--secondary)"
+                        strokeWidth={12}
+                        strokeDasharray={`${testArcLength} ${circumference - testArcLength}`}
+                        strokeDashoffset={-((classPerc / 100) * circumference)}
+                        strokeLinecap="round"
+                        className="transition-all duration-700"
+                    />
+                </svg>
+                <div className="absolute inset-0 flex items-center justify-center">
+                    <span className="text-lg font-bold text-gray-800">{total}</span>
+                </div>
+            </div>
+            <div className="space-y-3">
+                <div className="flex items-center gap-2">
+                    <div className="w-3 h-3 rounded-full bg-[var(--primary)]" />
+                    <span className="text-sm text-gray-600">Classes</span>
+                    <span className="text-sm font-bold text-gray-800 ml-auto">{classCount}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                    <div className="w-3 h-3 rounded-full bg-[var(--secondary)]" />
+                    <span className="text-sm text-gray-600">Tests</span>
+                    <span className="text-sm font-bold text-gray-800 ml-auto">{testCount}</span>
+                </div>
+            </div>
+        </div>
+    )
+}
+
+// ─── Main Dashboard Component ───────────────────────────────────────
 const AttendanceHistory = () => {
     const { user } = useAuth()
+    const { settings } = useSettings()
+    const siteName = settings?.siteInfo?.name || 'Institute'
     const [currentMonth, setCurrentMonth] = useState(new Date())
-    const [filter, setFilter] = useState('all') // 'all', 'present', 'absent', 'late'
+    const [filter, setFilter] = useState('all')
+    const [selectedDay, setSelectedDay] = useState(null)
+    const [expandedRecord, setExpandedRecord] = useState(null)
 
+    // Fetch attendance data
     const { data: attendanceData, isLoading } = useQuery({
         queryKey: ['student-attendance-history', user?.id],
         queryFn: async () => {
@@ -45,39 +261,81 @@ const AttendanceHistory = () => {
         enabled: !!user?.id
     })
 
-    // Calculate stats and processed data
-    const { stats, calendarDays, streaks } = useMemo(() => {
-        if (!attendanceData) return { stats: null, calendarDays: [], streaks: { current: 0, best: 0 } }
+    // ─── Core Attendance Logic ──────────────────────────────────────
+    // Deduplication: class + test on same date = 1 attendance entry
+    // Auto-absent: past dates with no record shown as pending
+    const {
+        stats,
+        calendarDays,
+        streaks,
+        monthlyTrend,
+        typeBreakdown,
+        effectiveRecords
+    } = useMemo(() => {
+        if (!attendanceData) return {
+            stats: null, calendarDays: [], streaks: { current: 0, best: 0 },
+            monthlyTrend: [], typeBreakdown: { classes: 0, tests: 0 }, effectiveRecords: []
+        }
 
-        // Sort by date mostly for streak calculation
-        const sortedData = [...attendanceData].sort((a, b) => new Date(b.date) - new Date(a.date))
+        // ── Step 1: Group records by date for deduplication ──
+        // If a class AND test occur on the same date, count as 1 attendance entry
+        const dateMap = new Map()
+        attendanceData.forEach(record => {
+            const dateKey = format(parseISO(record.date), 'yyyy-MM-dd')
+            if (!dateMap.has(dateKey)) {
+                dateMap.set(dateKey, {
+                    date: dateKey,
+                    records: [],
+                    types: new Set(),
+                    // For the effective entry, use the "worst" status across events
+                    // absent > late > present
+                    effectiveStatus: 'present',
+                    autoMarked: false
+                })
+            }
+            const entry = dateMap.get(dateKey)
+            entry.records.push(record)
+            entry.types.add(record.type)
 
-        // Calculate Stats
-        const total = sortedData.length
-        const present = sortedData.filter(r => r.status === 'present').length
-        const late = sortedData.filter(r => r.status === 'late').length
-        const absent = sortedData.filter(r => r.status === 'absent').length
-        const percentage = total > 0 ? Math.round(((present + late) / total) * 100) : 0
+            // Determine effective status (worst status wins)
+            if (record.status === 'absent') {
+                entry.effectiveStatus = 'absent'
+            } else if (record.status === 'late' && entry.effectiveStatus !== 'absent') {
+                entry.effectiveStatus = 'late'
+            }
+        })
 
-        // Calculate Streaks
+        // Build effective records (deduplicated by date)
+        const effective = Array.from(dateMap.values()).sort(
+            (a, b) => new Date(b.date) - new Date(a.date)
+        )
+
+        // ── Step 2: Calculate Stats ──
+        const totalEffective = effective.length
+        const presentDays = effective.filter(
+            e => e.effectiveStatus === 'present' || e.effectiveStatus === 'late'
+        ).length
+        const absentDays = effective.filter(e => e.effectiveStatus === 'absent').length
+        const lateDays = effective.filter(e => e.effectiveStatus === 'late').length
+        const percentage = totalEffective > 0
+            ? Math.round((presentDays / totalEffective) * 100)
+            : 0
+
+        // ── Step 3: Calculate Streaks ──
         let currentStreak = 0
         let bestStreak = 0
         let tempStreak = 0
 
-        // For current streak, check from today backwards
-        // This is a simplified streak calculation assuming contiguous days matter or just sequential sessions
-        // Let's do sequential sessions for simplicity in this context
-        for (const record of sortedData) {
-            if (record.status === 'present' || record.status === 'late') {
+        for (const entry of effective) {
+            if (entry.effectiveStatus === 'present' || entry.effectiveStatus === 'late') {
                 currentStreak++
             } else {
                 break
             }
         }
 
-        // Best streak scan
-        for (const record of sortedData) {
-            if (record.status === 'present' || record.status === 'late') {
+        for (const entry of effective) {
+            if (entry.effectiveStatus === 'present' || entry.effectiveStatus === 'late') {
                 tempStreak++
             } else {
                 bestStreak = Math.max(bestStreak, tempStreak)
@@ -86,202 +344,634 @@ const AttendanceHistory = () => {
         }
         bestStreak = Math.max(bestStreak, tempStreak)
 
-
-        // Calendar Days for the selected month
+        // ── Step 4: Calendar days for selected month ──
         const monthStart = startOfMonth(currentMonth)
         const monthEnd = endOfMonth(currentMonth)
         const daysInMonth = eachDayOfInterval({ start: monthStart, end: monthEnd })
+        const today = startOfDay(new Date())
 
         const days = daysInMonth.map(date => {
-            const dayRecords = attendanceData.filter(r => isSameDay(parseISO(r.date), date))
-            // Prioritize status: absent > late > present (if multiple records per day, e.g. multiple classes)
-            // Or just show dot indicators
-            const status = dayRecords.length > 0
-                ? (dayRecords.find(r => r.status === 'absent')?.status ||
-                    dayRecords.find(r => r.status === 'late')?.status ||
-                    'present')
-                : null
+            const dateKey = format(date, 'yyyy-MM-dd')
+            const entry = dateMap.get(dateKey)
+            const isFuture = isAfter(startOfDay(date), today)
+            const isPast = isBefore(startOfDay(date), today)
 
-            return { date, status, records: dayRecords }
+            let status = null
+            let records = []
+
+            if (entry) {
+                status = entry.effectiveStatus
+                records = entry.records
+            } else if (isPast && !isFuture) {
+                // Auto-absent: past date with no record = pending
+                // (admin hasn't updated yet)
+                status = 'pending'
+            }
+
+            return {
+                date,
+                dateKey,
+                status,
+                records,
+                isFuture,
+                types: entry?.types || new Set()
+            }
         })
 
+        // ── Step 5: Monthly Trend (last 6 months) ──
+        const trend = []
+        for (let i = 5; i >= 0; i--) {
+            const m = subMonths(new Date(), i)
+            const mMonth = getMonth(m)
+            const mYear = getYear(m)
+            const monthEntries = effective.filter(e => {
+                const d = new Date(e.date)
+                return getMonth(d) === mMonth && getYear(d) === mYear
+            })
+            const monthPresent = monthEntries.filter(
+                e => e.effectiveStatus === 'present' || e.effectiveStatus === 'late'
+            ).length
+            const monthTotal = monthEntries.length
+
+            trend.push({
+                label: format(m, 'MMM'),
+                month: mMonth,
+                year: mYear,
+                present: monthPresent,
+                total: monthTotal,
+                percentage: monthTotal > 0 ? Math.round((monthPresent / monthTotal) * 100) : 0
+            })
+        }
+
+        // ── Step 6: Type Breakdown ──
+        const classRecords = attendanceData.filter(r => r.type === 'class')
+        const testRecords = attendanceData.filter(r => r.type === 'test')
+
         return {
-            stats: { total, present, late, absent, percentage },
+            stats: {
+                total: totalEffective,
+                present: presentDays,
+                absent: absentDays,
+                late: lateDays,
+                percentage,
+                rawTotal: attendanceData.length
+            },
             calendarDays: days,
-            streaks: { current: currentStreak, best: bestStreak }
+            streaks: { current: currentStreak, best: bestStreak },
+            monthlyTrend: trend,
+            typeBreakdown: { classes: classRecords.length, tests: testRecords.length },
+            effectiveRecords: effective
         }
     }, [attendanceData, currentMonth])
 
+    // ─── Filtered History ───────────────────────────────────────────
     const filteredHistory = useMemo(() => {
-        if (!attendanceData) return []
-        return attendanceData.filter(item => {
+        if (!effectiveRecords) return []
+        return effectiveRecords.filter(item => {
             if (filter === 'all') return true
-            return item.status === filter
-        }).sort((a, b) => new Date(b.date) - new Date(a.date))
-    }, [attendanceData, filter])
+            return item.effectiveStatus === filter
+        })
+    }, [effectiveRecords, filter])
 
+    // ─── Navigation ─────────────────────────────────────────────────
     const nextMonth = () => setCurrentMonth(addMonths(currentMonth, 1))
     const prevMonth = () => setCurrentMonth(subMonths(currentMonth, 1))
+
+    // ─── PDF Export ──────────────────────────────────────────────────
+    const handleExport = useCallback(() => {
+        if (!attendanceData?.length || !stats) return
+
+        const doc = new jsPDF()
+        const pageWidth = doc.internal.pageSize.getWidth()
+        const margin = 16
+        const centerX = pageWidth / 2
+        let y = 0
+
+        // ── Colors ──
+        const primary = [37, 99, 235]
+        const darkText = [15, 23, 42]
+        const bodyText = [51, 65, 85]
+        const mutedText = [100, 116, 139]
+        const lightBg = [248, 250, 252]
+        const greenBg = [220, 252, 231]
+        const greenText = [21, 128, 61]
+        const redBg = [254, 226, 226]
+        const redText = [185, 28, 28]
+        const amberBg = [254, 243, 199]
+        const amberText = [180, 83, 9]
+
+        // ── Compact Header Banner ──
+        doc.setFillColor(...primary)
+        doc.rect(0, 0, pageWidth, 40, 'F')
+
+        // Institution name — centered
+        doc.setTextColor(255, 255, 255)
+        doc.setFontSize(18)
+        doc.setFont('helvetica', 'bold')
+        doc.text(siteName, centerX, 12, { align: 'center' })
+
+        // Subtitle — centered
+        doc.setFontSize(10)
+        doc.setFont('helvetica', 'normal')
+        doc.text('Attendance Report', centerX, 20, { align: 'center' })
+
+        // Student name — centered
+        doc.setFontSize(10)
+        doc.setFont('helvetica', 'bold')
+        doc.text(`${user?.name || 'Student'}`, centerX, 29, { align: 'center' })
+
+        // Roll & class — centered
+        doc.setFontSize(8)
+        doc.setFont('helvetica', 'normal')
+        doc.setTextColor(220, 225, 240)
+        const studentMeta = `Roll: ${user?.roll || 'N/A'}  |  Class: ${user?.class || 'N/A'}${user?.section ? ` (${user.section})` : ''}`
+        doc.text(studentMeta, centerX, 36, { align: 'center' })
+
+        // Generated date — below header
+        doc.setFontSize(8)
+        doc.setTextColor(...mutedText)
+        doc.text(`Generated: ${format(new Date(), 'dd MMM yyyy, hh:mm a')}`, centerX, 48, { align: 'center' })
+
+        y = 54
+
+        // ── Summary Statistics Box ──
+        const boxWidth = pageWidth - 2 * margin
+        doc.setDrawColor(220, 225, 235)
+        doc.setFillColor(...lightBg)
+        doc.roundedRect(margin, y, boxWidth, 28, 3, 3, 'FD')
+
+        const statCount = 4
+        const statBoxW = boxWidth / statCount
+        const summaryStats = [
+            { label: 'TOTAL SESSIONS', value: String(stats.total) },
+            { label: 'PRESENT', value: String(stats.present) },
+            { label: 'ABSENT', value: String(stats.absent) },
+            { label: 'ATTENDANCE', value: `${stats.percentage}%` }
+        ]
+
+        summaryStats.forEach((stat, i) => {
+            const x = margin + i * statBoxW + statBoxW / 2
+
+            doc.setTextColor(...darkText)
+            doc.setFontSize(14)
+            doc.setFont('helvetica', 'bold')
+            doc.text(stat.value, x, y + 12, { align: 'center' })
+
+            doc.setTextColor(...mutedText)
+            doc.setFontSize(6.5)
+            doc.setFont('helvetica', 'normal')
+            doc.text(stat.label, x, y + 20, { align: 'center' })
+
+            // Vertical divider between stats (not after last)
+            if (i < statCount - 1) {
+                doc.setDrawColor(210, 215, 225)
+                doc.setLineWidth(0.3)
+                doc.line(margin + (i + 1) * statBoxW, y + 5, margin + (i + 1) * statBoxW, y + 23)
+            }
+        })
+
+        y += 36
+
+        // ── Attendance Alert ──
+        if (stats.percentage < ATTENDANCE_THRESHOLD) {
+            doc.setFillColor(254, 242, 242)
+            doc.setDrawColor(252, 165, 165)
+            doc.roundedRect(margin, y, pageWidth - 2 * margin, 10, 2, 2, 'FD')
+            doc.setTextColor(...redText)
+            doc.setFontSize(8)
+            doc.setFont('helvetica', 'bold')
+            doc.text(`Warning: Attendance is below ${ATTENDANCE_THRESHOLD}% threshold (currently ${stats.percentage}%)`, margin + 4, y + 6.5)
+            y += 16
+        }
+
+        // ── Section Title ──
+        doc.setFillColor(...primary)
+        doc.rect(margin, y, 3, 10, 'F')
+        doc.setTextColor(...darkText)
+        doc.setFontSize(11)
+        doc.setFont('helvetica', 'bold')
+        doc.text('Detailed Attendance Records', margin + 7, y + 7)
+        y += 14
+
+        // ── Attendance Table ──
+        const sortedRecords = [...attendanceData].sort((a, b) => new Date(b.date) - new Date(a.date))
+        const tableBody = sortedRecords.map(r => [
+            format(parseISO(r.date), 'dd MMM yyyy (EEE)'),
+            r.type === 'class' ? `Class ${r.class || ''}` : (r.testId?.testName || 'Test'),
+            r.type.charAt(0).toUpperCase() + r.type.slice(1),
+            r.status.charAt(0).toUpperCase() + r.status.slice(1)
+        ])
+
+        autoTable(doc, {
+            startY: y,
+            head: [['Date', 'Subject / Event', 'Type', 'Status']],
+            body: tableBody,
+            margin: { left: margin, right: margin },
+            styles: {
+                fontSize: 7.5,
+                cellPadding: 4,
+                lineColor: [226, 232, 240],
+                lineWidth: 0.3,
+                textColor: bodyText,
+                font: 'helvetica',
+                overflow: 'linebreak'
+            },
+            headStyles: {
+                fillColor: primary,
+                textColor: [255, 255, 255],
+                fontStyle: 'bold',
+                fontSize: 8,
+                cellPadding: 5
+            },
+            alternateRowStyles: {
+                fillColor: [248, 250, 252]
+            },
+            columnStyles: {
+                0: { cellWidth: 38 },
+                1: { cellWidth: 'auto' },
+                2: { cellWidth: 24 },
+                3: { cellWidth: 24, halign: 'center' }
+            },
+            // Color-code the Status column cells
+            didParseCell: function (data) {
+                if (data.section === 'body' && data.column.index === 3) {
+                    const val = data.cell.raw?.toLowerCase()
+                    if (val === 'present') {
+                        data.cell.styles.fillColor = greenBg
+                        data.cell.styles.textColor = greenText
+                        data.cell.styles.fontStyle = 'bold'
+                    } else if (val === 'absent') {
+                        data.cell.styles.fillColor = redBg
+                        data.cell.styles.textColor = redText
+                        data.cell.styles.fontStyle = 'bold'
+                    } else if (val === 'late') {
+                        data.cell.styles.fillColor = amberBg
+                        data.cell.styles.textColor = amberText
+                        data.cell.styles.fontStyle = 'bold'
+                    }
+                }
+            }
+        })
+
+        // ── Footer on every page ──
+        const totalPages = doc.internal.getNumberOfPages()
+        for (let i = 1; i <= totalPages; i++) {
+            doc.setPage(i)
+            const pH = doc.internal.pageSize.getHeight()
+
+            // Footer separator line
+            doc.setDrawColor(220, 225, 235)
+            doc.line(margin, pH - 16, pageWidth - margin, pH - 16)
+
+            // Footer text
+            doc.setFontSize(7)
+            doc.setTextColor(...mutedText)
+            doc.setFont('helvetica', 'italic')
+            doc.text(`${siteName}  •  Attendance Report  •  Confidential`, margin, pH - 9)
+            doc.setFont('helvetica', 'normal')
+            doc.text(`Page ${i} of ${totalPages}`, pageWidth - margin, pH - 9, { align: 'right' })
+        }
+
+        // ── Save ──
+        doc.save(`Attendance_${user?.name?.replace(/\s+/g, '_') || 'Student'}_${format(new Date(), 'yyyy-MM-dd')}.pdf`)
+    }, [attendanceData, user, stats])
+
+    // ─── Status Helpers ─────────────────────────────────────────────
+    const getStatusColor = (status) => {
+        switch (status) {
+            case 'present': return { bg: 'bg-emerald-50', text: 'text-emerald-700', border: 'border-emerald-200', dot: 'bg-emerald-500', pill: 'bg-emerald-100 text-emerald-700' }
+            case 'late': return { bg: 'bg-amber-50', text: 'text-amber-700', border: 'border-amber-200', dot: 'bg-amber-500', pill: 'bg-amber-100 text-amber-700' }
+            case 'absent': return { bg: 'bg-red-50', text: 'text-red-700', border: 'border-red-200', dot: 'bg-red-500', pill: 'bg-red-100 text-red-700' }
+            case 'pending': return { bg: 'bg-yellow-50', text: 'text-yellow-700', border: 'border-yellow-200', dot: 'bg-yellow-400', pill: 'bg-yellow-100 text-yellow-700' }
+            default: return { bg: 'bg-gray-50', text: 'text-gray-500', border: 'border-gray-200', dot: 'bg-gray-300', pill: 'bg-gray-100 text-gray-500' }
+        }
+    }
+
+    const getStatusIcon = (status, size = 16) => {
+        switch (status) {
+            case 'present': return <CheckCircle size={size} />
+            case 'late': return <Clock size={size} />
+            case 'absent': return <XCircle size={size} />
+            case 'pending': return <AlertCircle size={size} />
+            default: return null
+        }
+    }
 
     if (isLoading) {
         return <AttendanceSkeleton />
     }
 
+    const belowThreshold = stats?.percentage < ATTENDANCE_THRESHOLD
+
     return (
-        <div className="max-w-7xl mx-auto space-y-4 md:space-y-6 animate-fadeIn px-1 sm:px-0">
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-1 md:gap-4">
+        <div className="max-w-7xl mx-auto space-y-5 md:space-y-6 animate-fadeIn px-3 sm:px-4 md:px-0 py-4 md:py-6">
+
+            {/* ─── Header ────────────────────────────────────────── */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div>
-                    <h1 className="text-xl md:text-2xl font-bold text-gray-900">Attendance History</h1>
-                    <p className="text-sm md:text-base text-gray-500">Track your attendance records and statistics</p>
+                    <h1 className="text-xl md:text-2xl font-bold text-gray-900 flex items-center gap-2">
+                        <CalendarIcon className="w-6 h-6 text-[var(--primary)] hidden sm:block" />
+                        Attendance Dashboard
+                    </h1>
+                    <p className="text-sm text-gray-500 mt-0.5">
+                        Track your attendance records, trends & statistics
+                    </p>
+                </div>
+                <button
+                    onClick={handleExport}
+                    className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white border border-gray-200 text-sm font-medium text-gray-700 hover:bg-gray-50 hover:border-[var(--primary)] hover:text-[var(--primary)] transition-all shadow-sm active:scale-[0.97]"
+                    aria-label="Export attendance report as CSV"
+                >
+                    <Download size={16} />
+                    <span className="hidden sm:inline">Export Report</span>
+                    <span className="sm:hidden">Export</span>
+                </button>
+            </div>
+
+            {/* ─── Attendance Alert Banner ────────────────────────── */}
+            {belowThreshold && stats && (
+                <div className="flex items-start gap-3 p-4 rounded-2xl bg-gradient-to-r from-red-50 to-orange-50 border border-red-200 animate-fadeIn">
+                    <div className="w-10 h-10 rounded-xl bg-red-100 flex items-center justify-center flex-shrink-0">
+                        <AlertTriangle size={20} className="text-red-500" />
+                    </div>
+                    <div>
+                        <p className="font-semibold text-red-800 text-sm">Attendance Below {ATTENDANCE_THRESHOLD}%</p>
+                        <p className="text-xs text-red-600 mt-0.5">
+                            Your attendance is at <span className="font-bold">{stats.percentage}%</span>.
+                            You need at least {ATTENDANCE_THRESHOLD}% to maintain good standing.
+                            Attend {Math.max(0, Math.ceil((ATTENDANCE_THRESHOLD * stats.total / 100) - stats.present))} more sessions to reach the threshold.
+                        </p>
+                    </div>
+                </div>
+            )}
+
+            {/* ─── Quick Stats Cards ─────────────────────────────── */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
+                {/* Overall Percentage */}
+                <div className="card p-4 md:p-5 relative overflow-hidden group hover:shadow-lg">
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <p className="text-[10px] md:text-xs font-bold text-gray-400 uppercase tracking-wider">Attendance</p>
+                            <p className="text-2xl md:text-3xl font-bold text-gray-900 mt-1">
+                                {stats?.percentage || 0}%
+                            </p>
+                            <p className="text-[11px] md:text-xs text-gray-500 mt-1">
+                                {stats?.present || 0}/{stats?.total || 0} days
+                            </p>
+                        </div>
+                        <div className="relative">
+                            <ProgressRing
+                                percentage={stats?.percentage || 0}
+                                size={64}
+                                strokeWidth={5}
+                                color={belowThreshold ? '#ef4444' : 'var(--primary)'}
+                            />
+                            <div className="absolute inset-0 flex items-center justify-center">
+                                <Target size={18} className={belowThreshold ? 'text-red-500' : 'text-[var(--primary)]'} />
+                            </div>
+                        </div>
+                    </div>
+                    <div className="absolute -bottom-4 -right-4 w-20 h-20 rounded-full bg-[var(--primary)]/5 group-hover:bg-[var(--primary)]/10 transition-colors" />
+                </div>
+
+                {/* Present */}
+                <div className="card p-4 md:p-5 relative overflow-hidden group hover:shadow-lg">
+                    <div>
+                        <p className="text-[10px] md:text-xs font-bold text-gray-400 uppercase tracking-wider">Present</p>
+                        <p className="text-2xl md:text-3xl font-bold text-emerald-600 mt-1">{stats?.present || 0}</p>
+                        <p className="text-[11px] md:text-xs text-gray-500 mt-1">
+                            {stats?.late || 0} late included
+                        </p>
+                    </div>
+                    <CheckCircle className="absolute right-4 bottom-4 text-emerald-100 w-10 h-10 group-hover:text-emerald-200 transition-colors" />
+                </div>
+
+                {/* Absent */}
+                <div className="card p-4 md:p-5 relative overflow-hidden group hover:shadow-lg">
+                    <div>
+                        <p className="text-[10px] md:text-xs font-bold text-gray-400 uppercase tracking-wider">Absent</p>
+                        <p className="text-2xl md:text-3xl font-bold text-red-500 mt-1">{stats?.absent || 0}</p>
+                        <p className="text-[11px] md:text-xs text-gray-500 mt-1">
+                            out of {stats?.total || 0} sessions
+                        </p>
+                    </div>
+                    <XCircle className="absolute right-4 bottom-4 text-red-100 w-10 h-10 group-hover:text-red-200 transition-colors" />
+                </div>
+
+                {/* Streak */}
+                <div className="card p-4 md:p-5 relative overflow-hidden group hover:shadow-lg border-l-4 border-l-orange-400">
+                    <div>
+                        <p className="text-[10px] md:text-xs font-bold text-gray-400 uppercase tracking-wider">Streak</p>
+                        <div className="flex items-baseline gap-1.5 mt-1">
+                            <span className="text-2xl md:text-3xl font-bold text-gray-900">{streaks.current}</span>
+                            <span className="text-xs text-gray-400">days</span>
+                        </div>
+                        <p className="text-[11px] md:text-xs text-orange-600 mt-1">
+                            Best: {streaks.best} days
+                        </p>
+                    </div>
+                    <Flame className="absolute right-4 bottom-4 text-orange-100 w-10 h-10 group-hover:text-orange-200 transition-colors" />
                 </div>
             </div>
 
+            {/* ─── Main Content Grid ─────────────────────────────── */}
             <div className="grid lg:grid-cols-3 gap-4 md:gap-6">
-                {/* Left Column: Stats & Calendar */}
-                <div className="lg:col-span-1 space-y-4 md:space-y-6">
-                    {/* Stats Cards */}
-                    <div className="grid grid-cols-2 gap-3 md:gap-4">
-                        <div className="card p-3.5 md:p-4 border-l-4 border-l-green-500 relative overflow-hidden shadow-sm">
-                            <div className="relative z-10">
-                                <p className="text-[10px] md:text-xs font-bold text-gray-500 uppercase mb-1">Overall Rate</p>
-                                <div className="flex items-baseline gap-1">
-                                    <span className="text-2xl md:text-2xl font-bold text-gray-900">{stats?.percentage}%</span>
-                                </div>
-                                <p className="text-[11px] md:text-xs text-green-600 mt-1">
-                                    {stats?.present + stats?.late}/{stats?.total} sessions
-                                </p>
-                            </div>
-                            <Award className="absolute right-2 bottom-2 text-green-100 w-8 h-8 md:w-12 md:h-12" />
-                        </div>
 
-                        <div className="card p-3.5 md:p-4 border-l-4 border-l-orange-500 relative overflow-hidden shadow-sm">
-                            <div className="relative z-10">
-                                <p className="text-[10px] md:text-xs font-bold text-gray-500 uppercase mb-1">Current Streak</p>
-                                <div className="flex items-baseline gap-1">
-                                    <span className="text-2xl md:text-2xl font-bold text-gray-900">{streaks.current}</span>
-                                    <span className="text-xs md:text-xs text-gray-500">days</span>
-                                </div>
-                                <p className="text-[11px] md:text-xs text-orange-600 mt-1">Best: {streaks.best} days</p>
-                            </div>
-                            <Flame className="absolute right-2 bottom-2 text-orange-100 w-8 h-8 md:w-12 md:h-12" />
-                        </div>
-                    </div>
-
-                    <div className="grid grid-cols-3 gap-3 md:gap-4">
-                        <div className="card p-3 md:p-3 text-center bg-gray-50 shadow-sm">
-                            <p className="text-[10px] md:text-xs text-gray-500 mb-0.5 md:mb-1 font-medium">Present</p>
-                            <p className="text-lg md:text-xl font-bold text-green-600">{stats?.present}</p>
-                        </div>
-                        <div className="card p-3 md:p-3 text-center bg-gray-50 shadow-sm">
-                            <p className="text-[10px] md:text-xs text-gray-500 mb-0.5 md:mb-1 font-medium">Late</p>
-                            <p className="text-lg md:text-xl font-bold text-amber-600">{stats?.late}</p>
-                        </div>
-                        <div className="card p-3 md:p-3 text-center bg-gray-50 shadow-sm">
-                            <p className="text-[10px] md:text-xs text-gray-500 mb-0.5 md:mb-1 font-medium">Absent</p>
-                            <p className="text-lg md:text-xl font-bold text-red-600">{stats?.absent}</p>
-                        </div>
-                    </div>
+                {/* ─── Left Column: Calendar + Charts ────────────── */}
+                <div className="lg:col-span-1 space-y-4 md:space-y-5">
 
                     {/* Calendar */}
-                    <div className="card p-3.5 md:p-4 shadow-sm">
-                        <div className="flex items-center justify-between mb-3 md:mb-4">
-                            <h3 className="text-base md:text-base font-bold text-gray-900">
+                    <div className="card p-4 md:p-5 shadow-sm hover:shadow-md transition-shadow">
+                        <div className="flex items-center justify-between mb-4">
+                            <h3 className="text-sm md:text-base font-bold text-gray-900">
                                 {format(currentMonth, 'MMMM yyyy')}
                             </h3>
                             <div className="flex gap-1">
-                                <button onClick={prevMonth} className="p-1.5 hover:bg-gray-100 rounded-lg active:bg-gray-200 transition-colors">
-                                    <ChevronLeft size={18} className="text-gray-500 md:w-5 md:h-5" />
+                                <button
+                                    onClick={prevMonth}
+                                    className="p-2 hover:bg-gray-100 rounded-xl active:bg-gray-200 transition-colors"
+                                    aria-label="Previous month"
+                                >
+                                    <ChevronLeft size={18} className="text-gray-500" />
                                 </button>
-                                <button onClick={nextMonth} className="p-1.5 hover:bg-gray-100 rounded-lg active:bg-gray-200 transition-colors">
-                                    <ChevronRight size={18} className="text-gray-500 md:w-5 md:h-5" />
+                                <button
+                                    onClick={nextMonth}
+                                    className="p-2 hover:bg-gray-100 rounded-xl active:bg-gray-200 transition-colors"
+                                    aria-label="Next month"
+                                >
+                                    <ChevronRight size={18} className="text-gray-500" />
                                 </button>
                             </div>
                         </div>
 
+                        {/* Day headers */}
                         <div className="grid grid-cols-7 gap-1 mb-1.5">
                             {['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'].map(day => (
-                                <div key={day} className="text-center text-[11px] md:text-xs font-semibold text-gray-400 py-1">
+                                <div key={day} className="text-center text-[10px] md:text-xs font-semibold text-gray-400 py-1" aria-hidden="true">
                                     {day}
                                 </div>
                             ))}
                         </div>
 
+                        {/* Calendar grid */}
                         <div className="grid grid-cols-7 gap-1">
                             {/* Empty cells for start of month */}
                             {[...Array(startOfMonth(currentMonth).getDay())].map((_, i) => (
-                                <div key={`empty-${i}`} className="aspect-square"></div>
+                                <div key={`empty-${i}`} className="aspect-square" />
                             ))}
 
                             {calendarDays.map((day, i) => {
-                                let bgColor = 'bg-transparent'
-                                let textColor = 'text-gray-700'
-                                let ringColor = ''
-
-                                if (day.status === 'present') {
-                                    bgColor = 'bg-green-100'
-                                    textColor = 'text-green-700'
-                                } else if (day.status === 'late') {
-                                    bgColor = 'bg-amber-100'
-                                    textColor = 'text-amber-700'
-                                } else if (day.status === 'absent') {
-                                    bgColor = 'bg-red-200'
-                                    textColor = 'text-red-800 font-bold'
-                                }
-
-                                if (isToday(day.date)) {
-                                    ringColor = 'ring-2 ring-[var(--primary)] ring-offset-1'
-                                }
+                                const colors = getStatusColor(day.status)
+                                const isSelected = selectedDay && isSameDay(day.date, selectedDay)
+                                const todayClass = isToday(day.date) ? 'ring-2 ring-[var(--primary)] ring-offset-1' : ''
+                                const futureClass = day.isFuture ? 'text-gray-300' : ''
 
                                 return (
-                                    <div
+                                    <button
                                         key={i}
-                                        className={`aspect-square rounded-lg flex flex-col items-center justify-center text-xs md:text-sm font-medium transition-all cursor-default ${bgColor} ${textColor} ${ringColor} hover:opacity-80`}
-                                        title={day.status ? `${format(day.date, 'MMM d')}: ${day.status}` : format(day.date, 'MMM d')}
+                                        onClick={() => setSelectedDay(isSelected ? null : day.date)}
+                                        className={`aspect-square rounded-xl flex flex-col items-center justify-center text-xs md:text-sm font-medium transition-all cursor-pointer
+                                            ${day.status ? colors.bg : 'hover:bg-gray-50'}
+                                            ${day.status ? colors.text : futureClass || 'text-gray-700'}
+                                            ${todayClass}
+                                            ${isSelected ? 'ring-2 ring-[var(--primary)] shadow-md scale-105' : ''}
+                                            active:scale-95
+                                        `}
+                                        aria-label={`${format(day.date, 'MMMM d')}: ${day.status || 'no record'}`}
                                     >
                                         <span>{format(day.date, 'd')}</span>
                                         {day.records.length > 0 && (
                                             <div className="flex gap-0.5 mt-0.5">
-                                                {day.records.map((r, idx) => (
+                                                {day.records.slice(0, 3).map((r, idx) => (
                                                     <div
                                                         key={idx}
-                                                        className={`w-1 h-1 md:w-1 md:h-1 rounded-full ${r.status === 'present' ? 'bg-green-500' :
-                                                            r.status === 'late' ? 'bg-amber-500' : 'bg-red-500'
-                                                            }`}
+                                                        className={`w-1 h-1 rounded-full ${getStatusColor(r.status).dot}`}
                                                     />
                                                 ))}
                                             </div>
                                         )}
-                                    </div>
+                                        {day.status === 'pending' && !day.records.length && (
+                                            <div className="w-1 h-1 rounded-full bg-yellow-400 mt-0.5" />
+                                        )}
+                                    </button>
                                 )
                             })}
                         </div>
 
-                        <div className="flex justify-center gap-4 md:gap-4 mt-3 md:mt-4 text-[11px] md:text-xs text-gray-500">
+                        {/* Legend */}
+                        <div className="flex flex-wrap justify-center gap-3 mt-4 text-[10px] md:text-xs text-gray-500">
                             <div className="flex items-center gap-1.5">
-                                <div className="w-2 h-2 md:w-2 md:h-2 rounded-full bg-green-500"></div> Present
+                                <div className="w-2.5 h-2.5 rounded-full bg-emerald-500" /> Present
                             </div>
                             <div className="flex items-center gap-1.5">
-                                <div className="w-2 h-2 md:w-2 md:h-2 rounded-full bg-amber-500"></div> Late
+                                <div className="w-2.5 h-2.5 rounded-full bg-amber-500" /> Late
                             </div>
                             <div className="flex items-center gap-1.5">
-                                <div className="w-2 h-2 md:w-2 md:h-2 rounded-full bg-red-500"></div> Absent
+                                <div className="w-2.5 h-2.5 rounded-full bg-red-500" /> Absent
+                            </div>
+                            <div className="flex items-center gap-1.5">
+                                <div className="w-2.5 h-2.5 rounded-full bg-yellow-400" /> Pending
                             </div>
                         </div>
+
+                        {/* Selected Day Details */}
+                        {selectedDay && (() => {
+                            const dayData = calendarDays.find(d => isSameDay(d.date, selectedDay))
+                            if (!dayData) return null
+
+                            return (
+                                <div className="mt-4 pt-4 border-t border-gray-100 animate-fadeIn">
+                                    <p className="text-sm font-semibold text-gray-800 mb-2">
+                                        {format(selectedDay, 'EEEE, MMM d, yyyy')}
+                                    </p>
+                                    {dayData.records.length > 0 ? (
+                                        <div className="space-y-2">
+                                            {dayData.records.map((r, idx) => {
+                                                const sc = getStatusColor(r.status)
+                                                return (
+                                                    <div key={idx} className={`flex items-center gap-2 p-2 rounded-lg ${sc.bg}`}>
+                                                        <div className={`${sc.text}`}>{getStatusIcon(r.status, 14)}</div>
+                                                        <div className="flex-1 min-w-0">
+                                                            <p className="text-xs font-medium text-gray-700 truncate">
+                                                                {r.type === 'class'
+                                                                    ? `Class ${r.class || ''}`
+                                                                    : (r.testId?.testName || 'Test')}
+                                                            </p>
+                                                        </div>
+                                                        <span className={`text-[10px] font-bold capitalize px-2 py-0.5 rounded-full ${sc.pill}`}>
+                                                            {r.status}
+                                                        </span>
+                                                    </div>
+                                                )
+                                            })}
+                                        </div>
+                                    ) : dayData.status === 'pending' ? (
+                                        <p className="text-xs text-yellow-600 bg-yellow-50 p-2 rounded-lg">
+                                            ⏳ No attendance record — pending admin update
+                                        </p>
+                                    ) : (
+                                        <p className="text-xs text-gray-400">No records for this day</p>
+                                    )}
+                                </div>
+                            )
+                        })()}
+                    </div>
+
+                    {/* Type Breakdown (Donut) */}
+                    <div className="card p-4 md:p-5 shadow-sm hover:shadow-md transition-shadow">
+                        <h3 className="text-sm md:text-base font-bold text-gray-900 flex items-center gap-2 mb-4">
+                            <PieChart size={16} className="text-[var(--primary)]" />
+                            Attendance Breakdown
+                        </h3>
+                        {typeBreakdown.classes + typeBreakdown.tests > 0 ? (
+                            <DonutChart classCount={typeBreakdown.classes} testCount={typeBreakdown.tests} />
+                        ) : (
+                            <div className="text-center py-6 text-sm text-gray-400">No data available</div>
+                        )}
                     </div>
                 </div>
 
-                {/* Right Column: Detailed History List */}
-                <div className="lg:col-span-2">
-                    <div className="card shadow-sm">
-                        <div className="p-3.5 md:p-4 border-b flex items-center justify-between sticky top-0 bg-white rounded-t-xl z-20">
+                {/* ─── Right Column: Trend + History ─────────────── */}
+                <div className="lg:col-span-2 space-y-4 md:space-y-5">
+
+                    {/* Monthly Trend Chart */}
+                    <div className="card p-4 md:p-5 shadow-sm hover:shadow-md transition-shadow">
+                        <div className="flex items-center justify-between mb-4">
+                            <h3 className="text-sm md:text-base font-bold text-gray-900 flex items-center gap-2">
+                                <BarChart3 size={16} className="text-[var(--primary)]" />
+                                Monthly Trends
+                            </h3>
+                            <div className="flex items-center gap-1.5 text-[10px] md:text-xs text-gray-400">
+                                <div className="w-2 h-2 rounded-full bg-[var(--primary)]" /> ≥{ATTENDANCE_THRESHOLD}%
+                                <div className="w-2 h-2 rounded-full bg-red-400 ml-2" /> &lt;{ATTENDANCE_THRESHOLD}%
+                            </div>
+                        </div>
+                        {monthlyTrend.some(m => m.total > 0) ? (
+                            <MonthlyTrendChart monthlyData={monthlyTrend} />
+                        ) : (
+                            <div className="text-center py-8 text-sm text-gray-400">
+                                No trend data available yet
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Attendance History List */}
+                    <div className="card shadow-sm hover:shadow-md transition-shadow">
+                        <div className="p-4 border-b flex flex-col sm:flex-row sm:items-center justify-between gap-2 sticky top-0 bg-white rounded-t-xl z-20">
                             <h3 className="font-bold text-sm md:text-base text-gray-900 flex items-center gap-2">
-                                <Clock size={16} className="md:w-[18px] md:h-[18px]" />
-                                Recent Activity
+                                <Clock size={16} className="text-[var(--primary)]" />
+                                Attendance Records
+                                {filteredHistory.length > 0 && (
+                                    <span className="text-xs font-normal text-gray-400 ml-1">
+                                        ({filteredHistory.length})
+                                    </span>
+                                )}
                             </h3>
                             <select
                                 value={filter}
                                 onChange={(e) => setFilter(e.target.value)}
-                                className="text-xs md:text-sm border-gray-200 rounded-lg focus:ring-[var(--primary)] focus:border-[var(--primary)] py-1.5 pl-2 pr-7 md:pr-8 h-8 md:h-auto"
+                                className="text-xs md:text-sm border border-gray-200 rounded-xl focus:ring-[var(--primary)] focus:border-[var(--primary)] py-2 pl-3 pr-8 bg-white shadow-sm"
+                                aria-label="Filter attendance by status"
                             >
                                 <option value="all">All Records</option>
                                 <option value="present">Present Only</option>
@@ -290,54 +980,117 @@ const AttendanceHistory = () => {
                             </select>
                         </div>
 
-                        <div className="divide-y max-h-[400px] md:max-h-[600px] overflow-y-auto">
+                        <div className="divide-y max-h-[450px] md:max-h-[550px] overflow-y-auto">
                             {filteredHistory.length === 0 ? (
-                                <div className="p-6 md:p-8 text-center text-gray-500">
-                                    <div className="w-10 h-10 md:w-12 md:h-12 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-3">
-                                        <Filter size={18} className="text-gray-400 md:w-5 md:h-5" />
+                                <div className="p-8 md:p-12 text-center text-gray-400">
+                                    <div className="w-14 h-14 bg-gray-100 rounded-2xl flex items-center justify-center mx-auto mb-3">
+                                        <Filter size={22} className="text-gray-300" />
                                     </div>
-                                    <p className="text-sm md:text-base">No attendance records found</p>
+                                    <p className="text-sm font-medium">No records found</p>
+                                    <p className="text-xs mt-1">Try adjusting your filter</p>
                                 </div>
                             ) : (
-                                filteredHistory.map((record) => (
-                                    <div key={record._id} className="p-3.5 md:p-4 hover:bg-gray-50 active:bg-gray-50 transition-colors flex items-start gap-3 md:gap-4">
-                                        <div className={`mt-0.5 w-9 h-9 md:w-10 md:h-10 rounded-full flex items-center justify-center flex-shrink-0 ${record.status === 'present' ? 'bg-green-100 text-green-600' :
-                                            record.status === 'late' ? 'bg-amber-100 text-amber-600' :
-                                                'bg-red-100 text-red-600'
-                                            }`}>
-                                            {record.status === 'present' ? <CheckCircle size={16} className="md:w-5 md:h-5" /> :
-                                                record.status === 'late' ? <Clock size={16} className="md:w-5 md:h-5" /> :
-                                                    <XCircle size={16} className="md:w-5 md:h-5" />}
-                                        </div>
+                                filteredHistory.map((entry, idx) => {
+                                    const colors = getStatusColor(entry.effectiveStatus)
+                                    const isExpanded = expandedRecord === idx
+                                    const hasMultipleRecords = entry.records.length > 1
+                                    const typeLabel = entry.types.has('class') && entry.types.has('test')
+                                        ? 'Class + Test'
+                                        : entry.types.has('test')
+                                            ? 'Test'
+                                            : 'Class'
 
-                                        <div className="flex-1 min-w-0">
-                                            <div className="flex items-start justify-between gap-2">
-                                                <div>
-                                                    <p className="font-bold text-sm md:text-base text-gray-900">
-                                                        {record.type === 'class'
-                                                            ? `Class ${record.class || 'Unknown'}`
-                                                            : (record.testId?.testName || 'Test Attendance')}
-                                                    </p>
-                                                    <p className="text-xs md:text-sm text-gray-500 mt-0.5">
-                                                        {format(parseISO(record.date), 'EEE, MMM d, yyyy')}
-                                                    </p>
+                                    return (
+                                        <div key={entry.date} className="group">
+                                            <div
+                                                className={`p-3.5 md:p-4 hover:bg-gray-50 active:bg-gray-50 transition-colors flex items-start gap-3 md:gap-4 ${hasMultipleRecords ? 'cursor-pointer' : ''}`}
+                                                onClick={() => hasMultipleRecords && setExpandedRecord(isExpanded ? null : idx)}
+                                                role={hasMultipleRecords ? 'button' : undefined}
+                                                aria-expanded={hasMultipleRecords ? isExpanded : undefined}
+                                            >
+                                                {/* Status Icon */}
+                                                <div className={`mt-0.5 w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${colors.bg} ${colors.text}`}>
+                                                    {getStatusIcon(entry.effectiveStatus, 18)}
                                                 </div>
-                                                <span className={`px-2 py-0.5 rounded-full text-[10px] md:text-xs font-bold capitalize whitespace-nowrap ${record.status === 'present' ? 'bg-green-100 text-green-700' :
-                                                    record.status === 'late' ? 'bg-amber-100 text-amber-700' :
-                                                        'bg-red-100 text-red-700'
-                                                    }`}>
-                                                    {record.status}
-                                                </span>
+
+                                                {/* Content */}
+                                                <div className="flex-1 min-w-0">
+                                                    <div className="flex items-start justify-between gap-2">
+                                                        <div>
+                                                            <p className="font-semibold text-sm md:text-base text-gray-900">
+                                                                {entry.records.length > 0
+                                                                    ? (entry.records[0].type === 'class'
+                                                                        ? `Class ${entry.records[0].class || ''}`
+                                                                        : (entry.records[0].testId?.testName || 'Test'))
+                                                                    : 'Session'
+                                                                }
+                                                            </p>
+                                                            <div className="flex items-center gap-2 mt-0.5">
+                                                                <p className="text-xs text-gray-500">
+                                                                    {format(new Date(entry.date), 'EEE, MMM d, yyyy')}
+                                                                </p>
+                                                                {entry.types.size > 0 && (
+                                                                    <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-md bg-[var(--primary)]/10 text-[var(--primary)]">
+                                                                        {typeLabel}
+                                                                    </span>
+                                                                )}
+                                                            </div>
+                                                        </div>
+                                                        <div className="flex items-center gap-2">
+                                                            <span className={`px-2.5 py-1 rounded-full text-[10px] md:text-xs font-bold capitalize whitespace-nowrap ${colors.pill}`}>
+                                                                {entry.effectiveStatus}
+                                                            </span>
+                                                            {hasMultipleRecords && (
+                                                                isExpanded
+                                                                    ? <ChevronUp size={14} className="text-gray-400" />
+                                                                    : <ChevronDown size={14} className="text-gray-400" />
+                                                            )}
+                                                        </div>
+                                                    </div>
+
+                                                    {/* Notes from first record */}
+                                                    {entry.records[0]?.notes && !isExpanded && (
+                                                        <p className="mt-1.5 text-xs text-gray-500 bg-gray-50 p-2 rounded-lg border border-gray-100 truncate">
+                                                            {entry.records[0].notes}
+                                                        </p>
+                                                    )}
+                                                </div>
                                             </div>
 
-                                            {record.notes && (
-                                                <p className="mt-2 text-xs md:text-sm text-gray-600 bg-gray-50 p-2 md:p-2 rounded-lg border border-gray-100">
-                                                    {record.notes}
-                                                </p>
+                                            {/* Expanded Details */}
+                                            {isExpanded && hasMultipleRecords && (
+                                                <div className="px-4 pb-4 pl-[4.25rem] animate-fadeIn space-y-2">
+                                                    {entry.records.map((r, ridx) => {
+                                                        const rc = getStatusColor(r.status)
+                                                        return (
+                                                            <div key={ridx} className={`flex items-center gap-3 p-3 rounded-xl ${rc.bg} border ${rc.border}`}>
+                                                                <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${rc.text}`}>
+                                                                    {r.type === 'class'
+                                                                        ? <BookOpen size={14} />
+                                                                        : <FileText size={14} />}
+                                                                </div>
+                                                                <div className="flex-1 min-w-0">
+                                                                    <p className="text-xs font-medium text-gray-700">
+                                                                        {r.type === 'class'
+                                                                            ? `Class ${r.class || ''}`
+                                                                            : (r.testId?.testName || 'Test')}
+                                                                    </p>
+                                                                    {r.notes && <p className="text-[10px] text-gray-500 mt-0.5">{r.notes}</p>}
+                                                                </div>
+                                                                <span className={`text-[10px] font-bold capitalize px-2 py-0.5 rounded-full ${rc.pill}`}>
+                                                                    {r.status}
+                                                                </span>
+                                                            </div>
+                                                        )
+                                                    })}
+                                                    <p className="text-[10px] text-gray-400 italic mt-1">
+                                                        * Multiple events on same date count as 1 attendance entry
+                                                    </p>
+                                                </div>
                                             )}
                                         </div>
-                                    </div>
-                                ))
+                                    )
+                                })
                             )}
                         </div>
                     </div>

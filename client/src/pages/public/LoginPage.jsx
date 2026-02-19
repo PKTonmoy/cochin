@@ -11,8 +11,10 @@ const LoginPage = () => {
     const navigate = useNavigate()
     const { login } = useAuth()
     const { getLogo, getSiteName, isLoading } = useSettings() // Get settings
-    const [formData, setFormData] = useState({ email: '', password: '' })
-    const [rememberMe, setRememberMe] = useState(false) // Added rememberMe state
+    const savedRemember = localStorage.getItem('rememberMe') === 'true'
+    const savedEmail = savedRemember ? localStorage.getItem('savedEmail') || '' : ''
+    const [formData, setFormData] = useState({ email: savedEmail, password: '' })
+    const [rememberMe, setRememberMe] = useState(savedRemember)
     const [showPassword, setShowPassword] = useState(false)
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState('')
@@ -35,6 +37,13 @@ const LoginPage = () => {
         setLoading(false)
 
         if (result.success) {
+            if (rememberMe) {
+                localStorage.setItem('rememberMe', 'true')
+                localStorage.setItem('savedEmail', formData.email)
+            } else {
+                localStorage.removeItem('rememberMe')
+                localStorage.removeItem('savedEmail')
+            }
             navigate('/admin')
         } else {
             setError(result.error)

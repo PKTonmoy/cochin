@@ -3,7 +3,8 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
     Upload, Image, Video, FileText, Trash2, Search,
     FolderPlus, Grid, List, X, CheckSquare, Square,
-    Download, Copy, ExternalLink, MoreVertical
+    Download, Copy, ExternalLink, MoreVertical,
+    HardDrive, Wifi, Layers, Zap, BarChart3, RefreshCw, Cloud
 } from 'lucide-react';
 import api from '../../lib/api';
 import { toast } from 'react-hot-toast';
@@ -16,6 +17,62 @@ const FILE_TYPE_ICONS = {
 
 const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'video/mp4', 'application/pdf'];
 
+// Progress bar component
+function UsageBar({ label, icon: Icon, used, limit, usedFormatted, limitFormatted, percent, color = 'blue' }) {
+    const clampedPercent = Math.min(percent || 0, 100);
+    const colorMap = {
+        blue: { bar: 'bg-blue-500', bg: 'bg-blue-100', text: 'text-blue-700', iconBg: 'bg-blue-50' },
+        purple: { bar: 'bg-purple-500', bg: 'bg-purple-100', text: 'text-purple-700', iconBg: 'bg-purple-50' },
+        emerald: { bar: 'bg-emerald-500', bg: 'bg-emerald-100', text: 'text-emerald-700', iconBg: 'bg-emerald-50' },
+        amber: { bar: 'bg-amber-500', bg: 'bg-amber-100', text: 'text-amber-700', iconBg: 'bg-amber-50' },
+    };
+    const c = colorMap[color] || colorMap.blue;
+    const isWarning = clampedPercent > 80;
+    const barColor = isWarning ? 'bg-red-500' : c.bar;
+
+    return (
+        <div className="bg-white rounded-xl border border-gray-200 p-4 hover:shadow-md transition-shadow">
+            <div className="flex items-center gap-3 mb-3">
+                <div className={`p-2 rounded-lg ${c.iconBg}`}>
+                    <Icon className={`w-4 h-4 ${c.text}`} />
+                </div>
+                <div className="flex-1 min-w-0">
+                    <h4 className="text-sm font-semibold text-gray-800">{label}</h4>
+                    <p className="text-xs text-gray-500 truncate">{usedFormatted} / {limitFormatted}</p>
+                </div>
+                <span className={`text-sm font-bold ${isWarning ? 'text-red-600' : c.text}`}>
+                    {clampedPercent.toFixed(1)}%
+                </span>
+            </div>
+            <div className={`w-full h-2 rounded-full ${c.bg}`}>
+                <div
+                    className={`h-2 rounded-full transition-all duration-500 ${barColor}`}
+                    style={{ width: `${clampedPercent}%` }}
+                />
+            </div>
+        </div>
+    );
+}
+
+// Resource stat card
+function ResourceCard({ icon: Icon, label, count, color = 'gray' }) {
+    const colorMap = {
+        blue: 'bg-blue-50 text-blue-600 border-blue-200',
+        purple: 'bg-purple-50 text-purple-600 border-purple-200',
+        amber: 'bg-amber-50 text-amber-600 border-amber-200',
+        gray: 'bg-gray-50 text-gray-600 border-gray-200',
+    };
+    return (
+        <div className={`flex items-center gap-3 px-4 py-3 rounded-xl border ${colorMap[color] || colorMap.gray}`}>
+            <Icon className="w-5 h-5" />
+            <div>
+                <p className="text-lg font-bold">{count.toLocaleString()}</p>
+                <p className="text-xs opacity-70">{label}</p>
+            </div>
+        </div>
+    );
+}
+
 export default function MediaLibrary() {
     const queryClient = useQueryClient();
     const [searchTerm, setSearchTerm] = useState('');
@@ -26,6 +83,7 @@ export default function MediaLibrary() {
     const [uploading, setUploading] = useState(false);
     const [uploadProgress, setUploadProgress] = useState(0);
     const [previewItem, setPreviewItem] = useState(null);
+    const [showStorage, setShowStorage] = useState(true);
 
     // Fetch media
     const { data: response, isLoading } = useQuery({
@@ -58,9 +116,21 @@ export default function MediaLibrary() {
         }
     });
 
+    // Fetch Cloudinary usage
+    const { data: usageResponse, isLoading: usageLoading, refetch: refetchUsage } = useQuery({
+        queryKey: ['cloudinary-usage'],
+        queryFn: async () => {
+            const res = await api.get('/media/cloudinary-usage');
+            return res.data;
+        },
+        staleTime: 1000 * 60 * 5, // 5 min cache
+        retry: 1
+    });
+
     const media = response?.data || [];
     const folders = foldersResponse?.data || [];
     const stats = statsResponse?.data || {};
+    const cloudUsage = usageResponse?.data || null;
 
     // Upload mutation
     const uploadMutation = useMutation({
@@ -77,6 +147,7 @@ export default function MediaLibrary() {
         onSuccess: () => {
             queryClient.invalidateQueries(['media']);
             queryClient.invalidateQueries(['media-stats']);
+            queryClient.invalidateQueries(['cloudinary-usage']);
             toast.success('File uploaded successfully');
         },
         onError: (error) => {
@@ -94,6 +165,7 @@ export default function MediaLibrary() {
         onSuccess: () => {
             queryClient.invalidateQueries(['media']);
             queryClient.invalidateQueries(['media-stats']);
+            queryClient.invalidateQueries(['cloudinary-usage']);
             toast.success('File deleted');
             setSelectedItems([]);
         }
@@ -105,6 +177,7 @@ export default function MediaLibrary() {
         onSuccess: () => {
             queryClient.invalidateQueries(['media']);
             queryClient.invalidateQueries(['media-stats']);
+            queryClient.invalidateQueries(['cloudinary-usage']);
             toast.success('Files deleted');
             setSelectedItems([]);
         }
@@ -182,7 +255,8 @@ export default function MediaLibrary() {
     const formatSize = (bytes) => {
         if (bytes < 1024) return bytes + ' B';
         if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
-        return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+        if (bytes < 1024 * 1024 * 1024) return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+        return (bytes / (1024 * 1024 * 1024)).toFixed(2) + ' GB';
     };
 
     const getFileTypeIcon = (type) => {
@@ -197,21 +271,111 @@ export default function MediaLibrary() {
                 <div>
                     <h1 className="text-2xl font-bold text-gray-900">Media Library</h1>
                     <p className="text-gray-600 mt-1">
-                        {stats.totalFiles || 0} files • {formatSize(stats.totalSize || 0)} used
+                        {stats.totalCount || 0} files • {formatSize(stats.totalSize || 0)} tracked in database
                     </p>
                 </div>
-                <label className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors cursor-pointer">
-                    <Upload className="w-4 h-4" />
-                    Upload Files
-                    <input
-                        type="file"
-                        multiple
-                        accept={ALLOWED_TYPES.join(',')}
-                        onChange={handleFileUpload}
-                        className="hidden"
-                    />
-                </label>
+                <div className="flex items-center gap-2">
+                    <button
+                        onClick={() => setShowStorage(s => !s)}
+                        className="inline-flex items-center gap-2 px-3 py-2 text-sm border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                    >
+                        <BarChart3 className="w-4 h-4" />
+                        {showStorage ? 'Hide' : 'Show'} Storage
+                    </button>
+                    <label className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors cursor-pointer">
+                        <Upload className="w-4 h-4" />
+                        Upload Files
+                        <input
+                            type="file"
+                            multiple
+                            accept={ALLOWED_TYPES.join(',')}
+                            onChange={handleFileUpload}
+                            className="hidden"
+                        />
+                    </label>
+                </div>
             </div>
+
+            {/* Cloudinary Storage Dashboard */}
+            {showStorage && (
+                <div className="bg-gradient-to-br from-slate-50 to-blue-50 rounded-2xl border border-gray-200 p-5">
+                    <div className="flex items-center justify-between mb-4">
+                        <div className="flex items-center gap-2">
+                            <Cloud className="w-5 h-5 text-blue-600" />
+                            <h2 className="text-lg font-bold text-gray-800">Cloudinary Storage</h2>
+                            {cloudUsage?.plan && (
+                                <span className="ml-2 px-2 py-0.5 text-xs font-medium bg-blue-100 text-blue-700 rounded-full">
+                                    {cloudUsage.plan}
+                                </span>
+                            )}
+                        </div>
+                        <button
+                            onClick={() => refetchUsage()}
+                            disabled={usageLoading}
+                            className="p-2 text-gray-500 hover:text-blue-600 hover:bg-white rounded-lg transition-colors"
+                            title="Refresh usage data"
+                        >
+                            <RefreshCw className={`w-4 h-4 ${usageLoading ? 'animate-spin' : ''}`} />
+                        </button>
+                    </div>
+
+                    {usageLoading && !cloudUsage ? (
+                        <div className="flex items-center justify-center py-8">
+                            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
+                            <span className="ml-3 text-sm text-gray-500">Loading Cloudinary usage...</span>
+                        </div>
+                    ) : cloudUsage ? (
+                        <>
+                            {/* Usage bars */}
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
+                                <UsageBar
+                                    label="Storage"
+                                    icon={HardDrive}
+                                    used={cloudUsage.storage.used}
+                                    limit={cloudUsage.storage.limit}
+                                    usedFormatted={cloudUsage.storage.formattedUsed}
+                                    limitFormatted={cloudUsage.storage.formattedLimit}
+                                    percent={cloudUsage.storage.usedPercent}
+                                    color="blue"
+                                />
+                                <UsageBar
+                                    label="Bandwidth"
+                                    icon={Wifi}
+                                    used={cloudUsage.bandwidth.used}
+                                    limit={cloudUsage.bandwidth.limit}
+                                    usedFormatted={cloudUsage.bandwidth.formattedUsed}
+                                    limitFormatted={cloudUsage.bandwidth.formattedLimit}
+                                    percent={cloudUsage.bandwidth.usedPercent}
+                                    color="purple"
+                                />
+                                <UsageBar
+                                    label="Transformations"
+                                    icon={Layers}
+                                    used={cloudUsage.transformations.used}
+                                    limit={cloudUsage.transformations.limit}
+                                    usedFormatted={cloudUsage.transformations.used.toLocaleString()}
+                                    limitFormatted={cloudUsage.transformations.limit.toLocaleString()}
+                                    percent={cloudUsage.transformations.usedPercent}
+                                    color="emerald"
+                                />
+                            </div>
+
+                            {/* Resource counts */}
+                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                                <ResourceCard icon={Layers} label="Total Resources" count={cloudUsage.resources.total} color="gray" />
+                                <ResourceCard icon={Image} label="Images" count={cloudUsage.resources.images} color="blue" />
+                                <ResourceCard icon={Video} label="Videos" count={cloudUsage.resources.videos} color="purple" />
+                                <ResourceCard icon={FileText} label="Raw Files" count={cloudUsage.resources.raw} color="amber" />
+                            </div>
+                        </>
+                    ) : (
+                        <div className="text-center py-6 text-sm text-gray-500">
+                            <Cloud className="w-8 h-8 text-gray-300 mx-auto mb-2" />
+                            Could not load Cloudinary usage data. Check API credentials.
+                        </div>
+                    )}
+                </div>
+            )}
 
             {/* Upload zone */}
             <div

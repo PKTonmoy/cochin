@@ -397,10 +397,74 @@ exports.getStats = async (req, res, next) => {
     }
 };
 
+/**
+ * Get Cloudinary account usage (storage, bandwidth, resources)
+ */
+exports.getCloudinaryUsage = async (req, res, next) => {
+    try {
+        const usage = await cloudinary.api.usage();
+
+        // Extract relevant fields
+        const data = {
+            // Storage
+            storage: {
+                used: usage.storage?.usage || 0,
+                limit: usage.storage?.limit || 0,
+                usedPercent: usage.storage?.used_percent || 0,
+                formattedUsed: formatBytes(usage.storage?.usage || 0),
+                formattedLimit: formatBytes(usage.storage?.limit || 0)
+            },
+            // Bandwidth (current period)
+            bandwidth: {
+                used: usage.bandwidth?.usage || 0,
+                limit: usage.bandwidth?.limit || 0,
+                usedPercent: usage.bandwidth?.used_percent || 0,
+                formattedUsed: formatBytes(usage.bandwidth?.usage || 0),
+                formattedLimit: formatBytes(usage.bandwidth?.limit || 0)
+            },
+            // Resources
+            resources: {
+                images: usage.resources || 0,
+                videos: usage.video?.usage || 0,
+                raw: usage.raw?.usage || 0,
+                total: (usage.resources || 0) + (usage.video?.usage || 0) + (usage.raw?.usage || 0)
+            },
+            // Transformations
+            transformations: {
+                used: usage.transformations?.usage || 0,
+                limit: usage.transformations?.limit || 0,
+                usedPercent: usage.transformations?.used_percent || 0
+            },
+            // Credits
+            credits: {
+                used: usage.credits?.usage || 0,
+                limit: usage.credits?.limit || 0,
+                usedPercent: usage.credits?.used_percent || 0
+            },
+            // Plan info
+            plan: usage.plan || 'Free',
+            lastUpdated: usage.last_updated || new Date().toISOString()
+        };
+
+        res.json({
+            success: true,
+            data
+        });
+    } catch (error) {
+        console.error('Cloudinary usage fetch error:', error);
+        // Return a fallback so the frontend doesn't break
+        res.json({
+            success: false,
+            message: 'Could not fetch Cloudinary usage. Check API credentials.',
+            data: null
+        });
+    }
+};
+
 // Helper function
 function formatBytes(bytes) {
     if (!bytes) return '0 Bytes';
-    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
     const i = Math.floor(Math.log(bytes) / Math.log(1024));
     return `${(bytes / Math.pow(1024, i)).toFixed(2)} ${sizes[i]}`;
 }
