@@ -441,7 +441,7 @@ const AttendanceHistory = () => {
     const handleExport = useCallback(() => {
         if (!attendanceData?.length || !stats) return
 
-        const doc = new jsPDF()
+        const doc = new jsPDF('p', 'mm', 'a4')
         const pageWidth = doc.internal.pageSize.getWidth()
         const margin = 16
         const centerX = pageWidth / 2

@@ -195,7 +195,7 @@ export default function StudentResultsV2() {
     const handleExportPDF = useCallback(() => {
         if (!stats?.results?.length) return
 
-        const doc = new jsPDF()
+        const doc = new jsPDF('p', 'mm', 'a4')
         const pageWidth = doc.internal.pageSize.getWidth()
         const pageHeight = doc.internal.pageSize.getHeight()
         const margin = 16
