@@ -10,6 +10,10 @@ export default defineConfig({
       '/api': {
         target: 'http://localhost:5000',
         changeOrigin: true
+      },
+      '/manifest.json': {
+        target: 'http://localhost:5000',
+        changeOrigin: true
       }
     }
   }

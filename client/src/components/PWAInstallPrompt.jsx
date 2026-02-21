@@ -176,7 +176,7 @@ const PWAInstallPrompt = () => {
                         {/* Text */}
                         <div className="flex-1 min-w-0">
                             <h3 className="text-sm font-bold text-gray-900 leading-tight">
-                                {settings?.guideContent?.welcomeHeading || 'Install PARAGON App'}
+                                {settings?.guideContent?.welcomeHeading || 'Install App'}
                             </h3>
                             <p className="text-xs text-gray-500 mt-1 leading-relaxed">
                                 {settings?.guideContent?.welcomeSubtext || 'Access your portal faster — works offline too!'}
@@ -230,7 +230,7 @@ const PWAInstallPrompt = () => {
                             <span className="text-white font-bold text-lg">P</span>
                         </div>
                         <div>
-                            <h3 className="text-lg font-bold text-gray-900">Install PARAGON App</h3>
+                            <h3 className="text-lg font-bold text-gray-900">Install App</h3>
                             <p className="text-sm text-gray-500">Add to your home screen</p>
                         </div>
                     </div>

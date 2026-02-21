@@ -62,13 +62,14 @@ export const AuthProvider = ({ children }) => {
     }, [])
 
     // Student login
-    const studentLogin = useCallback(async (roll, password) => {
+    const studentLogin = useCallback(async (roll, password, rememberMe = false) => {
         try {
             const response = await api.post('/auth/student-login', { roll, password })
             const { student, accessToken, refreshToken } = response.data.data
 
-            localStorage.setItem('accessToken', accessToken)
-            localStorage.setItem('refreshToken', refreshToken)
+            const storage = rememberMe ? localStorage : sessionStorage
+            storage.setItem('accessToken', accessToken)
+            storage.setItem('refreshToken', refreshToken)
             setUser({ ...student, role: 'student' })
 
             toast.success(`Welcome, ${student.name}!`)

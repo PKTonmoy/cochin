@@ -7,14 +7,14 @@ const SettingsContext = createContext(null)
 // Default fallback settings
 const defaultSettings = {
     siteInfo: {
-        name: 'PARAGON',
-        tagline: 'Transform Your Future',
+        name: '',
+        tagline: '',
         logo: { url: '' },
         favicon: { url: '' }
     },
     contact: {
-        phones: ['09666775566'],
-        email: 'info@paragon.edu.bd',
+        phones: [''],
+        email: '',
         whatsapp: '',
         address: {
             street: '',

@@ -25,7 +25,7 @@ const StudentLayout = () => {
     const [sidebarOpen, setSidebarOpen] = useState(false)
     const sidebarRef = useRef(null)
 
-    const siteName = settings?.siteInfo?.name || 'PARAGON'
+    const siteName = settings?.siteInfo?.name || ''
 
     const menuItems = [
         { path: '/student', icon: LayoutDashboard, label: 'Dashboard', exact: true, color: '#3b82f6' },

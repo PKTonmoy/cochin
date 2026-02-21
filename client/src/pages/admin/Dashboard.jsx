@@ -12,8 +12,10 @@ import {
 } from 'lucide-react'
 
 import Skeleton from '../../components/Skeleton'
+import { useSettings } from '../../contexts/SettingsContext'
 
 const Dashboard = () => {
+    const { settings } = useSettings()
     const { data: stats, isLoading } = useQuery({
         queryKey: ['dashboard-stats'],
         queryFn: async () => {
@@ -138,7 +140,7 @@ const Dashboard = () => {
             {/* Welcome message */}
             {/* Welcome message */}
             <div className="bg-white border border-gray-100 shadow-sm rounded-2xl p-6 md:p-8">
-                <h1 className="text-2xl md:text-3xl font-bold mb-2 text-gray-900">Welcome to PARAGON Admin</h1>
+                <h1 className="text-2xl md:text-3xl font-bold mb-2 text-gray-900">Welcome to {settings?.siteInfo?.name || ''} Admin</h1>
                 <p className="text-gray-500">Manage your coaching center from this dashboard.</p>
             </div>
 

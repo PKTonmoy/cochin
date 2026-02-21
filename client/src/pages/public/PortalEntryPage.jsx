@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
+import { useAuth } from '../../contexts/AuthContext'
 import PWAInstallGuide from '../../components/PWAInstallGuide'
 import api from '../../lib/api'
 
@@ -44,6 +45,7 @@ function getBrowserName() {
 
 const PortalEntryPage = () => {
     const navigate = useNavigate()
+    const { isAuthenticated, isStudent, isAdmin, isStaff } = useAuth()
     const [searchParams] = useSearchParams()
     const roll = searchParams.get('roll') || ''
     const source = searchParams.get('source') || 'qr'
@@ -103,6 +105,19 @@ const PortalEntryPage = () => {
             const guideVisibility = settings?.guideVisibility || {}
 
             // 4. Decision tree
+
+            // If already logged in, skip everything and go to dashboard
+            if (isAuthenticated) {
+                if (isStudent) {
+                    navigateToLogin('/student')
+                    return
+                }
+                if (isAdmin || isStaff) {
+                    navigateToLogin('/admin')
+                    return
+                }
+            }
+
             if (!redirect.enabled) {
                 // Redirect disabled — go straight to login
                 navigateToLogin(redirect.nonPwaRedirectUrl || '/student-login')

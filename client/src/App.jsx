@@ -111,7 +111,8 @@ const ProtectedRoute = ({ children, roles }) => {
   }
 
   if (!user) {
-    return <Navigate to="/login" replace />
+    const loginPath = roles?.includes('student') ? '/student-login' : '/login'
+    return <Navigate to={loginPath} replace />
   }
 
   if (roles && !roles.includes(user.role)) {

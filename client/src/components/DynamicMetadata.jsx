@@ -2,10 +2,10 @@ import { useEffect } from 'react'
 import { useSettings } from '../contexts/SettingsContext'
 
 export default function DynamicMetadata() {
-    const { settings } = useSettings()
+    const { settings, isLoading } = useSettings()
 
-    const siteName = settings?.siteInfo?.name || 'PARAGON'
-    const tagline = settings?.siteInfo?.tagline
+    const siteName = settings?.siteInfo?.name || ''
+    const tagline = settings?.siteInfo?.tagline || ''
 
     // Get URL safely (handle object vs string)
     const getUrl = (obj) => {
@@ -18,11 +18,12 @@ export default function DynamicMetadata() {
         getUrl(settings?.siteInfo?.logo) ||
         null
 
-    // Set default document title
+    // Set default document title only after settings have loaded
     useEffect(() => {
-        const defaultTitle = `${siteName} - ${tagline || 'Excellence in Education'}`
+        if (isLoading || !siteName) return
+        const defaultTitle = tagline ? `${siteName} - ${tagline}` : siteName
         document.title = defaultTitle
-    }, [siteName, tagline])
+    }, [siteName, tagline, isLoading])
 
     // Update favicon reactively (with rounded effect)
     useEffect(() => {
@@ -79,6 +80,16 @@ export default function DynamicMetadata() {
         img.src = faviconUrl
 
     }, [faviconUrl])
+
+    // Don't render meta tags until settings have loaded
+    if (isLoading || !siteName) {
+        return (
+            <>
+                <meta name="theme-color" content="#2563eb" media="(prefers-color-scheme: light)" />
+                <meta name="theme-color" content="#1e3a8a" media="(prefers-color-scheme: dark)" />
+            </>
+        )
+    }
 
     // React 19 native: meta tags rendered as JSX are automatically hoisted to <head>
     return (

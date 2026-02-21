@@ -9,14 +9,22 @@ import { useSettings } from '../../contexts/SettingsContext' // Import useSettin
 
 const StudentLoginPage = () => {
     const navigate = useNavigate()
-    const { studentLogin } = useAuth()
+    const { studentLogin, isAuthenticated, isStudent, isAdmin, isStaff } = useAuth()
     const { getLogo, getSiteName, isLoading } = useSettings() // Get settings
     const [formData, setFormData] = useState({ roll: '', password: '' })
     const [showPassword, setShowPassword] = useState(false)
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState('')
-    const [rememberRoll, setRememberRoll] = useState(false)
+    const [rememberMe, setRememberMe] = useState(false)
     const [searchParams] = useSearchParams()
+
+    // Redirect if already logged in
+    useEffect(() => {
+        if (isAuthenticated) {
+            if (isStudent) navigate('/student', { replace: true })
+            if (isAdmin || isStaff) navigate('/admin', { replace: true })
+        }
+    }, [isAuthenticated, isStudent, isAdmin, isStaff, navigate])
 
     // Load roll number on mount: URL param > sessionStorage > localStorage
     useEffect(() => {
@@ -27,7 +35,7 @@ const StudentLoginPage = () => {
         const rollToUse = urlRoll || sessionRoll || savedRoll
         if (rollToUse) {
             setFormData(prev => ({ ...prev, roll: rollToUse }))
-            if (savedRoll) setRememberRoll(true)
+            if (savedRoll) setRememberMe(true)
         }
 
         // Clear sessionStorage after reading (one-time use from QR)
@@ -47,13 +55,13 @@ const StudentLoginPage = () => {
         setError('')
         setLoading(true)
 
-        const result = await studentLogin(formData.roll, formData.password)
+        const result = await studentLogin(formData.roll, formData.password, rememberMe)
 
         setLoading(false)
 
         if (result.success) {
-            // Save or clear remembered roll number
-            if (rememberRoll) {
+            // Save or clear remembered roll number based on remember me
+            if (rememberMe) {
                 localStorage.setItem('remembered_roll', formData.roll)
             } else {
                 localStorage.removeItem('remembered_roll')
@@ -223,17 +231,17 @@ const StudentLoginPage = () => {
                                 </>
                             )}
                         </button>
-                        {/* Remember Roll Number */}
+                        {/* Remember Me */}
                         <div className="flex items-center gap-3">
                             <input
                                 type="checkbox"
-                                id="rememberRoll"
-                                checked={rememberRoll}
-                                onChange={(e) => setRememberRoll(e.target.checked)}
+                                id="rememberMe"
+                                checked={rememberMe}
+                                onChange={(e) => setRememberMe(e.target.checked)}
                                 className="w-4 h-4 rounded border-gray-300 text-[#2E86AB] focus:ring-[#2E86AB] cursor-pointer"
                             />
-                            <label htmlFor="rememberRoll" className="text-sm text-gray-600 cursor-pointer select-none">
-                                Remember my Roll Number
+                            <label htmlFor="rememberMe" className="text-sm text-gray-600 cursor-pointer select-none">
+                                Remember Me (keeps you logged in)
                             </label>
                         </div>
 

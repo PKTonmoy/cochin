@@ -59,7 +59,7 @@ const StudentLayoutModern = () => {
 
     const handleLogout = async () => {
         await logout()
-        navigate('/')
+        navigate('/student-login')
     }
 
     return (

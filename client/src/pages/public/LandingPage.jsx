@@ -338,8 +338,8 @@ export default function LandingPage() {
             <BackToTop />
 
             {/* Hero */}
-            <title>{settings?.siteInfo?.name ? `${settings.siteInfo.name} - ${settings.siteInfo.tagline || 'Transform Your Future'}` : 'PARAGON - Transform Your Future'}</title>
-            <meta name="description" content={settings?.siteInfo?.description || 'Paragon Coaching Center - Excellence in Education'} />
+            {settings?.siteInfo?.name && <title>{`${settings.siteInfo.name}${settings.siteInfo.tagline ? ` - ${settings.siteInfo.tagline}` : ''}`}</title>}
+            {settings?.siteInfo?.description && <meta name="description" content={settings.siteInfo.description} />}
             <HeroSection3D
                 content={hero}
                 stats={stats}

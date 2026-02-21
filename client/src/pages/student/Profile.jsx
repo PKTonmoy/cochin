@@ -63,7 +63,7 @@ const StudentProfile = () => {
 
     const handleLogout = async () => {
         await logout()
-        navigate('/')
+        navigate('/student-login')
     }
 
     if (isLoading) {
