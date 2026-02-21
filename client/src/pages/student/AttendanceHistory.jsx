@@ -544,74 +544,182 @@ const AttendanceHistory = () => {
             y += 16
         }
 
+        // ── Calendar-Style Helper Functions ──
+        const PAGE_W = pageWidth
+        const CONTENT_W = PAGE_W - 2 * margin
+        const CELL_W = CONTENT_W / 7
+        const CELL_H = 14
+        const DAY_HDRS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+        const MONTH_NAMES = ['January', 'February', 'March', 'April', 'May', 'June',
+            'July', 'August', 'September', 'October', 'November', 'December']
+
+        const checkPgBreak = (curY, needed = 40) => {
+            const ph = doc.internal.pageSize.getHeight()
+            if (curY + needed > ph - 25) { doc.addPage(); return 20 }
+            return curY
+        }
+
+        const drawCalMonth = (yr, mo, attMap, startY) => {
+            const firstD = new Date(yr, mo, 1)
+            const dimMonth = new Date(yr, mo + 1, 0).getDate()
+            const startDow = firstD.getDay()
+            const todayD = new Date(); todayD.setHours(0, 0, 0, 0)
+            const totalRows = Math.ceil((startDow + dimMonth) / 7)
+            const calH = 10 + 8 + (totalRows * CELL_H) + 4
+
+            let cy = checkPgBreak(startY, calH)
+
+            // Month title bar
+            doc.setFillColor(...primary)
+            doc.roundedRect(margin, cy, CONTENT_W, 9, 1.5, 1.5, 'F')
+            doc.setTextColor(255, 255, 255)
+            doc.setFontSize(9)
+            doc.setFont('helvetica', 'bold')
+            doc.text(`${MONTH_NAMES[mo]} ${yr}`, margin + 4, cy + 6.5)
+
+            // Month stats
+            let mP = 0, mA = 0, mL = 0
+            for (let d = 1; d <= dimMonth; d++) {
+                const k = `${yr}-${String(mo + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`
+                const s = attMap[k]
+                if (s === 'present') mP++
+                else if (s === 'absent') mA++
+                else if (s === 'late') mL++
+            }
+            const mT = mP + mA + mL
+            const mR = mT > 0 ? Math.round((mP / mT) * 100) : 0
+            doc.setFontSize(7)
+            doc.setFont('helvetica', 'normal')
+            doc.text(`P:${mP}  A:${mA}  L:${mL}  Rate:${mR}%`, PAGE_W - margin - 4, cy + 6.5, { align: 'right' })
+            cy += 11
+
+            // Day headers
+            doc.setFillColor(...lightBg)
+            doc.rect(margin, cy, CONTENT_W, 7, 'F')
+            doc.setFontSize(6.5)
+            doc.setFont('helvetica', 'bold')
+            doc.setTextColor(...mutedText)
+            DAY_HDRS.forEach((dh, i) => {
+                doc.text(dh, margin + (i * CELL_W) + CELL_W / 2, cy + 5, { align: 'center' })
+            })
+            cy += 8
+
+            // Day cells
+            let dn = 1
+            for (let row = 0; row < totalRows; row++) {
+                for (let col = 0; col < 7; col++) {
+                    const cx = margin + col * CELL_W
+                    const cellY = cy + row * CELL_H
+
+                    doc.setDrawColor(230, 233, 240)
+                    doc.setLineWidth(0.2)
+                    doc.rect(cx, cellY, CELL_W, CELL_H, 'S')
+
+                    if ((row === 0 && col < startDow) || dn > dimMonth) {
+                        doc.setFillColor(250, 250, 250)
+                        doc.rect(cx + 0.3, cellY + 0.3, CELL_W - 0.6, CELL_H - 0.6, 'F')
+                        continue
+                    }
+
+                    const dk = `${yr}-${String(mo + 1).padStart(2, '0')}-${String(dn).padStart(2, '0')}`
+                    const cd = new Date(yr, mo, dn); cd.setHours(0, 0, 0, 0)
+                    const isFut = cd > todayD
+                    const st = attMap[dk]
+
+                    // Cell fill
+                    if (st === 'present') doc.setFillColor(...greenBg)
+                    else if (st === 'absent') doc.setFillColor(...redBg)
+                    else if (st === 'late') doc.setFillColor(...amberBg)
+                    else if (isFut) doc.setFillColor(248, 249, 250)
+                    else doc.setFillColor(255, 255, 255)
+                    doc.rect(cx + 0.3, cellY + 0.3, CELL_W - 0.6, CELL_H - 0.6, 'F')
+
+                    // Day number
+                    doc.setFontSize(7)
+                    doc.setFont('helvetica', 'bold')
+                    if (st === 'present') doc.setTextColor(...greenText)
+                    else if (st === 'absent') doc.setTextColor(...redText)
+                    else if (st === 'late') doc.setTextColor(...amberText)
+                    else if (isFut) doc.setTextColor(200, 200, 200)
+                    else doc.setTextColor(...mutedText)
+                    doc.text(String(dn), cx + 3, cellY + 5.5)
+
+                    // Status symbol
+                    if (st) {
+                        doc.setFontSize(8)
+                        doc.setFont('helvetica', 'bold')
+                        let sym = ''
+                        if (st === 'present') { sym = '✓'; doc.setTextColor(...greenText) }
+                        else if (st === 'absent') { sym = '✗'; doc.setTextColor(...redText) }
+                        else if (st === 'late') { sym = '~'; doc.setTextColor(...amberText) }
+                        doc.text(sym, cx + CELL_W / 2, cellY + CELL_H - 3, { align: 'center' })
+                    }
+
+                    dn++
+                }
+            }
+
+            return cy + totalRows * CELL_H + 6
+        }
+
+        // ── Build date→status map ──
+        const attMap = {}
+        const sortedRecords = [...attendanceData].sort((a, b) => new Date(b.date) - new Date(a.date))
+        sortedRecords.forEach(r => {
+            const d = parseISO(r.date)
+            const k = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+            const ex = attMap[k]
+            if (!ex) attMap[k] = r.status
+            else if (r.status === 'absent') attMap[k] = 'absent'
+            else if (r.status === 'late' && ex !== 'absent') attMap[k] = 'late'
+        })
+
         // ── Section Title ──
         doc.setFillColor(...primary)
         doc.rect(margin, y, 3, 10, 'F')
         doc.setTextColor(...darkText)
         doc.setFontSize(11)
         doc.setFont('helvetica', 'bold')
-        doc.text('Detailed Attendance Records', margin + 7, y + 7)
+        doc.text('Calendar Attendance View', margin + 7, y + 7)
         y += 14
 
-        // ── Attendance Table ──
-        const sortedRecords = [...attendanceData].sort((a, b) => new Date(b.date) - new Date(a.date))
-        const tableBody = sortedRecords.map(r => [
-            format(parseISO(r.date), 'dd MMM yyyy (EEE)'),
-            r.type === 'class' ? `Class ${r.class || ''}` : (r.testId?.testName || 'Test'),
-            r.type.charAt(0).toUpperCase() + r.type.slice(1),
-            r.status.charAt(0).toUpperCase() + r.status.slice(1)
-        ])
-
-        autoTable(doc, {
-            startY: y,
-            head: [['Date', 'Subject / Event', 'Type', 'Status']],
-            body: tableBody,
-            margin: { left: margin, right: margin },
-            styles: {
-                fontSize: 7.5,
-                cellPadding: 4,
-                lineColor: [226, 232, 240],
-                lineWidth: 0.3,
-                textColor: bodyText,
-                font: 'helvetica',
-                overflow: 'linebreak'
-            },
-            headStyles: {
-                fillColor: primary,
-                textColor: [255, 255, 255],
-                fontStyle: 'bold',
-                fontSize: 8,
-                cellPadding: 5
-            },
-            alternateRowStyles: {
-                fillColor: [248, 250, 252]
-            },
-            columnStyles: {
-                0: { cellWidth: 38 },
-                1: { cellWidth: 'auto' },
-                2: { cellWidth: 24 },
-                3: { cellWidth: 24, halign: 'center' }
-            },
-            // Color-code the Status column cells
-            didParseCell: function (data) {
-                if (data.section === 'body' && data.column.index === 3) {
-                    const val = data.cell.raw?.toLowerCase()
-                    if (val === 'present') {
-                        data.cell.styles.fillColor = greenBg
-                        data.cell.styles.textColor = greenText
-                        data.cell.styles.fontStyle = 'bold'
-                    } else if (val === 'absent') {
-                        data.cell.styles.fillColor = redBg
-                        data.cell.styles.textColor = redText
-                        data.cell.styles.fontStyle = 'bold'
-                    } else if (val === 'late') {
-                        data.cell.styles.fillColor = amberBg
-                        data.cell.styles.textColor = amberText
-                        data.cell.styles.fontStyle = 'bold'
-                    }
-                }
-            }
+        // ── Color Legend ──
+        const legendItems = [
+            { label: 'Present', bg: greenBg, text: greenText },
+            { label: 'Absent', bg: redBg, text: redText },
+            { label: 'Late', bg: amberBg, text: amberText },
+            { label: 'No Record', bg: [255, 255, 255], text: mutedText },
+        ]
+        const legendStartX = margin + (CONTENT_W - legendItems.length * 42) / 2
+        legendItems.forEach((item, i) => {
+            const lx = legendStartX + i * 42
+            doc.setFillColor(...item.bg)
+            doc.setDrawColor(230, 233, 240)
+            doc.setLineWidth(0.2)
+            doc.roundedRect(lx, y, 8, 5, 1, 1, 'FD')
+            doc.setFontSize(6.5)
+            doc.setFont('helvetica', 'normal')
+            doc.setTextColor(...item.text)
+            doc.text(item.label, lx + 10, y + 3.8)
         })
+        y += 10
+
+        // ── Determine month range and draw calendars ──
+        const allDates = attendanceData.map(r => new Date(r.date))
+        const minDate = new Date(Math.min(...allDates))
+        const maxDate = new Date(Math.max(...allDates))
+
+        const monthsList = []
+        let curM = new Date(maxDate.getFullYear(), maxDate.getMonth(), 1)
+        const endM = new Date(minDate.getFullYear(), minDate.getMonth(), 1)
+        while (curM >= endM) {
+            monthsList.push({ year: curM.getFullYear(), month: curM.getMonth() })
+            curM = new Date(curM.getFullYear(), curM.getMonth() - 1, 1)
+        }
+
+        for (const m of monthsList) {
+            y = drawCalMonth(m.year, m.month, attMap, y)
+        }
 
         // ── Footer on every page ──
         const totalPages = doc.internal.getNumberOfPages()

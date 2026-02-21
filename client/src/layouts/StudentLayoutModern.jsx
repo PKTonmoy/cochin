@@ -5,6 +5,7 @@
 
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
+import { useSettings } from '../contexts/SettingsContext'
 import { useState, useEffect } from 'react'
 import {
     LayoutDashboard,
@@ -26,6 +27,9 @@ import { useSocketUpdates } from '../hooks/useSocketUpdates'
 
 const StudentLayoutModern = () => {
     const { user, logout } = useAuth()
+    const { settings } = useSettings()
+    const siteName = settings?.siteInfo?.name || 'Institute'
+    const logoUrl = settings?.siteInfo?.logo?.url || ''
     const location = useLocation()
     const navigate = useNavigate()
     const [sidebarOpen, setSidebarOpen] = useState(false)
@@ -65,10 +69,14 @@ const StudentLayoutModern = () => {
                 }`}>
                 <div className="flex items-center justify-between px-4 py-3">
                     <Link to="/student" className="flex items-center gap-2">
-                        <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[var(--primary)] to-[var(--primary-light)] flex items-center justify-center font-bold text-white">
-                            P
-                        </div>
-                        <span className="font-bold text-[var(--primary)]">PARAGON</span>
+                        {logoUrl ? (
+                            <img src={logoUrl} alt={siteName} className="w-8 h-8 rounded-lg object-contain" />
+                        ) : (
+                            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[var(--primary)] to-[var(--primary-light)] flex items-center justify-center font-bold text-white">
+                                {siteName.charAt(0)}
+                            </div>
+                        )}
+                        <span className="font-bold text-[var(--primary)]">{siteName}</span>
                     </Link>
 
                     <NotificationBell />
@@ -80,11 +88,15 @@ const StudentLayoutModern = () => {
                 {/* Logo */}
                 <div className="p-6 border-b border-white/10">
                     <Link to="/student" className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center font-bold text-lg text-white shadow-lg">
-                            P
-                        </div>
+                        {logoUrl ? (
+                            <img src={logoUrl} alt={siteName} className="w-10 h-10 rounded-xl object-contain bg-white/20 p-1 shadow-lg" />
+                        ) : (
+                            <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center font-bold text-lg text-white shadow-lg">
+                                {siteName.charAt(0)}
+                            </div>
+                        )}
                         <div>
-                            <span className="font-bold text-lg text-white block">PARAGON</span>
+                            <span className="font-bold text-lg text-white block">{siteName}</span>
                             <span className="text-xs text-white/70">Student Portal</span>
                         </div>
                     </Link>
@@ -152,10 +164,14 @@ const StudentLayoutModern = () => {
                     <aside className="fixed left-0 top-0 bottom-0 w-72 bg-[var(--primary)] z-50 md:hidden animate-slideIn">
                         <div className="flex items-center justify-between p-4 border-b border-white/10">
                             <div className="flex items-center gap-2">
-                                <div className="w-8 h-8 rounded-lg bg-white/20 flex items-center justify-center font-bold text-white">
-                                    P
-                                </div>
-                                <span className="font-bold text-white">PARAGON</span>
+                                {logoUrl ? (
+                                    <img src={logoUrl} alt={siteName} className="w-8 h-8 rounded-lg object-contain bg-white/20 p-0.5" />
+                                ) : (
+                                    <div className="w-8 h-8 rounded-lg bg-white/20 flex items-center justify-center font-bold text-white">
+                                        {siteName.charAt(0)}
+                                    </div>
+                                )}
+                                <span className="font-bold text-white">{siteName}</span>
                             </div>
                             <button
                                 onClick={() => setSidebarOpen(false)}
