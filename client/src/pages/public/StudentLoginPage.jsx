@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { useNavigate, Link } from 'react-router-dom'
+import { useState, useEffect } from 'react'
+import { useNavigate, Link, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
 import { Eye, EyeOff, Lock, User, ArrowRight, GraduationCap, BookOpen, Trophy, CheckCircle } from 'lucide-react'
 import LoginSkeleton from '../../components/skeletons/LoginSkeleton'
@@ -15,6 +15,24 @@ const StudentLoginPage = () => {
     const [showPassword, setShowPassword] = useState(false)
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState('')
+    const [rememberRoll, setRememberRoll] = useState(false)
+    const [searchParams] = useSearchParams()
+
+    // Load roll number on mount: URL param > sessionStorage > localStorage
+    useEffect(() => {
+        const urlRoll = searchParams.get('roll')
+        const sessionRoll = sessionStorage.getItem('qr_roll')
+        const savedRoll = localStorage.getItem('remembered_roll')
+
+        const rollToUse = urlRoll || sessionRoll || savedRoll
+        if (rollToUse) {
+            setFormData(prev => ({ ...prev, roll: rollToUse }))
+            if (savedRoll) setRememberRoll(true)
+        }
+
+        // Clear sessionStorage after reading (one-time use from QR)
+        if (sessionRoll) sessionStorage.removeItem('qr_roll')
+    }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
     if (isLoading) {
         return <LoginSkeleton />
@@ -34,6 +52,14 @@ const StudentLoginPage = () => {
         setLoading(false)
 
         if (result.success) {
+            // Save or clear remembered roll number
+            if (rememberRoll) {
+                localStorage.setItem('remembered_roll', formData.roll)
+            } else {
+                localStorage.removeItem('remembered_roll')
+            }
+            // Trigger PWA install prompt after successful login
+            window.dispatchEvent(new Event('pwa-show-install'))
             navigate('/student')
         } else {
             setError(result.error)
@@ -197,6 +223,20 @@ const StudentLoginPage = () => {
                                 </>
                             )}
                         </button>
+                        {/* Remember Roll Number */}
+                        <div className="flex items-center gap-3">
+                            <input
+                                type="checkbox"
+                                id="rememberRoll"
+                                checked={rememberRoll}
+                                onChange={(e) => setRememberRoll(e.target.checked)}
+                                className="w-4 h-4 rounded border-gray-300 text-[#2E86AB] focus:ring-[#2E86AB] cursor-pointer"
+                            />
+                            <label htmlFor="rememberRoll" className="text-sm text-gray-600 cursor-pointer select-none">
+                                Remember my Roll Number
+                            </label>
+                        </div>
+
                     </form>
 
 

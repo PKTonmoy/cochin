@@ -23,7 +23,8 @@ import {
     Image,
     Settings,
     MessageCircle,
-    MessageSquare
+    MessageSquare,
+    QrCode
 } from 'lucide-react'
 import NotificationBell from '../components/NotificationBell'
 
@@ -65,6 +66,7 @@ const AdminLayout = () => {
 
         { type: 'divider', label: 'System' },
         { path: '/admin/batches', icon: Database, label: 'Upload History' },
+        { path: '/admin/pwa-qr', icon: QrCode, label: 'PWA & QR Codes', adminOnly: true },
         { path: '/admin/settings', icon: Settings, label: 'Settings', adminOnly: true },
     ]
 

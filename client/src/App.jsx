@@ -7,6 +7,7 @@ import PublicLayout from './layouts/PublicLayout'
 import AdminLayout from './layouts/AdminLayout'
 import StudentLayout from './layouts/StudentLayoutModern'
 import DynamicMetadata from './components/DynamicMetadata'
+import PWAInstallPrompt from './components/PWAInstallPrompt'
 
 // Public pages
 import LandingPage from './pages/public/LandingPage'
@@ -51,6 +52,10 @@ import AddTestimonial from './pages/admin/AddTestimonial'
 import MediaLibrary from './pages/admin/MediaLibrary'
 import GlobalSettings from './pages/admin/GlobalSettings'
 import SMSManagement from './pages/admin/SMSManagement'
+import PWAQRSettings from './pages/admin/PWAQRSettings'
+
+// Smart redirect page (portal entry)
+import PortalEntryPage from './pages/public/PortalEntryPage'
 
 // Student pages
 import StudentDashboard from './pages/student/DashboardV2'
@@ -120,7 +125,11 @@ function App() {
   return (
     <>
       <DynamicMetadata />
+      <PWAInstallPrompt />
       <Routes>
+        {/* Portal entry — smart redirect (no layout wrapper) */}
+        <Route path="/portal-entry" element={<PortalEntryPage />} />
+
         {/* Public routes */}
         <Route element={<PublicLayout />}>
           <Route path="/" element={<LandingPage />} />
@@ -194,6 +203,7 @@ function App() {
           <Route path="media" element={<MediaLibrary />} />
           <Route path="settings" element={<GlobalSettings />} />
           <Route path="sms-management" element={<SMSManagement />} />
+          <Route path="pwa-qr" element={<PWAQRSettings />} />
         </Route>
 
         {/* Student routes */}

@@ -152,6 +152,16 @@ app.use('/api/testimonials', testimonialRoutes);
 app.use('/api/media', mediaRoutes);
 app.use('/api/sms', smsRoutes);
 
+// PWA Settings & QR Code routes
+const pwaSettingsRoutes = require('./routes/pwaSettings');
+const qrRoutes = require('./routes/qr');
+app.use('/api/pwa-settings', pwaSettingsRoutes);
+app.use('/api/qr', qrRoutes);
+
+// PWA: Dynamic manifest.json from admin settings
+const pwaRoutes = require('./routes/pwa');
+app.use(pwaRoutes);
+
 // Serve Frontend in Production (Catch-all for SPA)
 const clientBuildPath = path.join(__dirname, '../../client/dist');
 const indexHtmlPath = path.join(clientBuildPath, 'index.html');

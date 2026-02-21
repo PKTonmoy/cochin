@@ -3,22 +3,117 @@
 
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <!-- ===== Viewport & Mobile Optimization ===== -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, viewport-fit=cover" />
+
+  <!-- ===== SEO Meta Tags ===== -->
   <meta name="description"
     content="PARAGON Coaching Center - Excellence in Education. Quality coaching for SSC, HSC and university admission preparation." />
   <meta name="keywords" content="coaching center, education, SSC, HSC, admission, tuition, Dhaka" />
   <meta name="author" content="PARAGON Coaching Center" />
+
+  <!-- ===== Theme Color ===== -->
   <meta name="theme-color" content="#2563eb" media="(prefers-color-scheme: light)" />
   <meta name="theme-color" content="#1e3a8a" media="(prefers-color-scheme: dark)" />
+
+  <!-- ===== PWA Manifest (served dynamically from server) ===== -->
+  <link rel="manifest" href="/manifest.json" />
+
+  <!-- ===== Apple Web App (iOS PWA Support) ===== -->
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="apple-mobile-web-app-title" content="PARAGON" />
+
+  <!-- Apple Touch Icons (all iOS sizes) -->
+  <link rel="apple-touch-icon" sizes="180x180" href="/icons/icon-192x192.png" />
+  <link rel="apple-touch-icon" sizes="152x152" href="/icons/icon-152x152.png" />
+  <link rel="apple-touch-icon" sizes="144x144" href="/icons/icon-144x144.png" />
+  <link rel="apple-touch-icon" sizes="120x120" href="/icons/icon-128x128.png" />
+  <link rel="apple-touch-icon" sizes="114x114" href="/icons/icon-128x128.png" />
+  <link rel="apple-touch-icon" sizes="76x76" href="/icons/icon-96x96.png" />
+  <link rel="apple-touch-icon" sizes="72x72" href="/icons/icon-72x72.png" />
+  <link rel="apple-touch-icon" sizes="60x60" href="/icons/icon-72x72.png" />
+  <link rel="apple-touch-icon" sizes="57x57" href="/icons/icon-72x72.png" />
+
+  <!-- ===== MS Application Tiles (Windows) ===== -->
+  <meta name="msapplication-TileColor" content="#2563eb" />
+  <meta name="msapplication-TileImage" content="/icons/icon-144x144.png" />
+  <meta name="msapplication-config" content="none" />
+
+  <!-- ===== Open Graph Tags (Social Sharing) ===== -->
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="PARAGON Coaching Center - Student Portal" />
+  <meta property="og:description"
+    content="Access your academic dashboard, check results, view schedules, and track your progress." />
+  <meta property="og:image" content="/icons/icon-512x512.png" />
+  <meta property="og:site_name" content="PARAGON Coaching Center" />
+
+  <!-- ===== Preconnect & DNS Prefetch ===== -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="dns-prefetch" href="https://res.cloudinary.com">
+
+  <!-- ===== Fonts ===== -->
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
   <title>PARAGON Coaching Center - Excellence in Education</title>
+
+  <!-- ===== Safe Area Insets for Notched Phones ===== -->
+  <style>
+    /* Safe area support for PWA standalone mode */
+    body {
+      padding-top: env(safe-area-inset-top);
+      padding-right: env(safe-area-inset-right);
+      padding-bottom: env(safe-area-inset-bottom);
+      padding-left: env(safe-area-inset-left);
+    }
+
+    /* Remove 300ms tap delay */
+    html {
+      touch-action: manipulation;
+    }
+  </style>
 </head>
 
 <body>
   <div id="root"></div>
   <script type="module" src="/src/main.jsx"></script>
+
+  <!-- ===== Service Worker Registration ===== -->
+  <script>
+    // Register service worker for PWA support
+    // This is in index.html (not main.jsx) to ensure it runs on first load
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', function () {
+        navigator.serviceWorker.register('/service-worker.js', { scope: '/' })
+          .then(function (registration) {
+            console.log('[PWA] Service Worker registered with scope:', registration.scope);
+
+            // Check for updates periodically (every 60 minutes)
+            setInterval(function () {
+              registration.update();
+            }, 60 * 60 * 1000);
+
+            // Handle updates
+            registration.addEventListener('updatefound', function () {
+              var newWorker = registration.installing;
+              if (newWorker) {
+                newWorker.addEventListener('statechange', function () {
+                  if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                    // New version available — user will get it on next visit
+                    console.log('[PWA] New version available. Will update on next visit.');
+                  }
+                });
+              }
+            });
+          })
+          .catch(function (error) {
+            console.log('[PWA] Service Worker registration failed:', error);
+          });
+      });
+    }
+  </script>
 </body>
 
 </html>

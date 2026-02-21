@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#2563eb">
+  <title>Offline - PARAGON Student Portal</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    /* ===== Reset & Base ===== */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    
+    :root {
+      --primary: #3b82f6;
+      --primary-dark: #2563eb;
+      --secondary: #f97316;
+      --bg: #f8fafc;
+      --text-dark: #1e293b;
+      --text-muted: #64748b;
+      --glass-bg: rgba(255, 255, 255, 0.85);
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: var(--bg);
+      color: var(--text-dark);
+      min-height: 100vh;
+      min-height: 100dvh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      -webkit-font-smoothing: antialiased;
+      padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+    }
+
+    /* ===== Background Effects ===== */
+    body::before {
+      content: '';
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background:
+        radial-gradient(ellipse at 20% 20%, rgba(59, 130, 246, 0.08) 0%, transparent 50%),
+        radial-gradient(ellipse at 80% 80%, rgba(249, 115, 22, 0.06) 0%, transparent 50%),
+        radial-gradient(ellipse at 50% 50%, rgba(6, 182, 212, 0.04) 0%, transparent 50%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .container {
+      position: relative;
+      z-index: 1;
+      text-align: center;
+      padding: 24px;
+      max-width: 440px;
+      width: 100%;
+    }
+
+    /* ===== Logo ===== */
+    .logo-wrapper {
+      width: 80px;
+      height: 80px;
+      margin: 0 auto 24px;
+      border-radius: 20px;
+      background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 8px 30px rgba(59, 130, 246, 0.3);
+      animation: float 6s ease-in-out infinite;
+    }
+
+    .logo-letter {
+      font-size: 36px;
+      font-weight: 800;
+      color: white;
+      letter-spacing: -1px;
+    }
+
+    /* ===== Offline Icon ===== */
+    .offline-icon {
+      margin: 0 auto 28px;
+      width: 100px;
+      height: 100px;
+      position: relative;
+    }
+
+    .wifi-svg {
+      width: 100%;
+      height: 100%;
+      animation: pulse-glow 3s ease-in-out infinite;
+    }
+
+    .wifi-svg .wifi-bar { fill: none; stroke: var(--text-muted); stroke-width: 3; stroke-linecap: round; opacity: 0.3; }
+    .wifi-svg .wifi-dot { fill: var(--text-muted); opacity: 0.3; }
+    .wifi-svg .slash-line { stroke: #ef4444; stroke-width: 3; stroke-linecap: round; }
+
+    /* ===== Content ===== */
+    .institute-name {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--primary);
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      margin-bottom: 8px;
+    }
+
+    h1 {
+      font-size: 28px;
+      font-weight: 700;
+      color: var(--text-dark);
+      margin-bottom: 12px;
+      line-height: 1.2;
+    }
+
+    .message {
+      font-size: 16px;
+      color: var(--text-muted);
+      line-height: 1.6;
+      margin-bottom: 32px;
+    }
+
+    /* ===== Glass Card ===== */
+    .status-card {
+      background: var(--glass-bg);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid rgba(0, 0, 0, 0.06);
+      border-radius: 16px;
+      padding: 16px 20px;
+      margin-bottom: 28px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      text-align: left;
+    }
+
+    .status-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: #ef4444;
+      flex-shrink: 0;
+      animation: blink 2s ease-in-out infinite;
+    }
+
+    .status-text {
+      font-size: 13px;
+      color: var(--text-muted);
+    }
+
+    .status-text strong {
+      color: var(--text-dark);
+      font-weight: 600;
+    }
+
+    #lastSyncTime {
+      display: none;
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-top: 4px;
+    }
+
+    /* ===== Retry Button ===== */
+    .retry-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 14px 36px;
+      background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+      color: white;
+      font-family: inherit;
+      font-size: 15px;
+      font-weight: 600;
+      border: none;
+      border-radius: 14px;
+      cursor: pointer;
+      box-shadow: 0 4px 20px rgba(59, 130, 246, 0.3);
+      transition: all 0.3s ease;
+      position: relative;
+      overflow: hidden;
+      min-height: 48px;
+      touch-action: manipulation;
+    }
+
+    .retry-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 30px rgba(59, 130, 246, 0.4);
+    }
+
+    .retry-btn:active {
+      transform: scale(0.97);
+    }
+
+    .retry-btn.loading .retry-text { opacity: 0; }
+    .retry-btn .spinner { display: none; }
+    .retry-btn.loading .spinner {
+      display: block;
+      position: absolute;
+      width: 22px;
+      height: 22px;
+      border: 3px solid rgba(255,255,255,0.3);
+      border-top-color: white;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+
+    .retry-icon {
+      width: 18px; height: 18px;
+      transition: transform 0.3s ease;
+    }
+
+    .retry-btn:hover .retry-icon { transform: rotate(180deg); }
+
+    /* ===== Footer ===== */
+    .footer {
+      margin-top: 48px;
+      font-size: 12px;
+      color: var(--text-muted);
+      opacity: 0.7;
+    }
+
+    /* ===== Animations ===== */
+    @keyframes float {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-10px); }
+    }
+
+    @keyframes pulse-glow {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.6; }
+    }
+
+    @keyframes blink {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.3; }
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .container { animation: fadeIn 0.6s ease-out; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <!-- Logo -->
+    <div class="logo-wrapper">
+      <span class="logo-letter">P</span>
+    </div>
+
+    <!-- Offline Wi-Fi Icon -->
+    <div class="offline-icon">
+      <svg class="wifi-svg" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+        <!-- Wi-Fi arcs -->
+        <path class="wifi-bar" d="M50 80 Q30 60 15 45" />
+        <path class="wifi-bar" d="M50 80 Q35 65 25 55" />
+        <path class="wifi-bar" d="M50 80 Q70 60 85 45" />
+        <path class="wifi-bar" d="M50 80 Q65 65 75 55" />
+        <!-- Center dot -->
+        <circle class="wifi-dot" cx="50" cy="78" r="5" />
+        <!-- Slash -->
+        <line class="slash-line" x1="25" y1="25" x2="75" y2="75" />
+      </svg>
+    </div>
+
+    <!-- Institute Name -->
+    <p class="institute-name">PARAGON Coaching Center</p>
+
+    <!-- Heading -->
+    <h1>You're Currently Offline</h1>
+
+    <!-- Message -->
+    <p class="message">
+      Please check your internet connection and try again. 
+      Your data will sync automatically once you're back online.
+    </p>
+
+    <!-- Status Card -->
+    <div class="status-card">
+      <div class="status-dot"></div>
+      <div>
+        <div class="status-text"><strong>No Internet Connection</strong></div>
+        <div id="lastSyncTime"></div>
+      </div>
+    </div>
+
+    <!-- Retry Button -->
+    <button class="retry-btn" onclick="retryConnection()" id="retryBtn">
+      <div class="spinner"></div>
+      <span class="retry-text">
+        <svg class="retry-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="23 4 23 10 17 10"></polyline>
+          <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path>
+        </svg>
+        Try Again
+      </span>
+    </button>
+
+    <!-- Footer -->
+    <p class="footer">PARAGON Student Portal</p>
+  </div>
+
+  <script>
+    // ─── Show Last Sync Time ───
+    (async function showLastSync() {
+      try {
+        const cache = await caches.open('paragon-static-v1');
+        const response = await cache.match('/__last_sync_time');
+        if (response) {
+          const timeStr = await response.text();
+          const date = new Date(timeStr);
+          const el = document.getElementById('lastSyncTime');
+          el.textContent = 'Last synced: ' + date.toLocaleString();
+          el.style.display = 'block';
+        }
+      } catch (e) {
+        // Silently fail
+      }
+    })();
+
+    // ─── Retry Connection ───
+    function retryConnection() {
+      const btn = document.getElementById('retryBtn');
+      btn.classList.add('loading');
+      btn.disabled = true;
+
+      // Check connectivity by fetching a small resource
+      fetch('/api/health', { cache: 'no-store' })
+        .then((response) => {
+          if (response.ok) {
+            // We're back online — reload the app
+            window.location.reload();
+          } else {
+            throw new Error('Still offline');
+          }
+        })
+        .catch(() => {
+          btn.classList.remove('loading');
+          btn.disabled = false;
+          // Shake animation on failure
+          btn.style.animation = 'none';
+          btn.offsetHeight; // Trigger reflow
+          btn.style.animation = '';
+        });
+    }
+
+    // ─── Auto-retry when connection comes back ───
+    window.addEventListener('online', () => {
+      window.location.reload();
+    });
+  </script>
+</body>
+</html>
