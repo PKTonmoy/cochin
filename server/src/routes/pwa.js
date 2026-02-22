@@ -17,8 +17,8 @@ router.get('/manifest.json', async (req, res) => {
         const settings = await GlobalSettings.getSettings();
 
         const siteName = settings.siteInfo?.name || 'PARAGON Coaching Center';
-        // Use the first word or first 12 chars as short name
-        const shortName = siteName.split(' ')[0] || 'PARAGON';
+        // Use full site name as short name for PWA display
+        const shortName = siteName;
         const description = settings.siteInfo?.tagline
             ? `${siteName} - ${settings.siteInfo.tagline}. Access your academic dashboard, check results, view schedules, and track your progress.`
             : `${siteName} Student Portal - Access your academic dashboard, check results, view schedules, and track your progress.`;
