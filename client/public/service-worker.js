@@ -15,7 +15,7 @@
  */
 
 // ─── Cache Version ───────────────────────────────────────────────
-const CACHE_VERSION = 'v1';
+const CACHE_VERSION = 'v2';
 const STATIC_CACHE = `paragon-static-${CACHE_VERSION}`;
 const DYNAMIC_CACHE = `paragon-dynamic-${CACHE_VERSION}`;
 const API_CACHE = `paragon-api-${CACHE_VERSION}`;
@@ -93,8 +93,9 @@ self.addEventListener('fetch', (event) => {
 
     // ── API Requests: Network First ──
     if (url.pathname.startsWith('/api/')) {
-        // Never cache auth-related API calls
-        if (url.pathname.includes('/auth/')) return;
+        // Never cache auth-related or notification API calls
+        // Auth: sensitive data; Notifications: must always be fresh
+        if (url.pathname.includes('/auth/') || url.pathname.includes('/notifications/')) return;
 
         event.respondWith(networkFirstStrategy(request, API_CACHE));
         return;

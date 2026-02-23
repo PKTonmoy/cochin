@@ -61,7 +61,7 @@ const StudentLayoutModern = () => {
         queryKey: ['notice-unread-count'],
         queryFn: async () => {
             const res = await api.get('/notifications/unread-count')
-            return res.data?.data?.count || 0
+            return res.data?.data?.unreadCount || 0
         },
         refetchInterval: 30000
     })

@@ -105,13 +105,44 @@ exports.getClassNotifications = async (req, res, next) => {
 
 /**
  * Get unread notification count
+ * For students: counts personal unread + all broadcast/class notifications
+ * (broadcast/class are always "unread" per-student since they're shared docs)
  */
 exports.getUnreadCount = async (req, res, next) => {
     try {
-        const recipientType = req.user.role === 'student' ? 'student' : 'user';
-        const recipientId = req.user.role === 'student' ? req.user.studentId : req.user.id;
+        if (req.user.role === 'student') {
+            const studentId = req.user.studentId;
+            const studentClass = req.user.class;
+            const studentSection = req.user.section;
 
-        const count = await Notification.getUnreadCount(recipientId, recipientType);
+            const orConditions = [
+                { recipientType: 'student', recipientId: studentId, isRead: false },
+                { recipientType: 'all' }
+            ];
+
+            if (studentClass) {
+                orConditions.push({
+                    recipientType: 'class',
+                    recipientClass: studentClass,
+                    $or: [
+                        { recipientSection: studentSection },
+                        { recipientSection: { $exists: false } },
+                        { recipientSection: null },
+                        { recipientSection: '' }
+                    ]
+                });
+            }
+
+            const count = await Notification.countDocuments({ $or: orConditions });
+
+            return res.json({
+                success: true,
+                data: { unreadCount: count }
+            });
+        }
+
+        // Admin/staff — only personal notifications
+        const count = await Notification.getUnreadCount(req.user.id, 'user');
 
         res.json({
             success: true,
