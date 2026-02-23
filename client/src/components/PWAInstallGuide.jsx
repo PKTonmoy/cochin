@@ -1,19 +1,20 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { X, ChevronLeft, ChevronRight, Download, Share, Plus, Check, Smartphone, Wifi, Bell, Zap } from 'lucide-react'
+import { X, ChevronLeft, Download, Share, Plus, Check, Smartphone, MoreVertical, ArrowUp, ExternalLink, Globe } from 'lucide-react'
 
 /**
  * PWAInstallGuide Component
- * Full-screen animated 3-screen overlay for PWA installation guidance.
- * 
- * Props:
- *   settings - PWA settings from API (guideContent, guideAppearance, androidSteps, iosSteps)
- *   onClose - callback when user dismisses
- *   onInstallComplete - callback when installation detected
- *   deferredPrompt - beforeinstallprompt event (Android/Chrome)
- *   rollNumber - optional roll number to pass through
+ * Single-button install with automatic fallback to device-specific manual guide.
+ *
+ * Flow:
+ *   1. Shows a big "Install App" button
+ *   2. On click: tries native beforeinstallprompt (Chrome/Edge/Samsung/Opera)
+ *   3. If native prompt unavailable → shows device-specific manual instructions
+ *   4. On success → shows success screen with confetti
+ *
+ * Works on: Android (Chrome, Edge, Samsung, Opera, Firefox), iOS (Safari), Desktop
  */
 
-// ─── Device Detection ────────────────────────────────────────────
+// ─── Device & Browser Detection ──────────────────────────────────
 const getDeviceType = () => {
     const ua = navigator.userAgent
     if (/iPad|iPhone|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)) return 'ios'
@@ -21,23 +22,124 @@ const getDeviceType = () => {
     return 'desktop'
 }
 
+const getBrowserName = () => {
+    const ua = navigator.userAgent
+    if (navigator.brave !== undefined || /Brave/i.test(ua)) return 'brave'
+    if (/SamsungBrowser/i.test(ua)) return 'samsung'
+    if (/OPR|Opera/i.test(ua)) return 'opera'
+    if (/Firefox/i.test(ua)) return 'firefox'
+    if (/Edg/i.test(ua)) return 'edge'
+    if (/CriOS/i.test(ua)) return 'chrome-ios'
+    if (/Chrome/i.test(ua)) return 'chrome'
+    if (/Safari/i.test(ua)) return 'safari'
+    return 'other'
+}
+
 const isSafariBrowser = () => /^((?!chrome|android).)*safari/i.test(navigator.userAgent)
 
 const ANIMATION_SPEEDS = { slow: '0.8s', normal: '0.5s', fast: '0.3s', none: '0s' }
 
+// ─── Built-in fallback instructions per device/browser ───────────
+const getDefaultSteps = (device, browser) => {
+    if (device === 'ios') {
+        if (browser !== 'safari') {
+            return {
+                notice: 'PWA installation on iOS requires Safari. Please open this page in Safari.',
+                steps: [
+                    { icon: 'globe', title: 'Open in Safari', description: 'Copy this page URL and open it in Safari browser' },
+                    { icon: 'share', title: 'Tap the Share button', description: 'Tap the share icon (□↑) at the bottom of Safari' },
+                    { icon: 'plus', title: 'Add to Home Screen', description: 'Scroll down and tap "Add to Home Screen"' },
+                    { icon: 'check', title: 'Tap "Add"', description: 'Confirm by tapping "Add" in the top-right corner' }
+                ]
+            }
+        }
+        return {
+            steps: [
+                { icon: 'share', title: 'Tap the Share button', description: 'Tap the share icon (□↑) at the bottom of Safari' },
+                { icon: 'plus', title: 'Add to Home Screen', description: 'Scroll down and tap "Add to Home Screen"' },
+                { icon: 'check', title: 'Tap "Add"', description: 'Confirm by tapping "Add" in the top-right corner' }
+            ]
+        }
+    }
+
+    if (device === 'android') {
+        if (browser === 'firefox') {
+            return {
+                steps: [
+                    { icon: 'menu', title: 'Tap ⋮ Menu', description: 'Tap the three-dot menu at the top-right' },
+                    { icon: 'plus', title: 'Tap "Install"', description: 'Tap "Install" or "Add to Home screen"' },
+                    { icon: 'check', title: 'Confirm', description: 'Tap "Add" to install the app' }
+                ]
+            }
+        }
+        if (browser === 'brave') {
+            return {
+                steps: [
+                    { icon: 'menu', title: 'Tap ⋮ Menu', description: 'Tap the three-dot menu (bottom-right or top-right)' },
+                    { icon: 'download', title: 'Tap "Install App"', description: 'Look for "Install app" or "Add to Home screen"' },
+                    { icon: 'check', title: 'Confirm', description: 'Tap "Install" to add the app to your home screen' }
+                ]
+            }
+        }
+        if (browser === 'samsung') {
+            return {
+                steps: [
+                    { icon: 'menu', title: 'Tap ☰ Menu', description: 'Tap the menu icon at the bottom-right' },
+                    { icon: 'plus', title: 'Tap "Add page to"', description: 'Select "Add page to" → "Home screen"' },
+                    { icon: 'check', title: 'Confirm', description: 'Tap "Add" to place the app on your home screen' }
+                ]
+            }
+        }
+        // Chrome, Edge, Opera — similar flow
+        return {
+            steps: [
+                { icon: 'menu', title: 'Tap ⋮ Menu', description: 'Tap the three-dot menu at the top-right of your browser' },
+                { icon: 'download', title: 'Tap "Install App"', description: 'Look for "Install app" or "Add to Home screen"' },
+                { icon: 'check', title: 'Confirm', description: 'Tap "Install" to add the app to your home screen' }
+            ]
+        }
+    }
+
+    // Desktop
+    return {
+        steps: [
+            { icon: 'download', title: 'Click the install icon', description: 'Look for the install icon (⊕) in your browser\'s address bar' },
+            { icon: 'check', title: 'Click "Install"', description: 'Confirm the installation in the popup dialog' }
+        ]
+    }
+}
+
+const StepIcon = ({ icon, color }) => {
+    const props = { size: 16, style: { color } }
+    switch (icon) {
+        case 'share': return <Share {...props} />
+        case 'plus': return <Plus {...props} />
+        case 'check': return <Check {...props} />
+        case 'download': return <Download {...props} />
+        case 'menu': return <MoreVertical {...props} />
+        case 'globe': return <Globe {...props} />
+        case 'link': return <ExternalLink {...props} />
+        default: return <Smartphone {...props} />
+    }
+}
+
+// ─── Main Component ──────────────────────────────────────────────
 const PWAInstallGuide = ({ settings, onClose, onInstallComplete, deferredPrompt, rollNumber }) => {
-    const [currentScreen, setCurrentScreen] = useState(0) // 0: welcome, 1: instructions, 2: success
-    const [currentStep, setCurrentStep] = useState(0)
+    const [view, setView] = useState('install') // 'install' | 'manual' | 'success'
     const [isInstalling, setIsInstalling] = useState(false)
-    const [touchStart, setTouchStart] = useState(null)
+    const [installAttempted, setInstallAttempted] = useState(false)
     const deviceType = useRef(getDeviceType()).current
+    const browser = useRef(getBrowserName()).current
 
     // Guide content from admin settings or defaults
     const content = settings?.guideContent || {}
     const appearance = settings?.guideAppearance || {}
-    const androidSteps = settings?.androidSteps || []
-    const iosSteps = settings?.iosSteps || []
-    const steps = deviceType === 'ios' ? iosSteps : androidSteps
+
+    // Use admin-configured steps if available, otherwise use built-in defaults
+    const adminSteps = deviceType === 'ios' ? settings?.iosSteps : settings?.androidSteps
+    const builtInGuide = getDefaultSteps(deviceType, browser)
+    const steps = (adminSteps && adminSteps.length > 0) ? adminSteps : builtInGuide.steps
+    const notice = builtInGuide.notice
 
     const primaryColor = appearance.primaryColor || '#3b82f6'
     const animSpeed = ANIMATION_SPEEDS[appearance.animationSpeed] || '0.5s'
@@ -48,86 +150,85 @@ const PWAInstallGuide = ({ settings, onClose, onInstallComplete, deferredPrompt,
         { emoji: '🔔', text: 'Get Notifications' }
     ]
 
+    // Can we do native install?
+    const canNativeInstall = !!deferredPrompt
+
     // ── Listen for app installed ──
     useEffect(() => {
         const handler = () => {
-            setCurrentScreen(2) // Jump to success screen
+            setView('success')
             if (onInstallComplete) onInstallComplete()
         }
         window.addEventListener('appinstalled', handler)
         return () => window.removeEventListener('appinstalled', handler)
     }, [onInstallComplete])
 
-    // ── Auto-close success screen after 3s ──
+    // ── Auto-close success screen after 4s ──
     useEffect(() => {
-        if (currentScreen === 2) {
-            const timer = setTimeout(() => {
-                onClose?.()
-            }, 4000)
+        if (view === 'success') {
+            const timer = setTimeout(() => onClose?.(), 4000)
             return () => clearTimeout(timer)
         }
-    }, [currentScreen, onClose])
+    }, [view, onClose])
 
-    // ── Install handler (Android) ──
-    const handleInstall = useCallback(async () => {
-        if (deferredPrompt) {
+    // ── Single Install Button handler ──
+    const handleInstallClick = useCallback(async () => {
+        setInstallAttempted(true)
+
+        if (canNativeInstall) {
+            // Native install available — trigger it directly
             setIsInstalling(true)
             try {
                 deferredPrompt.prompt()
                 const { outcome } = await deferredPrompt.userChoice
                 if (outcome === 'accepted') {
-                    setCurrentScreen(2)
+                    setView('success')
+                } else {
+                    // User dismissed — show manual guide as fallback
+                    setView('manual')
                 }
-            } catch (err) { console.error('Install error:', err) }
-            finally { setIsInstalling(false) }
+            } catch (err) {
+                console.error('Install prompt error:', err)
+                setView('manual')
+            } finally {
+                setIsInstalling(false)
+            }
         } else {
-            // No deferred prompt — go to manual instructions
-            setCurrentScreen(1)
+            // No native prompt — show device-specific manual instructions
+            setView('manual')
         }
-    }, [deferredPrompt])
+    }, [canNativeInstall, deferredPrompt])
 
-    // ── Swipe handling ──
-    const handleTouchStart = (e) => setTouchStart(e.touches[0].clientX)
-    const handleTouchEnd = (e) => {
-        if (!touchStart) return
-        const diff = touchStart - e.changedTouches[0].clientX
-        if (Math.abs(diff) > 50) {
-            if (diff > 0 && currentScreen < 2) setCurrentScreen(s => s + 1)
-            if (diff < 0 && currentScreen > 0) setCurrentScreen(s => s - 1)
-        }
-        setTouchStart(null)
-    }
-
-    // ── Screen 1: Welcome ──
-    const WelcomeScreen = () => (
+    // ── Install View (Single Button) ──
+    const InstallView = () => (
         <div className="flex flex-col items-center text-center px-6 pt-6 pb-8 h-full justify-center">
-            {/* Logo with glow */}
+            {/* App icon with glow */}
             <div className="relative mb-8">
                 <div
                     className="w-20 h-20 rounded-2xl flex items-center justify-center text-white text-3xl font-bold shadow-xl"
                     style={{ background: `linear-gradient(135deg, ${primaryColor}, ${primaryColor}dd)`, boxShadow: `0 0 40px ${primaryColor}40` }}
                 >
-                    <Smartphone size={36} />
+                    <Download size={36} />
                 </div>
                 <div className="absolute inset-0 rounded-2xl animate-ping opacity-20" style={{ background: primaryColor }} />
             </div>
 
             {/* Heading */}
-            <h2 className="text-2xl font-bold mb-3" style={{ color: appearance.textColor || '#1e293b' }}>
-                {content.welcomeHeading || 'Get the App'}
+            <h2 className="text-2xl font-bold mb-2" style={{ color: appearance.textColor || '#1e293b' }}>
+                {content.welcomeHeading || 'Install App'}
             </h2>
-            <p className="text-sm text-gray-500 mb-8 max-w-xs leading-relaxed">
-                {content.welcomeSubtext || 'Install our app for faster access, offline support & better experience'}
+            <p className="text-sm text-gray-500 mb-6 max-w-xs leading-relaxed">
+                {content.welcomeSubtext || 'One tap to install — works like a native app on your phone'}
             </p>
 
             {/* Benefits */}
             {(appearance.showBenefits !== false) && (
-                <div className="w-full max-w-xs space-y-3 mb-8">
+                <div className="w-full max-w-xs space-y-2.5 mb-8">
                     {benefits.map((benefit, i) => (
                         <div
                             key={i}
                             className="flex items-center gap-3 p-3 rounded-xl bg-gray-50 text-left"
-                            style={{ animationDelay: `${i * 0.15}s`, animation: `slideInRight ${animSpeed} ease-out forwards`, opacity: 0 }}
+                            style={{ animationDelay: `${i * 0.12}s`, animation: `slideInRight ${animSpeed} ease-out forwards`, opacity: 0 }}
                         >
                             <span className="text-xl flex-shrink-0">{benefit.emoji}</span>
                             <span className="text-sm font-medium text-gray-700">{benefit.text}</span>
@@ -136,19 +237,11 @@ const PWAInstallGuide = ({ settings, onClose, onInstallComplete, deferredPrompt,
                 </div>
             )}
 
-            {/* Phone mockup hint */}
-            {(appearance.showPhoneMockup !== false) && (
-                <div className="mb-6 text-xs text-gray-400 flex items-center gap-1">
-                    <Smartphone size={14} />
-                    <span>Appears on your home screen like a native app</span>
-                </div>
-            )}
-
-            {/* Install button */}
+            {/* ★ Single Install Button ★ */}
             <button
-                onClick={handleInstall}
+                onClick={handleInstallClick}
                 disabled={isInstalling}
-                className="w-full max-w-xs py-4 rounded-2xl text-white font-bold text-base shadow-lg transition-all hover:shadow-xl active:scale-[0.98] flex items-center justify-center gap-2 disabled:opacity-70"
+                className="w-full max-w-xs py-4 rounded-2xl text-white font-bold text-base shadow-lg transition-all hover:shadow-xl active:scale-[0.98] flex items-center justify-center gap-2.5 disabled:opacity-70"
                 style={{
                     background: `linear-gradient(135deg, ${primaryColor}, ${primaryColor}cc)`,
                     boxShadow: `0 4px 20px ${primaryColor}40`,
@@ -159,29 +252,52 @@ const PWAInstallGuide = ({ settings, onClose, onInstallComplete, deferredPrompt,
                     <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
                 ) : (
                     <>
-                        <Download size={18} />
-                        {content.installButtonText || 'Install Now'}
+                        <Download size={20} />
+                        {content.installButtonText || 'Install App'}
                     </>
                 )}
             </button>
 
-            {/* Maybe later */}
-            <button onClick={onClose} className="mt-4 text-sm text-gray-400 hover:text-gray-600 transition-colors">
+            {/* Subtitle hint */}
+            <p className="mt-3 text-xs text-gray-400 flex items-center gap-1.5">
+                <Smartphone size={12} />
+                {canNativeInstall
+                    ? 'Installs instantly — no app store needed'
+                    : deviceType === 'ios'
+                        ? 'Quick setup — just 3 steps'
+                        : 'Quick setup — takes 10 seconds'}
+            </p>
+
+            {/* Skip */}
+            <button onClick={onClose} className="mt-5 text-sm text-gray-400 hover:text-gray-600 transition-colors">
                 {content.maybeLaterText || 'Maybe Later'}
             </button>
         </div>
     )
 
-    // ── Screen 2: Device-specific instructions ──
-    const InstructionScreen = () => (
+    // ── Manual Instructions View ──
+    const ManualView = () => (
         <div className="flex flex-col px-6 pt-4 pb-8 h-full">
             {/* Header */}
-            <div className="text-center mb-6">
-                <p className="text-xs font-semibold uppercase tracking-wider mb-1" style={{ color: primaryColor }}>
-                    {deviceType === 'ios' ? 'Safari Instructions' : 'Chrome Instructions'}
-                </p>
-                <h3 className="text-lg font-bold text-gray-900">How to Install</h3>
+            <div className="text-center mb-5">
+                <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold mb-3"
+                    style={{ background: `${primaryColor}15`, color: primaryColor }}>
+                    {deviceType === 'ios' ? '🍎 iOS' : deviceType === 'android' ? '🤖 Android' : '💻 Desktop'}
+                    {' · '}
+                    {browser === 'safari' ? 'Safari' : browser === 'chrome' ? 'Chrome' : browser === 'firefox' ? 'Firefox' :
+                        browser === 'edge' ? 'Edge' : browser === 'samsung' ? 'Samsung' : browser === 'opera' ? 'Opera' :
+                            browser === 'chrome-ios' ? 'Chrome' : browser === 'brave' ? 'Brave' : 'Browser'}
+                </div>
+                <h3 className="text-lg font-bold text-gray-900">Follow These Steps</h3>
+                <p className="text-xs text-gray-500 mt-1">It only takes a few seconds</p>
             </div>
+
+            {/* Safari-only notice for iOS non-Safari */}
+            {notice && (
+                <div className="mb-4 p-3 bg-orange-50 border border-orange-200 rounded-xl text-center">
+                    <p className="text-xs text-orange-700 font-medium">⚠️ {notice}</p>
+                </div>
+            )}
 
             {/* Steps */}
             <div className="flex-1 overflow-y-auto">
@@ -189,17 +305,16 @@ const PWAInstallGuide = ({ settings, onClose, onInstallComplete, deferredPrompt,
                     {steps.map((step, i) => (
                         <div
                             key={i}
-                            className={`flex items-start gap-3 p-3.5 rounded-xl transition-all ${i === currentStep ? 'bg-blue-50 border border-blue-100 shadow-sm' : 'bg-gray-50'}`}
-                            onClick={() => setCurrentStep(i)}
+                            className="flex items-start gap-3 p-3.5 rounded-xl bg-gray-50 border border-gray-100"
                             style={{ animation: `slideInRight ${animSpeed} ease-out ${i * 0.1}s forwards`, opacity: 0 }}
                         >
                             <div
-                                className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 text-sm font-bold text-white"
-                                style={{ background: i === currentStep ? primaryColor : '#cbd5e1' }}
+                                className="w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 text-sm font-bold text-white"
+                                style={{ background: primaryColor }}
                             >
-                                {i < currentStep ? <Check size={14} /> : step.stepNumber || i + 1}
+                                {step.stepNumber || <StepIcon icon={step.icon || ''} color="#fff" />}
                             </div>
-                            <div className="flex-1 min-w-0">
+                            <div className="flex-1 min-w-0 pt-1">
                                 <p className="text-sm font-semibold text-gray-800">{step.title}</p>
                                 <p className="text-xs text-gray-500 mt-0.5 leading-relaxed">{step.description}</p>
                             </div>
@@ -208,43 +323,26 @@ const PWAInstallGuide = ({ settings, onClose, onInstallComplete, deferredPrompt,
                 </div>
             </div>
 
-            {/* iOS Safari warning */}
-            {deviceType === 'ios' && !isSafariBrowser() && (
-                <div className="mt-4 p-3 bg-orange-50 border border-orange-100 rounded-xl text-center">
-                    <p className="text-xs text-orange-700 font-medium">⚠️ Please open this page in Safari to install</p>
+            {/* iOS Safari share button helper arrow */}
+            {deviceType === 'ios' && isSafariBrowser() && (
+                <div className="mt-4 flex justify-center animate-bounce">
+                    <div className="flex flex-col items-center text-gray-400">
+                        <ArrowUp size={20} className="rotate-180" />
+                        <span className="text-xs mt-0.5">Share button is down here ↓</span>
+                    </div>
                 </div>
             )}
 
-            {/* Android auto-install button */}
-            {deviceType === 'android' && deferredPrompt && (
-                <button
-                    onClick={handleInstall}
-                    disabled={isInstalling}
-                    className="mt-4 w-full py-3.5 rounded-2xl text-white font-bold shadow-lg flex items-center justify-center gap-2"
-                    style={{ background: primaryColor }}
-                >
-                    {isInstalling ? (
-                        <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                    ) : (
-                        <>
-                            <Download size={16} />
-                            Install Automatically
-                        </>
-                    )}
-                </button>
-            )}
-
-            {/* Skip to login */}
-            <button onClick={onClose} className="mt-3 text-sm text-gray-400 hover:text-gray-600 transition-colors text-center">
+            {/* Skip */}
+            <button onClick={onClose} className="mt-4 text-sm text-gray-400 hover:text-gray-600 transition-colors text-center">
                 Skip — Go to Login Page
             </button>
         </div>
     )
 
-    // ── Screen 3: Success! ──
-    const SuccessScreen = () => (
+    // ── Success View ──
+    const SuccessView = () => (
         <div className="flex flex-col items-center justify-center text-center px-6 h-full">
-            {/* Success animation */}
             <div className="relative mb-6">
                 <div
                     className="w-24 h-24 rounded-full flex items-center justify-center"
@@ -257,7 +355,7 @@ const PWAInstallGuide = ({ settings, onClose, onInstallComplete, deferredPrompt,
                         <Check size={32} strokeWidth={3} />
                     </div>
                 </div>
-                {/* Confetti dots */}
+                {/* Confetti */}
                 {[...Array(8)].map((_, i) => (
                     <div
                         key={i}
@@ -273,7 +371,7 @@ const PWAInstallGuide = ({ settings, onClose, onInstallComplete, deferredPrompt,
             </div>
 
             <h2 className="text-2xl font-bold text-gray-900 mb-2">
-                {content.successHeading || 'App Installed Successfully! 🎉'}
+                {content.successHeading || 'App Installed! 🎉'}
             </h2>
             <p className="text-sm text-gray-500 mb-8 max-w-xs">
                 {content.successSubtext || 'Find the app on your home screen'}
@@ -289,15 +387,14 @@ const PWAInstallGuide = ({ settings, onClose, onInstallComplete, deferredPrompt,
         </div>
     )
 
-    const screens = [<WelcomeScreen key="welcome" />, <InstructionScreen key="instructions" />, <SuccessScreen key="success" />]
-
     return (
         <>
-            {/* Inline animation styles */}
+            {/* Animation styles */}
             <style>{`
                 @keyframes slideInRight { from { opacity: 0; transform: translateX(20px); } to { opacity: 1; transform: translateX(0); } }
                 @keyframes bounceIn { 0% { transform: scale(0); } 70% { transform: scale(1.1); } 100% { transform: scale(1); } }
                 @keyframes pulse-shadow { 0%, 100% { box-shadow: 0 4px 20px ${primaryColor}40; } 50% { box-shadow: 0 4px 30px ${primaryColor}60; } }
+                @keyframes slideUp { from { transform: translateY(100%); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
                 @keyframes confetti-0 { to { transform: translate(-30px, -40px); opacity: 0; } }
                 @keyframes confetti-1 { to { transform: translate(30px, -35px); opacity: 0; } }
                 @keyframes confetti-2 { to { transform: translate(-25px, 30px); opacity: 0; } }
@@ -309,46 +406,37 @@ const PWAInstallGuide = ({ settings, onClose, onInstallComplete, deferredPrompt,
                 className="fixed inset-0 z-[10000] flex items-end sm:items-center justify-center"
                 style={{ background: `rgba(0,0,0,${overlayOpacity})` }}
                 onClick={(e) => { if (e.target === e.currentTarget) onClose?.() }}
-                onTouchStart={handleTouchStart}
-                onTouchEnd={handleTouchEnd}
             >
                 {/* Card */}
                 <div
                     className="w-full max-w-md bg-white rounded-t-3xl sm:rounded-3xl overflow-hidden relative flex flex-col"
                     style={{
                         maxHeight: '90dvh',
-                        minHeight: '60dvh',
+                        minHeight: view === 'success' ? '40dvh' : '55dvh',
                         background: appearance.cardBackgroundColor || '#ffffff',
                         animation: `slideUp ${animSpeed} ease-out`
                     }}
                     onClick={(e) => e.stopPropagation()}
                 >
-                    {/* Progress bar */}
-                    <div className="h-1 bg-gray-100 flex-shrink-0">
-                        <div
-                            className="h-full transition-all duration-500 ease-out"
-                            style={{ width: `${((currentScreen + 1) / 3) * 100}%`, background: primaryColor }}
-                        />
-                    </div>
-
-                    {/* Top controls */}
+                    {/* Top bar */}
                     <div className="flex items-center justify-between px-4 pt-3 flex-shrink-0">
-                        {currentScreen > 0 && currentScreen < 2 ? (
-                            <button onClick={() => setCurrentScreen(s => s - 1)} className="p-2 rounded-full hover:bg-gray-100 text-gray-400">
+                        {view === 'manual' ? (
+                            <button onClick={() => setView('install')} className="p-2 rounded-full hover:bg-gray-100 text-gray-400">
                                 <ChevronLeft size={20} />
                             </button>
                         ) : <div className="w-9" />}
 
-                        {/* Progress dots */}
+                        {/* View indicator */}
                         <div className="flex items-center gap-1.5">
-                            {[0, 1, 2].map(i => (
+                            {['install', 'manual', 'success'].map((v, i) => (
                                 <div
-                                    key={i}
+                                    key={v}
                                     className="rounded-full transition-all duration-300"
                                     style={{
-                                        width: i === currentScreen ? 20 : 6,
+                                        width: v === view ? 20 : 6,
                                         height: 6,
-                                        background: i === currentScreen ? primaryColor : '#e2e8f0'
+                                        background: v === view ? primaryColor :
+                                            (v === 'manual' && view === 'success') || (v === 'install' && view !== 'install') ? primaryColor : '#e2e8f0'
                                     }}
                                 />
                             ))}
@@ -359,17 +447,14 @@ const PWAInstallGuide = ({ settings, onClose, onInstallComplete, deferredPrompt,
                         </button>
                     </div>
 
-                    {/* Screen content */}
+                    {/* Content */}
                     <div className="flex-1 overflow-y-auto">
-                        {screens[currentScreen]}
+                        {view === 'install' && <InstallView />}
+                        {view === 'manual' && <ManualView />}
+                        {view === 'success' && <SuccessView />}
                     </div>
                 </div>
             </div>
-
-            {/* slideUp keyframe is already defined in index.css, but add fallback */}
-            <style>{`
-                @keyframes slideUp { from { transform: translateY(100%); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
-            `}</style>
         </>
     )
 }

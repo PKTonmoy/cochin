@@ -25,7 +25,8 @@ import {
     History,
     Pencil,
     Info,
-    LayoutGrid
+    LayoutGrid,
+    RefreshCw
 } from 'lucide-react'
 import { CLASSES } from '../../data/classData'
 
@@ -669,6 +670,7 @@ const AttendanceEditorTab = ({ initialSession, onBack }) => {
     const [editAttendance, setEditAttendance] = useState({})
     const [editSearch, setEditSearch] = useState('')
     const [confirmSave, setConfirmSave] = useState(false)
+    const [syncBanner, setSyncBanner] = useState(null) // { changedStudents, testId }
 
     const { data: tests } = useQuery({
         queryKey: ['tests-for-editor'],
@@ -764,12 +766,38 @@ const AttendanceEditorTab = ({ initialSession, onBack }) => {
             queryClient.invalidateQueries({ queryKey: ['attendance-history'] })
             queryClient.invalidateQueries({ queryKey: ['attendance-stats'] })
             queryClient.invalidateQueries({ queryKey: ['editor-records'] })
+            queryClient.invalidateQueries({ queryKey: ['test-attendees'] })
             setConfirmSave(false)
-            if (onBack) onBack()
+
+            // For test attendance, show sync banner if there are changed students
+            const changedStudents = data.data?.changedStudents || []
+            if (editType === 'test' && changedStudents.length > 0) {
+                setSyncBanner({ changedStudents, testId: editTest })
+            } else {
+                if (onBack) onBack()
+            }
         },
         onError: (error) => {
             toast.error(error.response?.data?.message || 'Failed to update attendance')
             setConfirmSave(false)
+        }
+    })
+
+    // Sync results mutation
+    const syncResultsMutation = useMutation({
+        mutationFn: async ({ testId, changedStudents }) => {
+            const response = await api.post(`/results/sync-attendance/${testId}`, { changedStudents })
+            return response.data
+        },
+        onSuccess: (data) => {
+            toast.success(data.message || 'Results synced successfully!')
+            queryClient.invalidateQueries({ queryKey: ['results'] })
+            queryClient.invalidateQueries({ queryKey: ['test-results'] })
+            setSyncBanner(null)
+            if (onBack) onBack()
+        },
+        onError: (error) => {
+            toast.error(error.response?.data?.message || 'Failed to sync results')
         }
     })
 
@@ -1014,8 +1042,49 @@ const AttendanceEditorTab = ({ initialSession, onBack }) => {
                     </div>
                 ) : null}
 
+                {/* Sync Results Banner */}
+                {syncBanner && (
+                    <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-xl">
+                        <div className="flex items-start gap-3">
+                            <RefreshCw size={20} className="text-blue-600 mt-0.5 flex-shrink-0" />
+                            <div className="flex-1">
+                                <h4 className="font-semibold text-blue-900">Attendance Changed — Sync Results?</h4>
+                                <p className="text-sm text-blue-700 mt-1">
+                                    {syncBanner.changedStudents.length} student(s) had their attendance status changed.
+                                    Click "Sync Results" to update their result records accordingly
+                                    (mark absent students' results, restore present students' results, and send SMS to newly present students).
+                                </p>
+                                <div className="flex gap-2 mt-3">
+                                    <button
+                                        onClick={() => syncResultsMutation.mutate(syncBanner)}
+                                        disabled={syncResultsMutation.isPending}
+                                        className="btn btn-primary py-1.5 px-4 text-sm"
+                                    >
+                                        {syncResultsMutation.isPending ? (
+                                            <>
+                                                <span className="spinner w-4 h-4 border-2"></span>
+                                                Syncing...
+                                            </>
+                                        ) : (
+                                            <>
+                                                <RefreshCw size={16} /> Sync Results
+                                            </>
+                                        )}
+                                    </button>
+                                    <button
+                                        onClick={() => { setSyncBanner(null); if (onBack) onBack(); }}
+                                        className="btn btn-outline py-1.5 px-4 text-sm"
+                                    >
+                                        Skip
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
                 {/* Save button */}
-                {filteredRecords.length > 0 && (
+                {filteredRecords.length > 0 && !syncBanner && (
                     <div className="flex justify-end gap-3 mt-6 pt-4 border-t">
                         {!confirmSave ? (
                             <button

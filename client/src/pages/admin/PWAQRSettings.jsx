@@ -7,6 +7,7 @@ import {
 } from 'lucide-react'
 import api from '../../lib/api'
 import toast from 'react-hot-toast'
+import PWAInstallGuide from '../../components/PWAInstallGuide'
 
 // ─── Tabs ────────────────────────────────────────────────────────
 const TABS = [
@@ -313,6 +314,7 @@ const QRCodesTab = ({ settings }) => {
 // TAB 2: Install Guide Settings
 // ═══════════════════════════════════════════════════════════════════
 const GuideSettingsTab = ({ settings, setSettings, updateField }) => {
+    const [showPreview, setShowPreview] = useState(false)
     const vis = settings.guideVisibility || {}
     const content = settings.guideContent || {}
     const appearance = settings.guideAppearance || {}
@@ -339,6 +341,34 @@ const GuideSettingsTab = ({ settings, setSettings, updateField }) => {
 
     return (
         <div className="space-y-6">
+            {/* Preview Guide Overlay */}
+            {showPreview && (
+                <PWAInstallGuide
+                    settings={settings}
+                    onClose={() => setShowPreview(false)}
+                    onInstallComplete={() => setShowPreview(false)}
+                    deferredPrompt={null}
+                />
+            )}
+
+            {/* Preview Button */}
+            <div className="card p-4 border-2 border-dashed border-blue-300 bg-blue-50/50">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div>
+                        <h3 className="text-base font-bold text-gray-900 flex items-center gap-2">
+                            <Eye size={18} className="text-blue-500" />
+                            Live Preview
+                        </h3>
+                        <p className="text-xs text-gray-500 mt-0.5">See how the install guide looks to students with your current settings</p>
+                    </div>
+                    <button
+                        onClick={() => setShowPreview(true)}
+                        className="btn-primary flex items-center gap-2 px-5 py-2.5 text-sm whitespace-nowrap"
+                    >
+                        <Eye size={16} /> Preview Guide
+                    </button>
+                </div>
+            </div>
             {/* Visibility Toggles */}
             <div className="card p-6">
                 <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">

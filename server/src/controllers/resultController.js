@@ -1018,3 +1018,131 @@ exports.updateResult = async (req, res, next) => {
         next(error);
     }
 };
+
+/**
+ * Sync results with attendance changes
+ * When attendance is edited (e.g., student marked absent→present or present→absent),
+ * this updates the corresponding results and sends SMS to newly-present students.
+ */
+exports.syncResultsWithAttendance = async (req, res, next) => {
+    try {
+        const { testId } = req.params;
+        const { changedStudents } = req.body;
+
+        if (!changedStudents || !Array.isArray(changedStudents) || changedStudents.length === 0) {
+            throw new ApiError('No changed students provided', 400);
+        }
+
+        const test = await Test.findById(testId);
+        if (!test) {
+            throw new ApiError('Test not found', 404);
+        }
+
+        const syncResults = {
+            markedAbsent: 0,
+            restored: 0,
+            noResultFound: 0,
+            smsSent: false
+        };
+
+        const affectedStudentIds = [];
+
+        for (const change of changedStudents) {
+            const { studentId, newStatus } = change;
+
+            // Find existing result for this student + test
+            const result = await Result.findOne({ studentId, testId });
+
+            if (!result) {
+                syncResults.noResultFound++;
+                continue;
+            }
+
+            if (newStatus === 'absent') {
+                // Student was changed to absent — mark result as absent
+                if (!result.isAbsent) {
+                    result.isAbsent = true;
+                    await result.save();
+                    syncResults.markedAbsent++;
+                    affectedStudentIds.push(studentId);
+                }
+            } else if (newStatus === 'present' || newStatus === 'late') {
+                // Student was changed to present/late — restore result
+                if (result.isAbsent) {
+                    result.isAbsent = false;
+                    await result.save();
+                    syncResults.restored++;
+                    affectedStudentIds.push(studentId);
+                }
+            }
+        }
+
+        // Recalculate ranks for all non-absent results
+        const allResults = await Result.find({ testId, isAbsent: { $ne: true } })
+            .sort({ totalMarks: -1 });
+
+        let currentRank = 1;
+        for (let i = 0; i < allResults.length; i++) {
+            if (i > 0 && allResults[i].totalMarks < allResults[i - 1].totalMarks) {
+                currentRank = i + 1;
+            }
+            allResults[i].rank = currentRank;
+            await allResults[i].save();
+        }
+
+        // Emit real-time updates to affected students
+        for (const studentId of affectedStudentIds) {
+            emitToStudent(studentId, 'results-updated', {
+                type: 'result_sync',
+                testId: test._id,
+                testName: test.testName,
+                message: `Your result for ${test.testName} has been updated`,
+                timestamp: new Date()
+            });
+        }
+
+        // Also emit to the class so student portal refreshes
+        emitToClass(test.class, 'results-updated', {
+            type: 'result_sync',
+            testId: test._id,
+            testName: test.testName,
+            message: `Results for ${test.testName} have been updated`,
+            timestamp: new Date()
+        }, test.section);
+
+        // Trigger SMS for newly-present students who have results (sendBulkResultSms
+        // already skips students who already received SMS via SmsLog dedup)
+        if (test.isPublished && syncResults.restored > 0) {
+            smsService.sendBulkResultSms(testId, req.user.id)
+                .then(smsResult => {
+                    console.log(`[SMS] Attendance sync trigger for "${test.testName}": ${JSON.stringify(smsResult.results || smsResult.reason)}`);
+                })
+                .catch(err => {
+                    console.error('[SMS] Error in attendance sync trigger:', err.message);
+                });
+            syncResults.smsSent = true;
+        }
+
+        await AuditLog.log({
+            action: 'results_synced_with_attendance',
+            userId: req.user.id,
+            userRole: req.user.role,
+            entityType: 'result',
+            details: {
+                testId,
+                testName: test.testName,
+                ...syncResults,
+                changedCount: changedStudents.length
+            },
+            ipAddress: req.ip
+        });
+
+        res.json({
+            success: true,
+            message: `Results synced: ${syncResults.markedAbsent} marked absent, ${syncResults.restored} restored${syncResults.smsSent ? ', SMS queued for new students' : ''}`,
+            data: syncResults
+        });
+    } catch (error) {
+        next(error);
+    }
+};

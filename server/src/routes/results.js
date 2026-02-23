@@ -45,6 +45,9 @@ router.put('/:resultId', authorize('admin', 'staff'), resultController.updateRes
 // Delete a single result
 router.delete('/:resultId', authorize('admin', 'staff'), resultController.deleteResult);
 
+// Sync results with attendance changes (after editing attendance)
+router.post('/sync-attendance/:testId', authorize('admin', 'staff'), resultController.syncResultsWithAttendance);
+
 // ==========================================
 // STUDENT ROUTES
 // ==========================================

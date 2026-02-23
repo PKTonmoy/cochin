@@ -26,6 +26,7 @@ exports.markAttendance = async (req, res, next) => {
         }
 
         const results = { created: 0, updated: 0 };
+        const changedStudents = []; // Track students whose status actually changed
 
         // Normalize date to UTC midnight to prevent timezone shifts
         const dateStr = new Date(date).toISOString().split('T')[0];
@@ -48,10 +49,16 @@ exports.markAttendance = async (req, res, next) => {
             const existing = await Attendance.findOne(query);
 
             if (existing) {
+                const oldStatus = existing.status;
                 existing.status = status;
                 existing.markedBy = req.user.id;
                 await existing.save();
                 results.updated++;
+
+                // Track actual status changes for result syncing
+                if (oldStatus !== status) {
+                    changedStudents.push({ studentId, oldStatus, newStatus: status });
+                }
             } else {
                 await Attendance.create({
                     studentId,
@@ -64,6 +71,8 @@ exports.markAttendance = async (req, res, next) => {
                     markedBy: req.user.id
                 });
                 results.created++;
+                // Newly created attendance is also a "change"
+                changedStudents.push({ studentId, oldStatus: null, newStatus: status });
             }
         }
 
@@ -101,7 +110,7 @@ exports.markAttendance = async (req, res, next) => {
         res.json({
             success: true,
             message: `Attendance marked: ${results.created} new, ${results.updated} updated`,
-            data: results
+            data: { ...results, changedStudents }
         });
     } catch (error) {
         next(error);
