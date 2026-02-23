@@ -235,18 +235,39 @@ async function processBackgroundSync() {
     }
 }
 
-// ─── Push Notifications (future-ready) ──────────────────────────
+// ─── Push Notifications ─────────────────────────────────────────
 self.addEventListener('push', (event) => {
     if (!event.data) return;
 
-    const data = event.data.json();
+    let data;
+    try {
+        data = event.data.json();
+    } catch (e) {
+        data = {
+            title: 'New Notification',
+            body: event.data.text() || 'You have a new notification'
+        };
+    }
+
     const title = data.title || 'PARAGON Coaching Center';
     const options = {
         body: data.body || 'You have a new notification',
-        icon: '/icons/icon-192x192.png',
-        badge: '/icons/icon-96x96.png',
-        vibrate: [100, 50, 100],
-        data: { url: data.url || '/student' }
+        icon: data.icon || '/icons/icon-192x192.png',
+        badge: data.badge || '/icons/icon-96x96.png',
+        tag: data.tag || `notification-${Date.now()}`,
+        renotify: data.renotify || false,
+        requireInteraction: data.requireInteraction || false,
+        vibrate: data.vibrate || [100, 50, 100],
+        data: {
+            url: data.data?.url || '/student/notices',
+            notificationId: data.data?.notificationId,
+            type: data.data?.type,
+            priority: data.data?.priority
+        },
+        actions: data.actions || [
+            { action: 'view', title: 'View Details' },
+            { action: 'dismiss', title: 'Dismiss' }
+        ]
     };
 
     event.waitUntil(
@@ -256,13 +277,23 @@ self.addEventListener('push', (event) => {
 
 self.addEventListener('notificationclick', (event) => {
     event.notification.close();
-    const url = event.notification.data?.url || '/student';
+
+    // Handle action button clicks
+    if (event.action === 'dismiss') return;
+
+    const url = event.notification.data?.url || '/student/notices';
     event.waitUntil(
-        self.clients.matchAll({ type: 'window' }).then((clients) => {
+        self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clients) => {
             // Focus if already open
             for (const client of clients) {
                 if (client.url.includes(url) && 'focus' in client) {
                     return client.focus();
+                }
+            }
+            // Try to focus any existing window and navigate
+            for (const client of clients) {
+                if ('focus' in client && 'navigate' in client) {
+                    return client.focus().then(() => client.navigate(url));
                 }
             }
             // Otherwise open new tab
@@ -270,3 +301,4 @@ self.addEventListener('notificationclick', (event) => {
         })
     );
 });
+

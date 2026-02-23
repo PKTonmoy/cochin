@@ -1,10 +1,15 @@
 /**
  * Notification Controller
  * Handles notification retrieval and management
+ * Includes multi-channel delivery: push, SMS, and in-portal
  */
 
 const Notification = require('../models/Notification');
+const Student = require('../models/Student');
 const { ApiError } = require('../middleware/errorHandler');
+const notificationService = require('../services/notificationService');
+const pushService = require('../services/pushService');
+const smsService = require('../services/smsService');
 
 /**
  * Get notifications for the current user
@@ -176,15 +181,39 @@ exports.markMultipleAsRead = async (req, res, next) => {
  */
 exports.markAllAsRead = async (req, res, next) => {
     try {
-        const recipientType = req.user.role === 'student' ? 'student' : 'user';
-        const recipientId = req.user.role === 'student' ? req.user.studentId : req.user.id;
+        let query;
+
+        if (req.user.role === 'student') {
+            // Build the same OR conditions used in getStudentNotices
+            const orConditions = [
+                { recipientType: 'student', recipientId: req.user.studentId || req.user.id },
+                { recipientType: 'all' }
+            ];
+
+            if (req.user.class) {
+                orConditions.push({
+                    recipientType: 'class',
+                    recipientClass: req.user.class,
+                    $or: [
+                        { recipientSection: req.user.section },
+                        { recipientSection: { $exists: false } },
+                        { recipientSection: null },
+                        { recipientSection: '' }
+                    ]
+                });
+            }
+
+            query = { $or: orConditions, isRead: false };
+        } else {
+            // Admin/staff — mark their own notifications
+            query = {
+                recipientId: req.user.id,
+                isRead: false
+            };
+        }
 
         const result = await Notification.updateMany(
-            {
-                recipientId,
-                recipientType,
-                isRead: false
-            },
+            query,
             {
                 $set: {
                     isRead: true,
@@ -232,7 +261,143 @@ exports.deleteNotification = async (req, res, next) => {
 };
 
 /**
- * Create a broadcast notification (admin only)
+ * Send a notice with multi-channel delivery (admin only)
+ * Channels: In-Portal (DB + Socket), PWA Push, SMS
+ */
+exports.sendNotice = async (req, res, next) => {
+    try {
+        const {
+            title,
+            message,
+            priority = 'normal',
+            targetType = 'all',       // 'all', 'class', 'students'
+            targetClass,
+            targetSection,
+            studentIds = [],          // for targetType = 'students'
+            channels = { portal: true, push: false, sms: false },
+            scheduledAt,              // ISO date string for scheduling
+            type = 'general'
+        } = req.body;
+
+        if (!title || !message) {
+            throw new ApiError('Title and message are required', 400);
+        }
+
+        const deliveryStatus = { portal: false, push: { sent: 0, failed: 0 }, sms: { sent: 0, failed: 0 } };
+
+        // ── Handle scheduling ──
+        if (scheduledAt && new Date(scheduledAt) > new Date()) {
+            // Create a scheduled notification
+            const notification = await Notification.create({
+                recipientType: targetType === 'students' ? 'student' : (targetType === 'class' ? 'class' : 'all'),
+                recipientClass: targetClass,
+                recipientSection: targetSection,
+                type,
+                priority,
+                title,
+                message,
+                actionUrl: '/student/notices',
+                createdBy: req.user.id,
+                isScheduled: true,
+                scheduledFor: new Date(scheduledAt),
+                metadata: { channels, targetType, studentIds }
+            });
+
+            return res.status(201).json({
+                success: true,
+                message: `Notice scheduled for ${new Date(scheduledAt).toLocaleString()}`,
+                data: { notification, deliveryStatus, scheduled: true }
+            });
+        }
+
+        // ── Send to specific students ──
+        if (targetType === 'students' && studentIds.length > 0) {
+            const notifications = [];
+            for (const studentId of studentIds) {
+                const notification = await notificationService.createNotification({
+                    recipientType: 'student',
+                    recipientId: studentId,
+                    recipientModel: 'Student',
+                    type,
+                    priority,
+                    title,
+                    message,
+                    actionUrl: '/student/notices',
+                    createdBy: req.user.id
+                }, {
+                    sendSocket: channels.portal !== false,
+                    sendPush: channels.push === true,
+                    sendEmail: false
+                });
+                notifications.push(notification);
+            }
+            deliveryStatus.portal = true;
+
+            // Send SMS if enabled
+            if (channels.sms) {
+                const smsResult = await smsService.sendCustomSms(
+                    { studentIds },
+                    `Notice: ${title} - ${message.substring(0, 100)}. Login to portal for details.`,
+                    'guardianPhone',
+                    req.user.id
+                );
+                deliveryStatus.sms = smsResult.results || { sent: 0, failed: 0 };
+            }
+
+            return res.status(201).json({
+                success: true,
+                message: `Notice sent to ${studentIds.length} student(s)`,
+                data: { notifications, deliveryStatus }
+            });
+        }
+
+        // ── Send to class or all ──
+        const recipientType = targetType === 'class' ? 'class' : 'all';
+        const notification = await notificationService.createNotification({
+            recipientType,
+            recipientClass: targetClass,
+            recipientSection: targetSection,
+            type,
+            priority,
+            title,
+            message,
+            actionUrl: '/student/notices',
+            createdBy: req.user.id
+        }, {
+            sendSocket: channels.portal !== false,
+            sendPush: channels.push === true,
+            sendEmail: false
+        });
+        deliveryStatus.portal = true;
+
+        // Send SMS if enabled
+        if (channels.sms) {
+            const filters = {};
+            if (targetType === 'class' && targetClass) {
+                filters.class = targetClass;
+                if (targetSection) filters.section = targetSection;
+            }
+            const smsResult = await smsService.sendCustomSms(
+                filters,
+                `Notice: ${title} - ${message.substring(0, 100)}. Login to portal for details.`,
+                'guardianPhone',
+                req.user.id
+            );
+            deliveryStatus.sms = smsResult.results || { sent: 0, failed: 0 };
+        }
+
+        res.status(201).json({
+            success: true,
+            message: 'Notice sent successfully',
+            data: { notification, deliveryStatus }
+        });
+    } catch (error) {
+        next(error);
+    }
+};
+
+/**
+ * Create a broadcast notification (admin only) — legacy endpoint
  */
 exports.createBroadcast = async (req, res, next) => {
     try {
@@ -251,7 +416,7 @@ exports.createBroadcast = async (req, res, next) => {
             throw new ApiError('Title and message are required', 400);
         }
 
-        const notification = await Notification.create({
+        const notification = await notificationService.createNotification({
             recipientType: recipientType || 'all',
             recipientClass,
             recipientSection,
@@ -262,10 +427,6 @@ exports.createBroadcast = async (req, res, next) => {
             actionUrl,
             createdBy: req.user.id
         });
-
-        // Emit via socket
-        const socketService = require('../services/socketService');
-        socketService.emitNotification(notification);
 
         res.status(201).json({
             success: true,
@@ -287,6 +448,7 @@ exports.getAllNotifications = async (req, res, next) => {
             limit = 50,
             type,
             recipientType,
+            priority,
             fromDate,
             toDate
         } = req.query;
@@ -295,6 +457,7 @@ exports.getAllNotifications = async (req, res, next) => {
 
         if (type) query.type = type;
         if (recipientType) query.recipientType = recipientType;
+        if (priority) query.priority = priority;
         if (fromDate || toDate) {
             query.createdAt = {};
             if (fromDate) query.createdAt.$gte = new Date(fromDate);
@@ -323,6 +486,144 @@ exports.getAllNotifications = async (req, res, next) => {
                     total,
                     pages: Math.ceil(total / parseInt(limit))
                 }
+            }
+        });
+    } catch (error) {
+        next(error);
+    }
+};
+
+// ─── Push Subscription Endpoints ─────────────────────────────────
+
+/**
+ * Save a push subscription for the authenticated student
+ */
+exports.savePushSubscription = async (req, res, next) => {
+    try {
+        const { subscription } = req.body;
+
+        if (!subscription || !subscription.endpoint || !subscription.keys) {
+            throw new ApiError('Valid push subscription is required', 400);
+        }
+
+        const studentId = req.user.studentId || req.user.id;
+        const userAgent = req.headers['user-agent'] || '';
+
+        await pushService.saveSubscription(studentId, subscription, userAgent);
+
+        res.json({
+            success: true,
+            message: 'Push subscription saved'
+        });
+    } catch (error) {
+        next(error);
+    }
+};
+
+/**
+ * Remove a push subscription
+ */
+exports.removePushSubscription = async (req, res, next) => {
+    try {
+        const { endpoint } = req.body;
+
+        if (!endpoint) {
+            throw new ApiError('Endpoint is required', 400);
+        }
+
+        await pushService.removeSubscription(endpoint);
+
+        res.json({
+            success: true,
+            message: 'Push subscription removed'
+        });
+    } catch (error) {
+        next(error);
+    }
+};
+
+/**
+ * Get VAPID public key (no auth required for subscribing)
+ */
+exports.getVapidPublicKey = async (req, res) => {
+    const key = pushService.getVapidPublicKey();
+    res.json({
+        success: true,
+        data: { vapidPublicKey: key }
+    });
+};
+
+// ─── Student Combined Notice Feed ────────────────────────────────
+
+/**
+ * Get all notices for a student (personal + class + broadcast)
+ * This combines personal and class-wide notifications into one feed
+ */
+exports.getStudentNotices = async (req, res, next) => {
+    try {
+        const { page = 1, limit = 20, priority, fromDate, toDate, unreadOnly } = req.query;
+        const studentId = req.user.studentId;
+        const studentClass = req.user.class;
+        const studentSection = req.user.section;
+
+        // Build query to match: personal + class-wide + broadcast notifications
+        const orConditions = [
+            // Personal notifications
+            { recipientType: 'student', recipientId: studentId },
+            // Broadcast to all
+            { recipientType: 'all' }
+        ];
+
+        // Class notifications (with or without section)
+        if (studentClass) {
+            orConditions.push({
+                recipientType: 'class',
+                recipientClass: studentClass,
+                $or: [
+                    { recipientSection: studentSection },
+                    { recipientSection: { $exists: false } },
+                    { recipientSection: null },
+                    { recipientSection: '' }
+                ]
+            });
+        }
+
+        const query = { $or: orConditions };
+
+        if (priority) query.priority = priority;
+        if (unreadOnly === 'true') query.isRead = false;
+        if (fromDate || toDate) {
+            query.createdAt = {};
+            if (fromDate) query.createdAt.$gte = new Date(fromDate);
+            if (toDate) query.createdAt.$lte = new Date(toDate);
+        }
+
+        const skip = (parseInt(page) - 1) * parseInt(limit);
+
+        const [notifications, total, unreadCount] = await Promise.all([
+            Notification.find(query)
+                .sort({ createdAt: -1 })
+                .skip(skip)
+                .limit(parseInt(limit))
+                .lean(),
+            Notification.countDocuments(query),
+            Notification.countDocuments({
+                $or: orConditions,
+                isRead: false
+            })
+        ]);
+
+        res.json({
+            success: true,
+            data: {
+                notifications,
+                pagination: {
+                    page: parseInt(page),
+                    limit: parseInt(limit),
+                    total,
+                    pages: Math.ceil(total / parseInt(limit))
+                },
+                unreadCount
             }
         });
     } catch (error) {

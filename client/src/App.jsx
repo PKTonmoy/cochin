@@ -53,6 +53,7 @@ import MediaLibrary from './pages/admin/MediaLibrary'
 import GlobalSettings from './pages/admin/GlobalSettings'
 import SMSManagement from './pages/admin/SMSManagement'
 import PWAQRSettings from './pages/admin/PWAQRSettings'
+import NoticeManagement from './pages/admin/NoticeManagement'
 
 // Smart redirect page (portal entry)
 import PortalEntryPage from './pages/public/PortalEntryPage'
@@ -63,6 +64,7 @@ import StudentResults from './pages/student/ResultsV2'
 import StudentProfile from './pages/student/Profile'
 import StudentSchedule from './pages/student/Schedule'
 import StudentAttendanceHistory from './pages/student/AttendanceHistory'
+import StudentNotices from './pages/student/Notices'
 
 // Lazy load BuilderPage to isolate Builder.io initialization issues
 const BuilderPage = lazy(() => import('./pages/public/BuilderPage'))
@@ -205,6 +207,7 @@ function App() {
           <Route path="settings" element={<GlobalSettings />} />
           <Route path="sms-management" element={<SMSManagement />} />
           <Route path="pwa-qr" element={<PWAQRSettings />} />
+          <Route path="notice-management" element={<NoticeManagement />} />
         </Route>
 
         {/* Student routes */}
@@ -221,6 +224,7 @@ function App() {
           <Route path="profile" element={<StudentProfile />} />
           <Route path="schedule" element={<StudentSchedule />} />
           <Route path="attendance" element={<StudentAttendanceHistory />} />
+          <Route path="notices" element={<StudentNotices />} />
         </Route>
 
         {/* Catch all */}

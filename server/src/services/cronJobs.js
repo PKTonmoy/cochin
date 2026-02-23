@@ -304,6 +304,34 @@ async function processScheduledNotifications() {
                 const socketService = require('./socketService');
                 socketService.emitNotification(notification);
 
+                // Send via push notification
+                const pushService = require('./pushService');
+                if (pushService.isEnabled()) {
+                    pushService.sendPushForNotification(notification).catch(err => {
+                        console.error(`[Cron] Failed to send push for scheduled notification ${notification._id}:`, err);
+                    });
+                }
+
+                // Send SMS if channels metadata indicates it
+                if (notification.metadata?.channels?.sms) {
+                    const smsService = require('./smsService');
+                    const filters = {};
+                    if (notification.recipientType === 'class' && notification.recipientClass) {
+                        filters.class = notification.recipientClass;
+                        if (notification.recipientSection) filters.section = notification.recipientSection;
+                    }
+                    if (notification.metadata?.studentIds?.length > 0) {
+                        filters.studentIds = notification.metadata.studentIds;
+                    }
+                    smsService.sendCustomSms(
+                        filters,
+                        `Notice: ${notification.title} - ${notification.message.substring(0, 100)}. Login to portal for details.`,
+                        'guardianPhone'
+                    ).catch(err => {
+                        console.error(`[Cron] Failed to send SMS for scheduled notification ${notification._id}:`, err);
+                    });
+                }
+
                 console.log(`📤 Processed scheduled notification: ${notification.title}`);
             } catch (err) {
                 console.error(`Failed to process scheduled notification ${notification._id}:`, err);

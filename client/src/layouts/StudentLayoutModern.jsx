@@ -7,6 +7,7 @@ import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { useSettings } from '../contexts/SettingsContext'
 import { useState, useEffect } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import {
     LayoutDashboard,
     FileText,
@@ -20,10 +21,12 @@ import {
     Settings,
     BookOpen,
     Award,
-    ClipboardCheck
+    ClipboardCheck,
+    Bell
 } from 'lucide-react'
 import NotificationBell from '../components/NotificationBell'
 import { useSocketUpdates } from '../hooks/useSocketUpdates'
+import api from '../lib/api'
 
 const StudentLayoutModern = () => {
     const { user, logout } = useAuth()
@@ -49,8 +52,19 @@ const StudentLayoutModern = () => {
         { path: '/student/schedule', icon: Calendar, label: 'My Schedule' },
         { path: '/student/results', icon: FileText, label: 'My Results' },
         { path: '/student/attendance', icon: ClipboardCheck, label: 'Attendance' },
+        { path: '/student/notices', icon: Bell, label: 'Notices' },
         { path: '/student/profile', icon: User, label: 'Profile' },
     ]
+
+    // Fetch unread notice count for badge
+    const { data: unreadCount } = useQuery({
+        queryKey: ['notice-unread-count'],
+        queryFn: async () => {
+            const res = await api.get('/notifications/unread-count')
+            return res.data?.data?.count || 0
+        },
+        refetchInterval: 30000
+    })
 
     const isActive = (path, exact) => {
         if (exact) return location.pathname === path
@@ -246,13 +260,19 @@ const StudentLayoutModern = () => {
                         <Link
                             key={item.path}
                             to={item.path}
-                            className={`flex flex-col items-center justify-center gap-0.5 flex-1 min-w-0 py-1.5 rounded-lg transition-all ${isActive(item.path, item.exact)
+                            className={`relative flex flex-col items-center justify-center gap-0.5 flex-1 min-w-0 py-1.5 rounded-lg transition-all ${isActive(item.path, item.exact)
                                 ? 'text-[var(--primary)]'
                                 : 'text-gray-400'
                                 }`}
                         >
                             <item.icon className="w-[18px] h-[18px] shrink-0" />
                             <span className="text-[10px] font-medium leading-tight truncate max-w-full px-0.5">{item.label.split(' ').pop()}</span>
+                            {/* Unread badge for Notices */}
+                            {item.path === '/student/notices' && unreadCount > 0 && (
+                                <span className="absolute -top-0.5 right-1/4 min-w-[16px] h-[16px] bg-red-500 text-white text-[9px] font-bold rounded-full flex items-center justify-center px-1">
+                                    {unreadCount > 99 ? '99+' : unreadCount}
+                                </span>
+                            )}
                         </Link>
                     ))}
                 </div>

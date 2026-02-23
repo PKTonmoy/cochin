@@ -7,6 +7,7 @@ const Notification = require('../models/Notification');
 const Student = require('../models/Student');
 const User = require('../models/User');
 const socketService = require('./socketService');
+const pushService = require('./pushService');
 const nodemailer = require('nodemailer');
 
 // Email transporter (lazy initialization)
@@ -37,6 +38,7 @@ async function createNotification(notificationData, options = {}) {
     const {
         sendEmail = true,
         sendSocket = true,
+        sendPush = true,
         saveToDb = true
     } = options;
 
@@ -53,6 +55,13 @@ async function createNotification(notificationData, options = {}) {
         // Send via Socket.io
         if (sendSocket) {
             socketService.emitNotification(notification);
+        }
+
+        // Send via Web Push
+        if (sendPush && pushService.isEnabled()) {
+            pushService.sendPushForNotification(notification).catch(err => {
+                console.error('Failed to send push notification:', err);
+            });
         }
 
         // Send email if enabled and applicable

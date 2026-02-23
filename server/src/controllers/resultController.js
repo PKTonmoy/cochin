@@ -11,6 +11,7 @@ const AuditLog = require('../models/AuditLog');
 const { ApiError } = require('../middleware/errorHandler');
 const { emitToClass, emitToStudent } = require('../services/socketService');
 const smsService = require('../services/smsService');
+const notificationService = require('../services/notificationService');
 const ExcelJS = require('exceljs');
 const path = require('path');
 const fs = require('fs');
@@ -692,8 +693,17 @@ exports.publishResults = async (req, res, next) => {
             ipAddress: req.ip
         });
 
-        // Trigger SMS notifications when publishing results
+        // Trigger push + portal notifications when publishing results
         if (publish) {
+            notificationService.notifyTest(test, 'result_published', { userId: req.user.id })
+                .then(() => {
+                    console.log(`[Notification] Result published notification sent for "${test.testName}"`);
+                })
+                .catch(err => {
+                    console.error('[Notification] Error sending result published notification:', err.message);
+                });
+
+            // Also trigger SMS
             smsService.sendBulkResultSms(testId, req.user.id)
                 .then(smsResult => {
                     console.log(`[SMS] Result publish trigger for "${test.testName}": ${JSON.stringify(smsResult.results || smsResult.reason)}`);

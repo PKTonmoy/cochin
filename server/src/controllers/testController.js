@@ -8,6 +8,7 @@ const Result = require('../models/Result');
 const Student = require('../models/Student');
 const AuditLog = require('../models/AuditLog');
 const { ApiError } = require('../middleware/errorHandler');
+const notificationService = require('../services/notificationService');
 
 /**
  * Get all tests with filters
@@ -176,6 +177,13 @@ exports.createTest = async (req, res, next) => {
             ipAddress: req.ip
         });
 
+        // Send notification to students about the new test
+        try {
+            await notificationService.notifyTest(test, 'created', { userId: req.user.id });
+        } catch (err) {
+            console.error('[Test] Failed to send test notification:', err.message);
+        }
+
         res.status(201).json({
             success: true,
             message: 'Test created successfully',
@@ -283,6 +291,13 @@ exports.publishTest = async (req, res, next) => {
         test.isPublished = true;
         test.publishedAt = new Date();
         await test.save();
+
+        // Send notification to students about published results
+        try {
+            await notificationService.notifyTest(test, 'result_published', { userId: req.user.id });
+        } catch (err) {
+            console.error('[Test] Failed to send result published notification:', err.message);
+        }
 
         await AuditLog.log({
             action: 'test_published',

@@ -187,10 +187,10 @@ export default function NotificationBell() {
                     {notifications.length > 0 && (
                         <div className="px-4 py-2 border-t border-gray-200 dark:border-gray-700 text-center">
                             <a
-                                href="/student/notifications"
+                                href="/student/notices"
                                 className="text-sm text-blue-600 hover:text-blue-800 dark:text-blue-400"
                             >
-                                View all notifications
+                                View all notices
                             </a>
                         </div>
                     )}

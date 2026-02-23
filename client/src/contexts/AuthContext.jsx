@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useEffect, useCallback } from 'react'
 import api from '../lib/api'
 import toast from 'react-hot-toast'
+import { initPushNotifications } from '../lib/pushNotifications'
 
 const AuthContext = createContext(null)
 
@@ -71,6 +72,9 @@ export const AuthProvider = ({ children }) => {
             storage.setItem('accessToken', accessToken)
             storage.setItem('refreshToken', refreshToken)
             setUser({ ...student, role: 'student' })
+
+            // Initialize push notifications after student login
+            initPushNotifications()
 
             toast.success(`Welcome, ${student.name}!`)
             return { success: true, user: student }

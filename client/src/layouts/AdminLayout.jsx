@@ -24,7 +24,8 @@ import {
     Settings,
     MessageCircle,
     MessageSquare,
-    QrCode
+    QrCode,
+    Bell
 } from 'lucide-react'
 import NotificationBell from '../components/NotificationBell'
 
@@ -56,6 +57,7 @@ const AdminLayout = () => {
 
         { type: 'divider', label: 'Content & Communication' },
         { path: '/admin/leads', icon: MessageCircle, label: 'Leads & Inquiries' },
+        { path: '/admin/notice-management', icon: Bell, label: 'Notices' },
         { path: '/admin/sms-management', icon: MessageSquare, label: 'SMS', adminOnly: true },
         { path: '/admin/cms', icon: Layout, label: 'Pages & CMS' },
         { path: '/admin/faculty', icon: GraduationCap, label: 'Faculty' },

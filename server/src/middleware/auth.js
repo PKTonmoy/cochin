@@ -34,8 +34,11 @@ const authenticate = async (req, res, next) => {
             }
             req.user = {
                 id: student._id,
+                studentId: student._id,
                 roll: student.roll,
                 name: student.name,
+                class: student.class,
+                section: student.section,
                 role: 'student'
             };
         } else {
@@ -109,8 +112,11 @@ const optionalAuth = async (req, res, next) => {
             if (student && student.status === 'active') {
                 req.user = {
                     id: student._id,
+                    studentId: student._id,
                     roll: student.roll,
                     name: student.name,
+                    class: student.class,
+                    section: student.section,
                     role: 'student'
                 };
             }
