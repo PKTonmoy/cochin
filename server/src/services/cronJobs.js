@@ -216,8 +216,7 @@ async function cleanupOldNotifications() {
         thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
         const result = await Notification.deleteMany({
-            createdAt: { $lt: thirtyDaysAgo },
-            isRead: true
+            createdAt: { $lt: thirtyDaysAgo }
         });
 
         console.log(`🧹 Cleaned up ${result.deletedCount} old notifications`);
