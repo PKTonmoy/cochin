@@ -268,6 +268,16 @@ const PWAInstallGuide = ({ settings, onClose, onInstallComplete, deferredPrompt,
                         : 'Quick setup — takes 10 seconds'}
             </p>
 
+            {/* Device & Browser Info */}
+            <div className="mt-4 inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold"
+                style={{ background: `${primaryColor}15`, color: primaryColor }}>
+                {deviceType === 'ios' ? '🍎 iOS' : deviceType === 'android' ? '🤖 Android' : '💻 Desktop'}
+                {' · '}
+                {browser === 'safari' ? 'Safari' : browser === 'chrome' ? 'Chrome' : browser === 'firefox' ? 'Firefox' :
+                    browser === 'edge' ? 'Edge' : browser === 'samsung' ? 'Samsung' : browser === 'opera' ? 'Opera' :
+                        browser === 'chrome-ios' ? 'Chrome' : browser === 'brave' ? 'Brave' : 'Browser'}
+            </div>
+
             {/* Skip */}
             <button onClick={onClose} className="mt-5 text-sm text-gray-400 hover:text-gray-600 transition-colors">
                 {content.maybeLaterText || 'Maybe Later'}
