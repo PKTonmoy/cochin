@@ -133,7 +133,17 @@ exports.markAsRead = async (req, res, next) => {
             throw new ApiError('Notification not found', 404);
         }
 
-        // Verify ownership
+        // Broadcast/class notifications are shared documents — don't modify
+        // their isRead flag since it would affect all students.
+        // The frontend tracks read state locally for these types.
+        if (['all', 'class'].includes(notification.recipientType)) {
+            return res.json({
+                success: true,
+                message: 'Notification marked as read'
+            });
+        }
+
+        // Verify ownership for personal notifications
         const recipientType = req.user.role === 'student' ? 'student' : 'user';
         const recipientId = req.user.role === 'student' ? req.user.studentId : req.user.id;
 
@@ -184,26 +194,15 @@ exports.markAllAsRead = async (req, res, next) => {
         let query;
 
         if (req.user.role === 'student') {
-            // Build the same OR conditions used in getStudentNotices
-            const orConditions = [
-                { recipientType: 'student', recipientId: req.user.studentId || req.user.id },
-                { recipientType: 'all' }
-            ];
-
-            if (req.user.class) {
-                orConditions.push({
-                    recipientType: 'class',
-                    recipientClass: req.user.class,
-                    $or: [
-                        { recipientSection: req.user.section },
-                        { recipientSection: { $exists: false } },
-                        { recipientSection: null },
-                        { recipientSection: '' }
-                    ]
-                });
-            }
-
-            query = { $or: orConditions, isRead: false };
+            // Only mark PERSONAL notifications as read.
+            // Broadcast ('all') and class notifications are shared documents —
+            // modifying their isRead flag would affect ALL students.
+            // The frontend tracks read state locally for shared notices.
+            query = {
+                recipientType: 'student',
+                recipientId: req.user.studentId || req.user.id,
+                isRead: false
+            };
         } else {
             // Admin/staff — mark their own notifications
             query = {
@@ -557,7 +556,11 @@ exports.getVapidPublicKey = async (req, res) => {
 
 /**
  * Get all notices for a student (personal + class + broadcast)
- * This combines personal and class-wide notifications into one feed
+ * This combines personal and class-wide notifications into one feed.
+ * NOTE: Broadcast ('all') and class notifications are shared documents
+ * with a single isRead flag. We never filter shared notices by isRead
+ * since the flag doesn't represent per-student read state.
+ * The frontend tracks read state locally for shared notices.
  */
 exports.getStudentNotices = async (req, res, next) => {
     try {
@@ -566,17 +569,66 @@ exports.getStudentNotices = async (req, res, next) => {
         const studentClass = req.user.class;
         const studentSection = req.user.section;
 
-        // Build query to match: personal + class-wide + broadcast notifications
-        const orConditions = [
-            // Personal notifications
-            { recipientType: 'student', recipientId: studentId },
-            // Broadcast to all
-            { recipientType: 'all' }
-        ];
+        // Build date filter if provided
+        let dateFilter = {};
+        if (fromDate || toDate) {
+            dateFilter.createdAt = {};
+            if (fromDate) dateFilter.createdAt.$gte = new Date(fromDate);
+            if (toDate) dateFilter.createdAt.$lte = new Date(toDate);
+        }
 
-        // Class notifications (with or without section)
+        // Personal notifications (isRead is meaningful here)
+        const personalCondition = {
+            recipientType: 'student',
+            recipientId: studentId,
+            ...(priority ? { priority } : {}),
+            ...dateFilter
+        };
+
+        // Shared notifications — never filter by isRead
+        const broadcastCondition = {
+            recipientType: 'all',
+            ...(priority ? { priority } : {}),
+            ...dateFilter
+        };
+
+        const orConditions = [personalCondition, broadcastCondition];
+
+        // Class notifications (shared — never filter by isRead)
         if (studentClass) {
             orConditions.push({
+                recipientType: 'class',
+                recipientClass: studentClass,
+                $or: [
+                    { recipientSection: studentSection },
+                    { recipientSection: { $exists: false } },
+                    { recipientSection: null },
+                    { recipientSection: '' }
+                ],
+                ...(priority ? { priority } : {}),
+                ...dateFilter
+            });
+        }
+
+        // For "unread only" filter, only apply to personal notifications
+        let query;
+        if (unreadOnly === 'true') {
+            const personalUnread = { ...personalCondition, isRead: false };
+            query = { $or: [personalUnread, broadcastCondition, ...(studentClass ? [orConditions[2]] : [])] };
+        } else {
+            query = { $or: orConditions };
+        }
+
+        const skip = (parseInt(page) - 1) * parseInt(limit);
+
+        // For unread count, count personal unread + all broadcast/class notices
+        // (broadcast/class are always "unread" from a per-student perspective)
+        const unreadOrConditions = [
+            { recipientType: 'student', recipientId: studentId, isRead: false },
+            { recipientType: 'all' }
+        ];
+        if (studentClass) {
+            unreadOrConditions.push({
                 recipientType: 'class',
                 recipientClass: studentClass,
                 $or: [
@@ -588,18 +640,6 @@ exports.getStudentNotices = async (req, res, next) => {
             });
         }
 
-        const query = { $or: orConditions };
-
-        if (priority) query.priority = priority;
-        if (unreadOnly === 'true') query.isRead = false;
-        if (fromDate || toDate) {
-            query.createdAt = {};
-            if (fromDate) query.createdAt.$gte = new Date(fromDate);
-            if (toDate) query.createdAt.$lte = new Date(toDate);
-        }
-
-        const skip = (parseInt(page) - 1) * parseInt(limit);
-
         const [notifications, total, unreadCount] = await Promise.all([
             Notification.find(query)
                 .sort({ createdAt: -1 })
@@ -607,10 +647,7 @@ exports.getStudentNotices = async (req, res, next) => {
                 .limit(parseInt(limit))
                 .lean(),
             Notification.countDocuments(query),
-            Notification.countDocuments({
-                $or: orConditions,
-                isRead: false
-            })
+            Notification.countDocuments({ $or: unreadOrConditions })
         ]);
 
         res.json({

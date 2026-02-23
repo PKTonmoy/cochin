@@ -15,6 +15,18 @@ import { formatDistanceToNow, format } from 'date-fns'
 import api from '../../lib/api'
 import { onNotification } from '../../lib/socket'
 
+const BROADCAST_READ_KEY = 'read-broadcast-notices'
+
+function getLocalReadIds() {
+    try {
+        return new Set(JSON.parse(localStorage.getItem(BROADCAST_READ_KEY) || '[]'))
+    } catch { return new Set() }
+}
+
+function saveLocalReadIds(ids) {
+    localStorage.setItem(BROADCAST_READ_KEY, JSON.stringify([...ids]))
+}
+
 export default function Notices() {
     const queryClient = useQueryClient()
     const [page, setPage] = useState(1)
@@ -22,6 +34,7 @@ export default function Notices() {
     const [unreadOnly, setUnreadOnly] = useState(false)
     const [expandedId, setExpandedId] = useState(null)
     const [showFilters, setShowFilters] = useState(false)
+    const [localReadIds, setLocalReadIds] = useState(getLocalReadIds)
 
     // Fetch student notices
     const { data, isLoading } = useQuery({
@@ -48,6 +61,15 @@ export default function Notices() {
     const markAllAsReadMutation = useMutation({
         mutationFn: () => api.put('/notifications/mark-all-read'),
         onSuccess: () => {
+            // Mark all current broadcast/class notices as read locally
+            const updated = new Set(localReadIds)
+            rawNotices?.forEach(n => {
+                if (['all', 'class'].includes(n.recipientType)) {
+                    updated.add(n._id)
+                }
+            })
+            setLocalReadIds(updated)
+            saveLocalReadIds(updated)
             queryClient.invalidateQueries({ queryKey: ['student-notices'] })
             queryClient.invalidateQueries({ queryKey: ['notifications'] })
         }
@@ -61,13 +83,27 @@ export default function Notices() {
         return unsubscribe
     }, [queryClient])
 
-    const notices = data?.notifications || []
+    const rawNotices = data?.notifications || []
     const pagination = data?.pagination || {}
-    const unreadCount = data?.unreadCount || 0
+
+    // Merge backend isRead with local read tracking for broadcast/class notices
+    const isSharedNotice = (n) => ['all', 'class'].includes(n.recipientType)
+    const notices = rawNotices.map(n => ({
+        ...n,
+        isRead: isSharedNotice(n) ? localReadIds.has(n._id) : n.isRead
+    }))
+    const unreadCount = notices.filter(n => !n.isRead).length
 
     const handleNoticeClick = (notice) => {
         setExpandedId(expandedId === notice._id ? null : notice._id)
         if (!notice.isRead) {
+            if (isSharedNotice(notice)) {
+                // Track broadcast/class read state locally
+                const updated = new Set(localReadIds)
+                updated.add(notice._id)
+                setLocalReadIds(updated)
+                saveLocalReadIds(updated)
+            }
             markAsReadMutation.mutate(notice._id)
         }
     }
