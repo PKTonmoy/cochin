@@ -258,7 +258,8 @@ const AttendanceHistory = () => {
             const response = await api.get(`/attendance/student/${user?.id}?limit=500`)
             return response.data.data.attendance || []
         },
-        enabled: !!user?.id
+        enabled: !!user?.id,
+        refetchOnMount: 'always'
     })
 
     // ─── Core Attendance Logic ──────────────────────────────────────

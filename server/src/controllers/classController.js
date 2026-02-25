@@ -9,6 +9,7 @@ const AuditLog = require('../models/AuditLog');
 const { ApiError } = require('../middleware/errorHandler');
 const conflictService = require('../services/conflictService');
 const notificationService = require('../services/notificationService');
+const { emitToClass } = require('../services/socketService');
 
 /**
  * Get all classes with filters
@@ -223,6 +224,14 @@ exports.createClass = async (req, res, next) => {
             }
         }
 
+        // Emit real-time update
+        emitToClass(targetClass, 'schedule-updated', {
+            type: 'class_created',
+            classId: classSession._id,
+            message: `A new class "${title || subject}" has been scheduled.`,
+            timestamp: new Date()
+        }, section);
+
         res.status(201).json({
             success: true,
             message: 'Class created successfully',
@@ -349,6 +358,14 @@ exports.updateClass = async (req, res, next) => {
             ipAddress: req.ip
         });
 
+        // Emit real-time update
+        emitToClass(updatedClass.class, 'schedule-updated', {
+            type: 'class_updated',
+            classId: updatedClass._id,
+            message: `Class "${updatedClass.title || updatedClass.subject}" has been updated.`,
+            timestamp: new Date()
+        }, updatedClass.section);
+
         res.json({
             success: true,
             message: 'Class updated successfully',
@@ -437,6 +454,14 @@ exports.rescheduleClass = async (req, res, next) => {
             }
         }
 
+        // Emit real-time update
+        emitToClass(classSession.class, 'schedule-updated', {
+            type: 'class_rescheduled',
+            classId: classSession._id,
+            message: `Class "${classSession.title || classSession.subject}" has been rescheduled.`,
+            timestamp: new Date()
+        }, classSession.section);
+
         res.json({
             success: true,
             message: 'Class rescheduled successfully',
@@ -489,6 +514,14 @@ exports.cancelClass = async (req, res, next) => {
             }
         }
 
+        // Emit real-time update
+        emitToClass(classSession.class, 'schedule-updated', {
+            type: 'class_cancelled',
+            classId: classSession._id,
+            message: `Class "${classSession.title || classSession.subject}" has been cancelled.`,
+            timestamp: new Date()
+        }, classSession.section);
+
         res.json({
             success: true,
             message: 'Class cancelled successfully',
@@ -521,6 +554,14 @@ exports.deleteClass = async (req, res, next) => {
             details: { title: classSession.title },
             ipAddress: req.ip
         });
+
+        // Emit real-time update
+        emitToClass(classSession.class, 'schedule-updated', {
+            type: 'class_deleted',
+            classId: classSession._id,
+            message: `Class "${classSession.title || classSession.subject}" has been removed from the schedule.`,
+            timestamp: new Date()
+        }, classSession.section);
 
         res.json({
             success: true,

@@ -25,7 +25,7 @@ export function useSocketUpdates(studentId, studentClass, studentSection) {
 
         const socket = socketRef.current;
 
-        // Authenticate when connected
+        // Authenticate when connected and refresh data on reconnect
         socket.on('connect', () => {
             console.log('🔌 Student portal socket connected');
             socket.emit('authenticate', {
@@ -34,6 +34,9 @@ export function useSocketUpdates(studentId, studentClass, studentSection) {
                 class: studentClass,
                 section: studentSection
             });
+
+            // Re-fetch data if connecting from background
+            queryClient.invalidateQueries();
         });
 
         // Handle attendance updates
@@ -82,12 +85,14 @@ export function useSocketUpdates(studentId, studentClass, studentSection) {
         });
 
         // Handle schedule updates
-        socket.on('schedule-update', (data) => {
+        socket.on('schedule-updated', (data) => {
             console.log('📅 Schedule update received:', data);
 
             // Invalidate schedule queries
             queryClient.invalidateQueries({ queryKey: ['upcoming-classes'] });
             queryClient.invalidateQueries({ queryKey: ['student-schedule'] });
+            queryClient.invalidateQueries({ queryKey: ['schedule-classes'] });
+            queryClient.invalidateQueries({ queryKey: ['schedule-tests'] });
             queryClient.invalidateQueries({ queryKey: ['calendar-events'] });
             queryClient.invalidateQueries({ queryKey: ['student-dashboard-v2'] });
             queryClient.invalidateQueries({ queryKey: ['student-dashboard'] });
@@ -143,6 +148,9 @@ export function useSocketUpdates(studentId, studentClass, studentSection) {
                 console.log('📱 Service Worker requested noticeable refresh');
                 queryClient.invalidateQueries({ queryKey: ['notifications'] });
                 queryClient.invalidateQueries({ queryKey: ['student-notices'] });
+            } else if (event.data && event.data.type === 'PUSH_RECEIVED') {
+                console.log('📱 Service Worker received push notification, fetching latest data');
+                queryClient.invalidateQueries(); // Refresh everything just to be safe
             }
         };
 

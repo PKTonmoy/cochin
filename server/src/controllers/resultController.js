@@ -713,6 +713,15 @@ exports.publishResults = async (req, res, next) => {
                 });
         }
 
+        // Emit real-time update
+        emitToClass(test.class, 'results-updated', {
+            type: publish ? 'results_published' : 'results_unpublished',
+            testId: test._id,
+            testName: test.testName,
+            message: publish ? `Results for ${test.testName} have been published!` : `Results for ${test.testName} have been unpublished.`,
+            timestamp: new Date()
+        }, test.section);
+
         res.json({
             success: true,
             message: publish ? 'Results published successfully' : 'Results unpublished',
@@ -942,6 +951,14 @@ exports.deleteResult = async (req, res, next) => {
             ipAddress: req.ip
         });
 
+        // Emit real-time update
+        emitToStudent(result.studentId.toString(), 'results-updated', {
+            type: 'result_deleted',
+            testId: result.testId,
+            message: `Your result has been updated.`,
+            timestamp: new Date()
+        });
+
         res.json({
             success: true,
             message: 'Result deleted successfully'
@@ -1017,6 +1034,14 @@ exports.updateResult = async (req, res, next) => {
                 reason: reason || 'Not specified'
             },
             ipAddress: req.ip
+        });
+
+        // Emit real-time update
+        emitToStudent(result.studentId.toString(), 'results-updated', {
+            type: 'result_updated',
+            testId: result.testId,
+            message: `Your result has been updated.`,
+            timestamp: new Date()
         });
 
         res.json({

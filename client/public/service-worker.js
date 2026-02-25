@@ -15,7 +15,7 @@
  */
 
 // ─── Cache Version ───────────────────────────────────────────────
-const CACHE_VERSION = 'v2';
+const CACHE_VERSION = 'v3';
 const STATIC_CACHE = `paragon-static-${CACHE_VERSION}`;
 const DYNAMIC_CACHE = `paragon-dynamic-${CACHE_VERSION}`;
 const API_CACHE = `paragon-api-${CACHE_VERSION}`;
@@ -272,7 +272,17 @@ self.addEventListener('push', (event) => {
     };
 
     event.waitUntil(
-        self.registration.showNotification(title, options)
+        Promise.all([
+            self.registration.showNotification(title, options),
+            self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clients) => {
+                clients.forEach((client) => {
+                    client.postMessage({
+                        type: 'PUSH_RECEIVED',
+                        payload: data
+                    });
+                });
+            })
+        ])
     );
 });
 

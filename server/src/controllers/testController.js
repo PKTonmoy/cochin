@@ -9,6 +9,7 @@ const Student = require('../models/Student');
 const AuditLog = require('../models/AuditLog');
 const { ApiError } = require('../middleware/errorHandler');
 const notificationService = require('../services/notificationService');
+const { emitToClass } = require('../services/socketService');
 
 /**
  * Get all tests with filters
@@ -184,6 +185,14 @@ exports.createTest = async (req, res, next) => {
             console.error('[Test] Failed to send test notification:', err.message);
         }
 
+        // Emit real-time update
+        emitToClass(classValue, 'schedule-updated', {
+            type: 'test_created',
+            testId: test._id,
+            message: `A new test "${testName}" has been scheduled.`,
+            timestamp: new Date()
+        }, section);
+
         res.status(201).json({
             success: true,
             message: 'Test created successfully',
@@ -232,6 +241,14 @@ exports.updateTest = async (req, res, next) => {
             ipAddress: req.ip
         });
 
+        // Emit real-time update
+        emitToClass(updatedTest.class, 'schedule-updated', {
+            type: 'test_updated',
+            testId: updatedTest._id,
+            message: `Test "${updatedTest.testName}" has been updated.`,
+            timestamp: new Date()
+        }, updatedTest.section);
+
         res.json({
             success: true,
             message: 'Test updated successfully',
@@ -267,6 +284,14 @@ exports.deleteTest = async (req, res, next) => {
             details: { testName: test.testName },
             ipAddress: req.ip
         });
+
+        // Emit real-time update
+        emitToClass(test.class, 'schedule-updated', {
+            type: 'test_deleted',
+            testId: test._id,
+            message: `Test "${test.testName}" has been removed.`,
+            timestamp: new Date()
+        }, test.section);
 
         res.json({
             success: true,

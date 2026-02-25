@@ -61,8 +61,7 @@ export default function Schedule() {
             const response = await api.get(`/classes/calendar?${params}`)
             return response.data.data || []
         },
-        enabled: !!user?.class,
-        staleTime: 1000 * 60 * 5, // 5 minutes (override global 24h)
+        enabled: !!user?.class
     })
 
     // Fetch tests for selected week
@@ -91,8 +90,7 @@ export default function Schedule() {
                 totalMarks: test.totalMaxMarks
             }))
         },
-        enabled: !!user?.class,
-        staleTime: 1000 * 60 * 5, // 5 minutes (override global 24h)
+        enabled: !!user?.class
     })
 
     // Fetch upcoming classes (next 3)
@@ -106,7 +104,6 @@ export default function Schedule() {
             return response.data.data || []
         },
         enabled: !!user?.class,
-        staleTime: 1000 * 60 * 2, // 2 minutes (override global 24h)
         refetchOnMount: 'always', // always refetch when page is visited
     })
 
@@ -134,7 +131,6 @@ export default function Schedule() {
             }))
         },
         enabled: !!user?.class,
-        staleTime: 1000 * 60 * 2, // 2 minutes (override global 24h)
         refetchOnMount: 'always', // always refetch when page is visited
     })
 

@@ -107,7 +107,8 @@ export default function StudentResultsV2() {
             const response = await api.get(`/results/student/${user?.studentId || user?.id}`)
             return response.data.data
         },
-        enabled: !!user
+        enabled: !!user,
+        refetchOnMount: 'always'
     })
 
     // Fetch detailed result

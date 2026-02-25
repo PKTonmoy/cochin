@@ -58,7 +58,8 @@ export default function StudentDashboard() {
         queryFn: async () => {
             const response = await api.get(`/students/${user?.roll}/dashboard`)
             return response.data.data
-        }
+        },
+        refetchOnMount: 'always'
     })
 
     // Fetch upcoming classes
@@ -68,7 +69,8 @@ export default function StudentDashboard() {
             const response = await api.get(`/classes/upcoming?class=${user?.class}&limit=5`)
             return response.data.data
         },
-        enabled: !!user?.class
+        enabled: !!user?.class,
+        refetchOnMount: 'always'
     })
 
 

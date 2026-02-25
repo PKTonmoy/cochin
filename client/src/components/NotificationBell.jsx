@@ -39,7 +39,7 @@ export default function NotificationBell() {
             const response = await api.get(endpoint)
             return response.data.data
         },
-        refetchInterval: 60000 // Refetch every minute
+        refetchOnMount: 'always'
     })
 
     // Listen for local storage changes from Notices.jsx
