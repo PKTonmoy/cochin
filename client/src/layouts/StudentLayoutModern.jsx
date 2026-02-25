@@ -56,15 +56,32 @@ const StudentLayoutModern = () => {
         { path: '/student/profile', icon: User, label: 'Profile' },
     ]
 
-    // Fetch unread notice count for badge
-    const { data: unreadCount } = useQuery({
-        queryKey: ['notice-unread-count'],
-        queryFn: async () => {
-            const res = await api.get('/notifications/unread-count')
-            return res.data?.data?.unreadCount || 0
-        },
-        refetchInterval: 30000
+    const [localReadIds, setLocalReadIds] = useState(() => {
+        try { return new Set(JSON.parse(localStorage.getItem('read-broadcast-notices') || '[]')) }
+        catch { return new Set() }
     })
+
+    // Fetch notifications to calculate true unread count (shared with NotificationBell)
+    const { data: noticesData } = useQuery({
+        queryKey: ['notifications', true],
+        queryFn: async () => {
+            const res = await api.get('/notifications/student-notices?limit=20')
+            return res.data?.data
+        },
+        refetchInterval: 60000
+    })
+
+    useEffect(() => {
+        try { setLocalReadIds(new Set(JSON.parse(localStorage.getItem('read-broadcast-notices') || '[]'))) } catch { }
+    }, [noticesData])
+
+    const rawNotices = noticesData?.notifications || []
+    const unreadCount = rawNotices.filter(n => {
+        if (['all', 'class'].includes(n.recipientType)) {
+            return !localReadIds.has(n._id)
+        }
+        return !n.isRead
+    }).length
 
     const isActive = (path, exact) => {
         if (exact) return location.pathname === path

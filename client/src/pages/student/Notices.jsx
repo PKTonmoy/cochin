@@ -13,7 +13,6 @@ import {
 } from 'lucide-react'
 import { formatDistanceToNow, format } from 'date-fns'
 import api from '../../lib/api'
-import { onNotification } from '../../lib/socket'
 
 const BROADCAST_READ_KEY = 'read-broadcast-notices'
 
@@ -75,13 +74,7 @@ export default function Notices() {
         }
     })
 
-    // Real-time updates
-    useEffect(() => {
-        const unsubscribe = onNotification(() => {
-            queryClient.invalidateQueries({ queryKey: ['student-notices'] })
-        })
-        return unsubscribe
-    }, [queryClient])
+
 
     const rawNotices = data?.notifications || []
     const pagination = data?.pagination || {}

@@ -288,13 +288,17 @@ self.addEventListener('notificationclick', (event) => {
             // Focus if already open
             for (const client of clients) {
                 if (client.url.includes(url) && 'focus' in client) {
+                    client.postMessage({ type: 'REFRESH_NOTICES' });
                     return client.focus();
                 }
             }
             // Try to focus any existing window and navigate
             for (const client of clients) {
                 if ('focus' in client && 'navigate' in client) {
-                    return client.focus().then(() => client.navigate(url));
+                    return client.focus().then(() => {
+                        client.postMessage({ type: 'REFRESH_NOTICES' });
+                        return client.navigate(url);
+                    });
                 }
             }
             // Otherwise open new tab

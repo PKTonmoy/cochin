@@ -118,6 +118,10 @@ export function useSocketUpdates(studentId, studentClass, studentSection) {
         socket.on('notification', (data) => {
             console.log('🔔 Notification received:', data);
 
+            // Invalidate notification-related queries
+            queryClient.invalidateQueries({ queryKey: ['notifications'] });
+            queryClient.invalidateQueries({ queryKey: ['student-notices'] });
+
             // Show notification toast based on priority
             const toastFn = data.priority === 'high' ? toast.error :
                 data.priority === 'medium' ? toast : toast.success;
@@ -133,10 +137,26 @@ export function useSocketUpdates(studentId, studentClass, studentSection) {
             console.log('🔌 Student portal socket disconnected');
         });
 
+        // Listen for messages from Service Worker (e.g., push notification clicks)
+        const handleServiceWorkerMessage = (event) => {
+            if (event.data && event.data.type === 'REFRESH_NOTICES') {
+                console.log('📱 Service Worker requested noticeable refresh');
+                queryClient.invalidateQueries({ queryKey: ['notifications'] });
+                queryClient.invalidateQueries({ queryKey: ['student-notices'] });
+            }
+        };
+
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.addEventListener('message', handleServiceWorkerMessage);
+        }
+
         // Cleanup on unmount
         return () => {
             socket.disconnect();
             socketRef.current = null;
+            if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.removeEventListener('message', handleServiceWorkerMessage);
+            }
         };
     }, [studentId, studentClass, studentSection, queryClient]);
 

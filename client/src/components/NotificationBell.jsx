@@ -8,28 +8,51 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Bell, Check, CheckCheck, X, Clock, Calendar, FileText, AlertCircle } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
 import api from '../lib/api'
-import { onNotification } from '../lib/socket'
+import { useAuth } from '../contexts/AuthContext'
+
+const BROADCAST_READ_KEY = 'read-broadcast-notices'
+
+function getLocalReadIds() {
+    try {
+        return new Set(JSON.parse(localStorage.getItem(BROADCAST_READ_KEY) || '[]'))
+    } catch { return new Set() }
+}
+
+function saveLocalReadIds(ids) {
+    localStorage.setItem(BROADCAST_READ_KEY, JSON.stringify([...ids]))
+}
 
 export default function NotificationBell() {
     const [isOpen, setIsOpen] = useState(false)
     const dropdownRef = useRef(null)
     const queryClient = useQueryClient()
 
+    const { user } = useAuth()
+    const isStudent = user?.role === 'student'
+    const [localReadIds, setLocalReadIds] = useState(getLocalReadIds)
+
     // Fetch notifications
     const { data, isLoading } = useQuery({
-        queryKey: ['notifications'],
+        queryKey: ['notifications', isStudent],
         queryFn: async () => {
-            const response = await api.get('/notifications?limit=10')
+            const endpoint = isStudent ? '/notifications/student-notices?limit=20' : '/notifications?limit=20'
+            const response = await api.get(endpoint)
             return response.data.data
         },
         refetchInterval: 60000 // Refetch every minute
     })
+
+    // Listen for local storage changes from Notices.jsx
+    useEffect(() => {
+        setLocalReadIds(getLocalReadIds())
+    }, [isOpen, data])
 
     // Mark as read mutation
     const markAsReadMutation = useMutation({
         mutationFn: (id) => api.put(`/notifications/${id}/read`),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['notifications'] })
+            queryClient.invalidateQueries({ queryKey: ['student-notices'] })
         }
     })
 
@@ -37,18 +60,22 @@ export default function NotificationBell() {
     const markAllAsReadMutation = useMutation({
         mutationFn: () => api.put('/notifications/mark-all-read'),
         onSuccess: () => {
+            if (isStudent && data?.notifications) {
+                const updated = new Set(localReadIds)
+                data.notifications.forEach(n => {
+                    if (['all', 'class'].includes(n.recipientType)) {
+                        updated.add(n._id)
+                    }
+                })
+                setLocalReadIds(updated)
+                saveLocalReadIds(updated)
+            }
             queryClient.invalidateQueries({ queryKey: ['notifications'] })
+            queryClient.invalidateQueries({ queryKey: ['student-notices'] })
         }
     })
 
-    // Subscribe to real-time notifications
-    useEffect(() => {
-        const unsubscribe = onNotification((notification) => {
-            queryClient.invalidateQueries({ queryKey: ['notifications'] })
-        })
 
-        return unsubscribe
-    }, [queryClient])
 
     // Close dropdown when clicking outside
     useEffect(() => {
@@ -62,8 +89,18 @@ export default function NotificationBell() {
         return () => document.removeEventListener('mousedown', handleClickOutside)
     }, [])
 
-    const notifications = data?.notifications || []
-    const unreadCount = data?.unreadCount || 0
+    const rawNotices = data?.notifications || []
+    const isSharedNotice = (n) => ['all', 'class'].includes(n.recipientType)
+
+    const notifications = isStudent ? rawNotices.map(n => ({
+        ...n,
+        isRead: isSharedNotice(n) ? localReadIds.has(n._id) : n.isRead
+    })) : rawNotices
+
+    // For students, calculate unread locally to account for broadcasts
+    const unreadCount = isStudent
+        ? notifications.filter(n => !n.isRead).length
+        : (data?.unreadCount || 0)
 
     const getNotificationIcon = (type) => {
         switch (type) {
@@ -151,6 +188,12 @@ export default function NotificationBell() {
                                         } ${getPriorityColor(notification.priority)}`}
                                     onClick={() => {
                                         if (!notification.isRead) {
+                                            if (isStudent && isSharedNotice(notification)) {
+                                                const updated = new Set(localReadIds)
+                                                updated.add(notification._id)
+                                                setLocalReadIds(updated)
+                                                saveLocalReadIds(updated)
+                                            }
                                             markAsReadMutation.mutate(notification._id)
                                         }
                                         if (notification.actionUrl) {
