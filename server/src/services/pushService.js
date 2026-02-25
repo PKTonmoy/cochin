@@ -49,15 +49,15 @@ function getVapidPublicKey() {
  * Build the push notification payload
  */
 function buildPayload(notification, settings) {
-    const siteName = settings?.siteInfo?.name || 'PARAGON';
-    const siteLogo = settings?.siteInfo?.logo?.url || '/icons/icon-192x192.png';
-    const siteFavicon = settings?.siteInfo?.favicon?.url || siteLogo || '/icons/icon-96x96.png';
+    const siteName = settings?.siteInfo?.name || '';
+    const siteLogo = settings?.siteInfo?.logo?.url || '';
+    const siteFavicon = settings?.siteInfo?.favicon?.url || siteLogo || '';
 
-    return JSON.stringify({
-        title: `${siteName}: ${notification.title || 'New Notification'}`,
+    const titlePrefix = siteName ? `${siteName}: ` : '';
+
+    const payload = {
+        title: `${titlePrefix}${notification.title || 'New Notification'}`,
         body: notification.message || 'You have a new notification',
-        icon: siteLogo,
-        badge: siteFavicon,
         tag: notification.tag || `notification-${notification._id || Date.now()}`,
         renotify: notification.priority === 'urgent' || notification.priority === 'high',
         requireInteraction: notification.priority === 'urgent',
@@ -74,7 +74,12 @@ function buildPayload(notification, settings) {
             { action: 'view', title: 'View Details' },
             { action: 'dismiss', title: 'Dismiss' }
         ]
-    });
+    };
+
+    if (siteLogo) payload.icon = siteLogo;
+    if (siteFavicon) payload.badge = siteFavicon;
+
+    return JSON.stringify(payload);
 }
 
 /**
