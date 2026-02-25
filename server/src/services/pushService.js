@@ -7,6 +7,7 @@
 const webpush = require('web-push');
 const PushSubscription = require('../models/PushSubscription');
 const Student = require('../models/Student');
+const GlobalSettings = require('../models/GlobalSettings');
 
 // ─── VAPID Configuration ────────────────────────────────────────
 let isConfigured = false;
@@ -47,12 +48,16 @@ function getVapidPublicKey() {
 /**
  * Build the push notification payload
  */
-function buildPayload(notification) {
+function buildPayload(notification, settings) {
+    const siteName = settings?.siteInfo?.name || 'PARAGON';
+    const siteLogo = settings?.siteInfo?.logo?.url || '/icons/icon-192x192.png';
+    const siteFavicon = settings?.siteInfo?.favicon?.url || siteLogo || '/icons/icon-96x96.png';
+
     return JSON.stringify({
-        title: notification.title || 'New Notification',
+        title: `${siteName}: ${notification.title || 'New Notification'}`,
         body: notification.message || 'You have a new notification',
-        icon: '/icons/icon-192x192.png',
-        badge: '/icons/icon-96x96.png',
+        icon: siteLogo,
+        badge: siteFavicon,
         tag: notification.tag || `notification-${notification._id || Date.now()}`,
         renotify: notification.priority === 'urgent' || notification.priority === 'high',
         requireInteraction: notification.priority === 'urgent',
@@ -111,7 +116,8 @@ async function sendPushToStudent(studentId, notification) {
     const subscriptions = await PushSubscription.getForStudent(studentId);
     if (subscriptions.length === 0) return { sent: 0, failed: 0 };
 
-    const payload = buildPayload(notification);
+    const settings = await GlobalSettings.getSettings();
+    const payload = buildPayload(notification, settings);
     const results = await Promise.all(
         subscriptions.map(sub => sendToSubscription(sub, payload))
     );
@@ -143,7 +149,8 @@ async function sendPushToClass(className, section, notification) {
     const subscriptions = await PushSubscription.getForStudents(studentIds);
     if (subscriptions.length === 0) return { sent: 0, failed: 0, students: students.length };
 
-    const payload = buildPayload(notification);
+    const settings = await GlobalSettings.getSettings();
+    const payload = buildPayload(notification, settings);
     const results = await Promise.all(
         subscriptions.map(sub => sendToSubscription(sub, payload))
     );
@@ -165,7 +172,8 @@ async function sendPushToAll(notification) {
     const subscriptions = await PushSubscription.find({ isActive: true });
     if (subscriptions.length === 0) return { sent: 0, failed: 0 };
 
-    const payload = buildPayload(notification);
+    const settings = await GlobalSettings.getSettings();
+    const payload = buildPayload(notification, settings);
 
     // Process in batches of 50 to avoid overwhelming the push service
     const BATCH_SIZE = 50;
