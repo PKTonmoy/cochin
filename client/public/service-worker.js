@@ -219,22 +219,84 @@ function isStaticAsset(pathname) {
 self.addEventListener('sync', (event) => {
     if (event.tag === 'background-sync') {
         console.log('[SW] Background sync triggered');
-        event.waitUntil(
-            // Process any queued requests
-            processBackgroundSync()
-        );
+        event.waitUntil(processBackgroundSync());
     }
 });
 
+const SYNC_QUEUE_CACHE = 'paragon-sync-queue';
+
+/**
+ * Queue a failed request for later replay
+ */
+async function queueRequest(request) {
+    try {
+        const cache = await caches.open(SYNC_QUEUE_CACHE);
+        const body = await request.text();
+        const queueEntry = new Response(JSON.stringify({
+            url: request.url,
+            method: request.method,
+            headers: Object.fromEntries(request.headers.entries()),
+            body: body,
+            timestamp: Date.now(),
+        }));
+        const key = `/__sync_queue/${Date.now()}_${Math.random().toString(36).slice(2)}`;
+        await cache.put(key, queueEntry);
+        console.log('[SW] Queued request for background sync:', request.url);
+    } catch (error) {
+        console.error('[SW] Failed to queue request:', error);
+    }
+}
+
+/**
+ * Process the background sync queue — replay failed requests
+ */
 async function processBackgroundSync() {
     try {
-        // Check if there are queued requests in IndexedDB
-        // This is a placeholder — integrate with your form submission logic
-        console.log('[SW] Processing background sync queue...');
+        const cache = await caches.open(SYNC_QUEUE_CACHE);
+        const keys = await cache.keys();
+
+        console.log(`[SW] Processing ${keys.length} queued requests…`);
+
+        for (const key of keys) {
+            try {
+                const response = await cache.match(key);
+                const data = await response.json();
+
+                // Replay the request
+                const replayResponse = await fetch(data.url, {
+                    method: data.method,
+                    headers: data.headers,
+                    body: data.method !== 'GET' ? data.body : undefined,
+                });
+
+                if (replayResponse.ok) {
+                    await cache.delete(key);
+                    console.log('[SW] Synced queued request:', data.url);
+                } else {
+                    console.warn('[SW] Replay failed (will retry):', data.url, replayResponse.status);
+                }
+            } catch (err) {
+                console.warn('[SW] Replay error (will retry):', err.message);
+            }
+        }
+
+        // Notify all open clients that sync completed
+        const clients = await self.clients.matchAll({ type: 'window' });
+        clients.forEach(client => {
+            client.postMessage({ type: 'SYNC_COMPLETED', count: keys.length });
+        });
     } catch (error) {
         console.error('[SW] Background sync failed:', error);
     }
 }
+
+// ─── Message Handler (SKIP_WAITING for app updates) ─────────────
+self.addEventListener('message', (event) => {
+    if (event.data && event.data.type === 'SKIP_WAITING') {
+        console.log('[SW] Skip waiting — activating new version');
+        self.skipWaiting();
+    }
+});
 
 // ─── Push Notifications ─────────────────────────────────────────
 self.addEventListener('push', (event) => {

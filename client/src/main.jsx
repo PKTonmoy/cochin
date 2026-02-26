@@ -14,8 +14,9 @@ import './styles/cms.css'
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: 1000 * 60 * 60 * 24, // 24 hours
-      gcTime: 1000 * 60 * 60 * 24 * 7, // 7 days
+      staleTime: 1000 * 60 * 2, // 2 minutes — fast updates, battery-friendly
+      gcTime: 1000 * 60 * 60, // 1 hour
+      refetchOnWindowFocus: true, // refetch when user switches back to app/PWA
       retry: 1,
     },
   },
@@ -30,7 +31,7 @@ createRoot(document.getElementById('root')).render(
     <BrowserRouter>
       <PersistQueryClientProvider
         client={queryClient}
-        persistOptions={{ persister }}
+        persistOptions={{ persister, maxAge: 1000 * 60 * 60 }}
       >
         <AuthProvider>
           <SettingsProvider>

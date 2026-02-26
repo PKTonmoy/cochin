@@ -1,6 +1,8 @@
 /**
  * Modern Student Layout
  * Futuristic, dark-mode enabled layout for student portal
+ * With advanced PWA features: offline detection, pull-to-refresh,
+ * app update prompt, smart prefetching, haptic feedback
  */
 
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom'
@@ -26,6 +28,13 @@ import {
 } from 'lucide-react'
 import NotificationBell from '../components/NotificationBell'
 import { useSocketUpdates } from '../hooks/useSocketUpdates'
+import { useNetworkStatus } from '../hooks/useNetworkStatus'
+import { useAppUpdate } from '../hooks/useAppUpdate'
+import { usePullToRefresh } from '../hooks/usePullToRefresh'
+import { usePrefetch } from '../hooks/usePrefetch'
+import { useHaptics } from '../hooks/useHaptics'
+import { useAdaptiveLoading } from '../hooks/useAdaptiveLoading'
+import { NetworkStatusBanner, AppUpdateBanner, PullToRefreshIndicator } from '../components/PWAFeatures'
 import api from '../lib/api'
 
 const StudentLayoutModern = () => {
@@ -46,6 +55,19 @@ const StudentLayoutModern = () => {
 
     // Initialize real-time updates via Socket.IO for the entire student session
     useSocketUpdates(user?.id, user?.class, user?.section)
+
+    // ─── Advanced PWA Hooks ─────────────────────────────────────
+    const networkStatus = useNetworkStatus()
+    const { updateAvailable, applyUpdate, dismissUpdate } = useAppUpdate()
+    const haptics = useHaptics()
+    const { enablePrefetch, enableAnimations } = useAdaptiveLoading()
+    const { pullProgress, isRefreshing, showIndicator } = usePullToRefresh()
+    usePrefetch({
+        enabled: enablePrefetch && networkStatus.isOnline,
+        userRoll: user?.roll,
+        userClass: user?.class,
+        userId: user?.id,
+    })
 
     const menuItems = [
         { path: '/student', icon: LayoutDashboard, label: 'Dashboard', exact: true },
@@ -93,8 +115,34 @@ const StudentLayoutModern = () => {
         navigate('/student-login')
     }
 
+    // Bottom nav tap handler with haptic feedback
+    const handleNavTap = (path) => {
+        haptics.tap()
+    }
+
     return (
         <div className="min-h-screen bg-[var(--light)]">
+            {/* ─── PWA Network Status Banner ─── */}
+            <NetworkStatusBanner
+                isOnline={networkStatus.isOnline}
+                wasOffline={networkStatus.wasOffline}
+                isSlowConnection={networkStatus.isSlowConnection}
+            />
+
+            {/* ─── Pull-to-Refresh Indicator ─── */}
+            <PullToRefreshIndicator
+                pullProgress={pullProgress}
+                isRefreshing={isRefreshing}
+                showIndicator={showIndicator}
+            />
+
+            {/* ─── App Update Banner ─── */}
+            {updateAvailable && (
+                <AppUpdateBanner
+                    onUpdate={applyUpdate}
+                    onDismiss={dismissUpdate}
+                />
+            )}
             {/* Mobile Header */}
             <header className={`fixed top-0 left-0 right-0 z-50 md:hidden transition-all duration-300 ${scrolled ? 'bg-white/95 backdrop-blur-xl shadow-md' : 'bg-white shadow-sm'
                 }`}>
@@ -277,6 +325,7 @@ const StudentLayoutModern = () => {
                         <Link
                             key={item.path}
                             to={item.path}
+                            onClick={() => handleNavTap(item.path)}
                             className={`relative flex flex-col items-center justify-center gap-0.5 flex-1 min-w-0 py-1.5 rounded-lg transition-all ${isActive(item.path, item.exact)
                                 ? 'text-[var(--primary)]'
                                 : 'text-gray-400'
@@ -307,9 +356,24 @@ const StudentLayoutModern = () => {
                         opacity: 1;
                     }
                 }
-                
                 .animate-slideIn {
                     animation: slideIn 0.3s ease-out;
+                }
+
+                @keyframes slideDown {
+                    from { transform: translateY(-100%); opacity: 0; }
+                    to { transform: translateY(0); opacity: 1; }
+                }
+                .animate-slideDown {
+                    animation: slideDown 0.3s ease-out;
+                }
+
+                @keyframes slideUp {
+                    from { transform: translateY(100%); opacity: 0; }
+                    to { transform: translateY(0); opacity: 1; }
+                }
+                .animate-slideUp {
+                    animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1);
                 }
             `}</style>
         </div>

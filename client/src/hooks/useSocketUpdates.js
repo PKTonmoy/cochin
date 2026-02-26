@@ -5,13 +5,39 @@ import toast from 'react-hot-toast';
 
 /**
  * Custom hook for Socket.IO real-time updates on student portal
- * Handles attendance and results update notifications
+ * Handles attendance, results, schedule, and notification updates
+ * Includes PWA visibility-change handling for instant refresh on foreground
  */
 export function useSocketUpdates(studentId, studentClass, studentSection) {
     const socketRef = useRef(null);
+    const hiddenAtRef = useRef(null); // tracks when page went to background
     const queryClient = useQueryClient();
 
-    // Connect to socket and setup event listeners
+    // ----- PWA Visibility Change Handler (battery-friendly) -----
+    useEffect(() => {
+        const BACKGROUND_THRESHOLD_MS = 30 * 1000; // 30 seconds
+
+        const handleVisibilityChange = () => {
+            if (document.hidden) {
+                // Page going to background — record timestamp
+                hiddenAtRef.current = Date.now();
+            } else {
+                // Page coming to foreground
+                const hiddenAt = hiddenAtRef.current;
+                hiddenAtRef.current = null;
+
+                if (hiddenAt && (Date.now() - hiddenAt) > BACKGROUND_THRESHOLD_MS) {
+                    console.log('📱 PWA returned from background (>30s), refreshing data…');
+                    queryClient.invalidateQueries();
+                }
+            }
+        };
+
+        document.addEventListener('visibilitychange', handleVisibilityChange);
+        return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+    }, [queryClient]);
+
+    // ----- Socket Connection & Event Listeners -----
     useEffect(() => {
         if (!studentId) return;
 

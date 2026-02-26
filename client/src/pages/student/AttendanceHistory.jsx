@@ -775,27 +775,68 @@ const AttendanceHistory = () => {
     return (
         <div className="max-w-7xl mx-auto space-y-5 md:space-y-6 animate-fadeIn px-3 sm:px-4 md:px-0 py-4 md:py-6">
 
-            {/* ─── Header ────────────────────────────────────────── */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                <div>
-                    <h1 className="text-xl md:text-2xl font-bold text-gray-900 flex items-center gap-2">
-                        <CalendarIcon className="w-6 h-6 text-[var(--primary)] hidden sm:block" />
-                        Attendance Dashboard
-                    </h1>
-                    <p className="text-sm text-gray-500 mt-0.5">
-                        Track your attendance records, trends & statistics
-                    </p>
+            {/* ─── Premium Header ────────────────────────────────── */}
+            <div className="relative mb-2">
+                <div className="bg-gradient-to-r from-teal-600 via-emerald-600 to-cyan-600 rounded-2xl p-6 text-white overflow-hidden relative">
+                    {/* Decorative elements */}
+                    <div className="absolute top-0 right-0 w-40 h-40 bg-white/5 rounded-full -translate-y-12 translate-x-12" />
+                    <div className="absolute bottom-0 left-20 w-24 h-24 bg-white/5 rounded-full translate-y-8" />
+                    <div className="absolute top-6 right-28 w-16 h-16 bg-white/5 rounded-full hidden md:block" />
+
+                    <div className="relative flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                        <div className="flex items-center gap-4">
+                            <div className="w-14 h-14 bg-white/15 backdrop-blur-sm rounded-2xl flex items-center justify-center border border-white/20">
+                                <CalendarIcon className="w-7 h-7 text-white" />
+                            </div>
+                            <div>
+                                <h1 className="text-2xl font-bold tracking-tight">Attendance Dashboard</h1>
+                                <p className="text-white/70 text-sm mt-0.5">
+                                    {stats ? (
+                                        <>
+                                            <span className="text-white/90 font-medium">{stats.percentage}%</span> overall attendance
+                                            {streaks.current > 0 && (
+                                                <span className="ml-2">
+                                                    • <Flame className="w-3.5 h-3.5 inline text-amber-300" /> {streaks.current} day streak
+                                                </span>
+                                            )}
+                                        </>
+                                    ) : 'Track your attendance records & trends'}
+                                </p>
+                            </div>
+                        </div>
+
+                        <div className="flex items-center gap-3">
+                            {stats && (
+                                <div className="hidden sm:flex items-center gap-3">
+                                    <div className="glass-stat px-3 py-2 rounded-xl text-center">
+                                        <div className="text-lg font-bold text-white">{stats.present}</div>
+                                        <div className="text-[10px] text-white/60 uppercase tracking-wider">Present</div>
+                                    </div>
+                                    <div className="glass-stat px-3 py-2 rounded-xl text-center">
+                                        <div className="text-lg font-bold text-white">{stats.absent}</div>
+                                        <div className="text-[10px] text-white/60 uppercase tracking-wider">Absent</div>
+                                    </div>
+                                </div>
+                            )}
+                            <button
+                                onClick={handleExport}
+                                className="flex items-center gap-2 px-4 py-2.5 bg-white/15 hover:bg-white/25 backdrop-blur-sm border border-white/20 rounded-xl text-sm font-medium transition-all duration-200"
+                            >
+                                <Download size={16} />
+                                <span className="hidden sm:inline">Export</span>
+                            </button>
+                        </div>
+                    </div>
                 </div>
-                <button
-                    onClick={handleExport}
-                    className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white border border-gray-200 text-sm font-medium text-gray-700 hover:bg-gray-50 hover:border-[var(--primary)] hover:text-[var(--primary)] transition-all shadow-sm active:scale-[0.97]"
-                    aria-label="Export attendance report as CSV"
-                >
-                    <Download size={16} />
-                    <span className="hidden sm:inline">Export Report</span>
-                    <span className="sm:hidden">Export</span>
-                </button>
             </div>
+
+            <style>{`
+                .glass-stat {
+                    background: rgba(255, 255, 255, 0.1);
+                    backdrop-filter: blur(8px);
+                    border: 1px solid rgba(255, 255, 255, 0.15);
+                }
+            `}</style>
 
             {/* ─── Attendance Alert Banner ────────────────────────── */}
             {belowThreshold && stats && (

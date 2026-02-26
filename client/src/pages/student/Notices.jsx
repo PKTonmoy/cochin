@@ -4,17 +4,18 @@
  * unread highlighting, mark-as-read, filters, and expandable notices
  */
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
     Bell, Check, CheckCheck, Clock, Calendar, FileText, AlertCircle,
     Filter, ChevronDown, ChevronUp, Megaphone, Loader2, X,
-    Sparkles, BellRing, ChevronLeft, ChevronRight
+    Sparkles, BellRing, ChevronLeft, ChevronRight, Trash2
 } from 'lucide-react'
 import { formatDistanceToNow, format } from 'date-fns'
 import api from '../../lib/api'
 
 const BROADCAST_READ_KEY = 'read-broadcast-notices'
+const HIDDEN_NOTICES_KEY = 'hidden-notices'
 
 function getLocalReadIds() {
     try {
@@ -26,6 +27,16 @@ function saveLocalReadIds(ids) {
     localStorage.setItem(BROADCAST_READ_KEY, JSON.stringify([...ids]))
 }
 
+function getHiddenNoticeIds() {
+    try {
+        return new Set(JSON.parse(localStorage.getItem(HIDDEN_NOTICES_KEY) || '[]'))
+    } catch { return new Set() }
+}
+
+function saveHiddenNoticeIds(ids) {
+    localStorage.setItem(HIDDEN_NOTICES_KEY, JSON.stringify([...ids]))
+}
+
 export default function Notices() {
     const queryClient = useQueryClient()
     const [page, setPage] = useState(1)
@@ -34,6 +45,12 @@ export default function Notices() {
     const [expandedId, setExpandedId] = useState(null)
     const [showFilters, setShowFilters] = useState(false)
     const [localReadIds, setLocalReadIds] = useState(getLocalReadIds)
+    const [hiddenIds, setHiddenIds] = useState(getHiddenNoticeIds)
+    const [deleteConfirm, setDeleteConfirm] = useState(null) // notice to confirm delete
+
+    // Long-press detection refs
+    const longPressTimer = useRef(null)
+    const longPressTriggered = useRef(false)
 
     // Fetch student notices
     const { data, isLoading } = useQuery({
@@ -45,6 +62,7 @@ export default function Notices() {
             const response = await api.get(`/notifications/student-notices?${params}`)
             return response.data.data
         },
+        refetchOnMount: 'always', // always refetch when page is visited
         refetchInterval: 60000
     })
 
@@ -81,13 +99,46 @@ export default function Notices() {
 
     // Merge backend isRead with local read tracking for broadcast/class notices
     const isSharedNotice = (n) => ['all', 'class'].includes(n.recipientType)
-    const notices = rawNotices.map(n => ({
-        ...n,
-        isRead: isSharedNotice(n) ? localReadIds.has(n._id) : n.isRead
-    }))
+    const notices = rawNotices
+        .filter(n => !hiddenIds.has(n._id)) // Filter out locally deleted notices
+        .map(n => ({
+            ...n,
+            isRead: isSharedNotice(n) ? localReadIds.has(n._id) : n.isRead
+        }))
     const unreadCount = notices.filter(n => !n.isRead).length
 
+    // ─── Long-press handlers ────────────────────────────────────
+    const handleLongPressStart = useCallback((notice, e) => {
+        longPressTriggered.current = false
+        longPressTimer.current = setTimeout(() => {
+            longPressTriggered.current = true
+            // Haptic feedback
+            if (navigator.vibrate) navigator.vibrate(30)
+            setDeleteConfirm(notice)
+        }, 500) // 500ms long press
+    }, [])
+
+    const handleLongPressEnd = useCallback(() => {
+        if (longPressTimer.current) {
+            clearTimeout(longPressTimer.current)
+            longPressTimer.current = null
+        }
+    }, [])
+
+    const handleDeleteNotice = useCallback((noticeId) => {
+        const updated = new Set(hiddenIds)
+        updated.add(noticeId)
+        setHiddenIds(updated)
+        saveHiddenNoticeIds(updated)
+        setDeleteConfirm(null)
+        if (expandedId === noticeId) setExpandedId(null)
+        // Success haptic
+        if (navigator.vibrate) navigator.vibrate([10, 50, 10])
+    }, [hiddenIds, expandedId])
+
     const handleNoticeClick = (notice) => {
+        // Don't open if long press was triggered
+        if (longPressTriggered.current) return
         setExpandedId(expandedId === notice._id ? null : notice._id)
         if (!notice.isRead) {
             if (isSharedNotice(notice)) {
@@ -318,7 +369,7 @@ export default function Notices() {
                                 <div
                                     key={notice._id}
                                     className={`
-                                    bg-white rounded-2xl overflow-hidden transition-all duration-300 cursor-pointer
+                                    bg-white rounded-2xl overflow-hidden transition-all duration-300 cursor-pointer select-none
                                     ${getPriorityAccent(notice.priority)}
                                     ${!notice.isRead
                                             ? 'shadow-md shadow-indigo-100 ring-1 ring-indigo-100'
@@ -327,6 +378,10 @@ export default function Notices() {
                                     ${isExpanded ? 'shadow-lg ring-1 ring-indigo-200' : ''}
                                 `}
                                     onClick={() => handleNoticeClick(notice)}
+                                    onTouchStart={(e) => handleLongPressStart(notice, e)}
+                                    onTouchEnd={handleLongPressEnd}
+                                    onTouchMove={handleLongPressEnd}
+                                    onContextMenu={(e) => { e.preventDefault(); setDeleteConfirm(notice) }}
                                     style={{ animationDelay: `${index * 50}ms` }}
                                 >
                                     {/* Notice header */}
@@ -435,6 +490,61 @@ export default function Notices() {
                     </div>
                 )}
             </div>
+
+            {/* Delete Confirmation Modal */}
+            {deleteConfirm && (
+                <div
+                    className="fixed inset-0 z-[200] flex items-end sm:items-center justify-center p-4"
+                    onClick={() => setDeleteConfirm(null)}
+                >
+                    {/* Backdrop */}
+                    <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
+
+                    {/* Modal */}
+                    <div
+                        className="relative bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden animate-slideUp"
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <div className="p-6 text-center">
+                            <div className="w-14 h-14 bg-red-50 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                                <Trash2 className="w-7 h-7 text-red-500" />
+                            </div>
+                            <h3 className="text-lg font-bold text-gray-900 mb-1">Delete Notice?</h3>
+                            <p className="text-sm text-gray-500 mb-1 line-clamp-1 font-medium">
+                                {deleteConfirm.title}
+                            </p>
+                            <p className="text-xs text-gray-400">
+                                This will only remove it from your device
+                            </p>
+                        </div>
+                        <div className="flex border-t border-gray-100">
+                            <button
+                                onClick={() => setDeleteConfirm(null)}
+                                className="flex-1 py-3.5 text-sm font-semibold text-gray-600 hover:bg-gray-50 transition-colors"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={() => handleDeleteNotice(deleteConfirm._id)}
+                                className="flex-1 py-3.5 text-sm font-semibold text-red-600 hover:bg-red-50 transition-colors border-l border-gray-100"
+                            >
+                                Delete
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Animations */}
+            <style>{`
+                @keyframes slideUp {
+                    from { transform: translateY(100%); opacity: 0; }
+                    to { transform: translateY(0); opacity: 1; }
+                }
+                .animate-slideUp {
+                    animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+                }
+            `}</style>
         </div>
     )
 }
