@@ -73,6 +73,10 @@ const smsSettingsSchema = new mongoose.Schema({
         type: String,
         default: 'Dear {studentName}, Your {testName} result: {score}/{total}. Highest Score: {highest}. Visit {website} for details. - PARAGON'
     },
+    noticeSmsTemplate: {
+        type: String,
+        default: 'Notice: {title} - {message}. Login to portal for details.'
+    },
     websiteUrl: { type: String, trim: true, default: '' }
 }, { _id: false });
 

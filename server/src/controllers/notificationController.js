@@ -6,10 +6,22 @@
 
 const Notification = require('../models/Notification');
 const Student = require('../models/Student');
+const GlobalSettings = require('../models/GlobalSettings');
 const { ApiError } = require('../middleware/errorHandler');
 const notificationService = require('../services/notificationService');
 const pushService = require('../services/pushService');
 const smsService = require('../services/smsService');
+
+/**
+ * Build the notice SMS text from the saved template.
+ * Supports placeholders: {title}, {message}
+ */
+function buildNoticeSmsText(template, title, message) {
+    const truncatedMsg = message.length > 100 ? message.substring(0, 100) : message;
+    return template
+        .replace(/\{title\}/g, title)
+        .replace(/\{message\}/g, truncatedMsg);
+}
 
 /**
  * Get notifications for the current user
@@ -306,6 +318,7 @@ exports.sendNotice = async (req, res, next) => {
             studentIds = [],          // for targetType = 'students'
             channels = { portal: true, push: false, sms: false },
             scheduledAt,              // ISO date string for scheduling
+            smsTemplate: customSmsTemplate, // optional per-notice SMS template override
             type = 'general'
         } = req.body;
 
@@ -365,9 +378,12 @@ exports.sendNotice = async (req, res, next) => {
 
             // Send SMS if enabled
             if (channels.sms) {
+                const settings = await GlobalSettings.getSettings();
+                const smsTemplate = customSmsTemplate || settings?.smsSettings?.noticeSmsTemplate || 'Notice: {title} - {message}. Login to portal for details.';
+                const smsText = buildNoticeSmsText(smsTemplate, title, message);
                 const smsResult = await smsService.sendCustomSms(
                     { studentIds },
-                    `Notice: ${title} - ${message.substring(0, 100)}. Login to portal for details.`,
+                    smsText,
                     'guardianPhone',
                     req.user.id
                 );
@@ -407,9 +423,12 @@ exports.sendNotice = async (req, res, next) => {
                 filters.class = targetClass;
                 if (targetSection) filters.section = targetSection;
             }
+            const settings = await GlobalSettings.getSettings();
+            const smsTemplate = customSmsTemplate || settings?.smsSettings?.noticeSmsTemplate || 'Notice: {title} - {message}. Login to portal for details.';
+            const smsText = buildNoticeSmsText(smsTemplate, title, message);
             const smsResult = await smsService.sendCustomSms(
                 filters,
-                `Notice: ${title} - ${message.substring(0, 100)}. Login to portal for details.`,
+                smsText,
                 'guardianPhone',
                 req.user.id
             );

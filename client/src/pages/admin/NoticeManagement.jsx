@@ -9,7 +9,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
     Bell, Send, Clock, Users, Search, Filter, ChevronDown, ChevronUp,
     CheckCircle2, XCircle, AlertCircle, Calendar, Megaphone,
-    Smartphone, MessageSquare, Monitor, Loader2, RefreshCw, Eye
+    Smartphone, MessageSquare, Monitor, Loader2, RefreshCw, Eye, Settings2
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import api from '../../lib/api'
@@ -74,8 +74,32 @@ function ComposeNotice() {
     const [selectedStudents, setSelectedStudents] = useState([])
     const [studentSearch, setStudentSearch] = useState('')
     const [channels, setChannels] = useState({ portal: true, push: true, sms: false })
+    const [smsTemplate, setSmsTemplate] = useState('')
+    const [defaultSmsTemplate, setDefaultSmsTemplate] = useState('')
+    const [showTemplateEditor, setShowTemplateEditor] = useState(false)
     const [isScheduled, setIsScheduled] = useState(false)
     const [scheduledAt, setScheduledAt] = useState('')
+
+    // Fetch default SMS template from settings
+    const { data: settingsData } = useQuery({
+        queryKey: ['sms-settings-template'],
+        queryFn: async () => {
+            const res = await api.get('/settings')
+            return res.data?.data?.smsSettings || {}
+        },
+        staleTime: 60000
+    })
+
+    useEffect(() => {
+        if (settingsData?.noticeSmsTemplate) {
+            setDefaultSmsTemplate(settingsData.noticeSmsTemplate)
+            if (!smsTemplate) setSmsTemplate(settingsData.noticeSmsTemplate)
+        } else if (!smsTemplate) {
+            const fallback = 'Notice: {title} - {message}. Login to portal for details.'
+            setDefaultSmsTemplate(fallback)
+            setSmsTemplate(fallback)
+        }
+    }, [settingsData])
     const [showStudentDropdown, setShowStudentDropdown] = useState(false)
 
     // Fetch classes for the dropdown
@@ -128,6 +152,8 @@ function ComposeNotice() {
             setTargetSection('')
             setSelectedStudents([])
             setChannels({ portal: true, push: true, sms: false })
+            setSmsTemplate(defaultSmsTemplate)
+            setShowTemplateEditor(false)
             setIsScheduled(false)
             setScheduledAt('')
         },
@@ -156,7 +182,8 @@ function ComposeNotice() {
             priority,
             targetType,
             channels,
-            type: 'general'
+            type: 'general',
+            smsTemplate: channels.sms ? smsTemplate : undefined
         }
 
         if (targetType === 'class') {
@@ -169,7 +196,8 @@ function ComposeNotice() {
         }
 
         if (isScheduled && scheduledAt) {
-            payload.scheduledAt = scheduledAt
+            // Convert local datetime to ISO with timezone so the server interprets it correctly
+            payload.scheduledAt = new Date(scheduledAt).toISOString()
         }
 
         sendNoticeMutation.mutate(payload)
@@ -382,6 +410,56 @@ function ComposeNotice() {
                         </label>
                     ))}
                 </div>
+
+                {/* SMS Template Editor - shown when SMS is selected */}
+                {channels.sms && (
+                    <div className="mt-4 p-4 bg-purple-50/50 border border-purple-200 rounded-xl space-y-3">
+                        <button
+                            type="button"
+                            onClick={() => setShowTemplateEditor(!showTemplateEditor)}
+                            className="flex items-center gap-2 text-sm font-medium text-purple-700 hover:text-purple-900 transition-colors"
+                        >
+                            <Settings2 className="w-4 h-4" />
+                            SMS Template
+                            {showTemplateEditor ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+                        </button>
+                        {showTemplateEditor && (
+                            <div className="space-y-3">
+                                <textarea
+                                    value={smsTemplate}
+                                    onChange={e => setSmsTemplate(e.target.value)}
+                                    rows={3}
+                                    className="w-full px-3 py-2 border border-purple-300 rounded-lg text-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500 bg-white"
+                                    placeholder="SMS template..."
+                                />
+                                <div className="flex items-center justify-between">
+                                    <p className="text-xs text-purple-600">
+                                        Placeholders: <code className="bg-purple-100 px-1 rounded">{'{title}'}</code>{' '}
+                                        <code className="bg-purple-100 px-1 rounded">{'{message}'}</code> (auto-truncated to 100 chars)
+                                    </p>
+                                    <button
+                                        type="button"
+                                        onClick={() => setSmsTemplate(defaultSmsTemplate)}
+                                        className="text-xs text-purple-500 hover:text-purple-700 underline"
+                                    >
+                                        Reset to default
+                                    </button>
+                                </div>
+                                {title && message && (
+                                    <div className="p-3 bg-white border border-purple-200 rounded-lg">
+                                        <p className="text-xs font-medium text-gray-500 mb-1">Preview:</p>
+                                        <p className="text-sm text-gray-800">
+                                            {smsTemplate
+                                                .replace(/\{title\}/g, title)
+                                                .replace(/\{message\}/g, message.length > 100 ? message.substring(0, 100) + '...' : message)
+                                            }
+                                        </p>
+                                    </div>
+                                )}
+                            </div>
+                        )}
+                    </div>
+                )}
             </div>
 
             {/* Schedule */}

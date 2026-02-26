@@ -322,9 +322,16 @@ async function processScheduledNotifications() {
                     if (notification.metadata?.studentIds?.length > 0) {
                         filters.studentIds = notification.metadata.studentIds;
                     }
+                    const GlobalSettings = require('../models/GlobalSettings');
+                    const settings = await GlobalSettings.getSettings();
+                    const smsTemplate = settings?.smsSettings?.noticeSmsTemplate || 'Notice: {title} - {message}. Login to portal for details.';
+                    const truncatedMsg = notification.message.length > 100 ? notification.message.substring(0, 100) : notification.message;
+                    const smsText = smsTemplate
+                        .replace(/\{title\}/g, notification.title)
+                        .replace(/\{message\}/g, truncatedMsg);
                     smsService.sendCustomSms(
                         filters,
-                        `Notice: ${notification.title} - ${notification.message.substring(0, 100)}. Login to portal for details.`,
+                        smsText,
                         'guardianPhone'
                     ).catch(err => {
                         console.error(`[Cron] Failed to send SMS for scheduled notification ${notification._id}:`, err);
