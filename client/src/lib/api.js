@@ -35,6 +35,12 @@ api.interceptors.response.use(
     async (error) => {
         const originalRequest = error.config
 
+        // Do not attempt token refresh for login requests
+        const isAuthRequest = originalRequest.url?.includes('/auth/login') || originalRequest.url?.includes('/auth/student-login')
+        if (error.response?.status === 401 && isAuthRequest) {
+            return Promise.reject(error)
+        }
+
         // If token expired and we haven't tried refreshing yet
         if (error.response?.status === 401 && !originalRequest._retry) {
             originalRequest._retry = true
