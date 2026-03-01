@@ -41,7 +41,7 @@ export function useSocketUpdates(studentId, studentClass, studentSection) {
     useEffect(() => {
         if (!studentId) return;
 
-        const socketUrl = import.meta.env.PROD ? '/' : (import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:5000');
+        const socketUrl = import.meta.env.PROD ? '/' : (import.meta.env.VITE_API_URL?.replace('/api', '') || `http://${window.location.hostname}:5000`);
 
         // Initialize socket connection
         socketRef.current = io(socketUrl, {

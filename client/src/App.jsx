@@ -54,9 +54,13 @@ import GlobalSettings from './pages/admin/GlobalSettings'
 import SMSManagement from './pages/admin/SMSManagement'
 import PWAQRSettings from './pages/admin/PWAQRSettings'
 import NoticeManagement from './pages/admin/NoticeManagement'
+import MarketingDashboard from './pages/admin/MarketingDashboard'
 
 // Smart redirect page (portal entry)
 import PortalEntryPage from './pages/public/PortalEntryPage'
+
+// QR Video page (marketing module — standalone, no layout)
+import QrVideoPage from './pages/public/QrVideoPage'
 
 // Student pages
 import StudentDashboard from './pages/student/DashboardV2'
@@ -132,6 +136,8 @@ function App() {
       <Routes>
         {/* Portal entry — smart redirect (no layout wrapper) */}
         <Route path="/portal-entry" element={<PortalEntryPage />} />
+        {/* QR Video page — standalone immersive experience (marketing module) */}
+        <Route path="/qr/:id" element={<QrVideoPage />} />
 
         {/* Public routes */}
         <Route element={<PublicLayout />}>
@@ -208,6 +214,7 @@ function App() {
           <Route path="sms-management" element={<SMSManagement />} />
           <Route path="pwa-qr" element={<PWAQRSettings />} />
           <Route path="notice-management" element={<NoticeManagement />} />
+          <Route path="marketing" element={<MarketingDashboard />} />
         </Route>
 
         {/* Student routes */}

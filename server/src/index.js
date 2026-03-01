@@ -78,6 +78,8 @@ app.use(helmet({
       "img-src": ["'self'", "data:", "blob:", "https://res.cloudinary.com"],
       "script-src": ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
       "connect-src": ["'self'", "https://res.cloudinary.com", "wss:", "ws:"],
+      "media-src": ["'self'", "https://res.cloudinary.com", "blob:"],
+      "frame-src": ["'self'", "https://www.youtube.com", "https://player.vimeo.com"],
     },
   },
   crossOriginResourcePolicy: { policy: "cross-origin" }
@@ -85,7 +87,7 @@ app.use(helmet({
 
 // CORS configuration
 app.use(cors({
-  origin: process.env.CLIENT_URL || 'http://localhost:5173',
+  origin: process.env.CLIENT_URL || ['http://localhost:5173', 'http://192.168.1.10:5173'],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
   allowedHeaders: ['Content-Type', 'Authorization']
@@ -158,6 +160,10 @@ const qrRoutes = require('./routes/qr');
 app.use('/api/pwa-settings', pwaSettingsRoutes);
 app.use('/api/qr', qrRoutes);
 
+// Marketing Module routes (isolated)
+const marketingRoutes = require('./routes/marketing');
+app.use('/api/marketing', marketingRoutes);
+
 // PWA: Dynamic manifest.json from admin settings
 const pwaRoutes = require('./routes/pwa');
 app.use(pwaRoutes);
@@ -192,7 +198,7 @@ app.use(errorHandler);
 const PORT = process.env.PORT || 5000;
 
 if (process.env.NODE_ENV !== 'test') {
-  server.listen(PORT, () => {
+  server.listen(PORT, '0.0.0.0', () => {
     console.log(`🚀 PARAGON Server running on port ${PORT}`);
     console.log(`📝 Environment: ${process.env.NODE_ENV || 'development'}`);
     console.log(`🔌 Socket.io enabled`);
