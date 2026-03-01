@@ -317,13 +317,6 @@ exports.publishTest = async (req, res, next) => {
         test.publishedAt = new Date();
         await test.save();
 
-        // Send notification to students about published results
-        try {
-            await notificationService.notifyTest(test, 'result_published', { userId: req.user.id });
-        } catch (err) {
-            console.error('[Test] Failed to send result published notification:', err.message);
-        }
-
         await AuditLog.log({
             action: 'test_published',
             userId: req.user.id,
