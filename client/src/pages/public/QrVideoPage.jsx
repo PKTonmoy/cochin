@@ -2,10 +2,13 @@
  * QrVideoPage.jsx
  * Standalone immersive QR code video experience page
  * 
- * - Full-screen video player with only play/pause controls
- * - Back button interception (disabled during video)
+ * OPTIMIZED VERSION:
+ * - Hidden iframe preloads the redirect target while video plays
+ * - Crossfade transition eliminates hard "white flash" on redirect
+ * - Premium skeleton loading with shimmer effect
+ * - Preconnect hints for faster resource loading
+ * - Video buffering progress indicator
  * - Post-video animations (logo/confetti/ripple/zoom)
- * - Redirect after animation completes
  * - Analytics: logs scan on mount, completion on video end
  */
 
@@ -14,6 +17,188 @@ import { useParams } from 'react-router-dom'
 import axios from 'axios'
 
 const API_URL = import.meta.env.VITE_API_URL || '/api'
+
+// ============================================================
+// PRECONNECT HINTS — Inject on mount for faster resource loading
+// ============================================================
+function PreconnectHints() {
+    useEffect(() => {
+        const hints = [
+            { rel: 'preconnect', href: 'https://res.cloudinary.com' },
+            { rel: 'preconnect', href: 'https://fonts.googleapis.com' },
+            { rel: 'preconnect', href: 'https://fonts.gstatic.com', crossOrigin: 'anonymous' },
+            { rel: 'dns-prefetch', href: 'https://www.youtube.com' },
+            { rel: 'dns-prefetch', href: 'https://player.vimeo.com' }
+        ]
+        const links = hints.map(h => {
+            const link = document.createElement('link')
+            link.rel = h.rel
+            link.href = h.href
+            if (h.crossOrigin) link.crossOrigin = h.crossOrigin
+            document.head.appendChild(link)
+            return link
+        })
+        return () => links.forEach(l => l.parentNode?.removeChild(l))
+    }, [])
+    return null
+}
+
+// ============================================================
+// HIDDEN PRELOADER — loads redirect target while video plays
+// ============================================================
+function HiddenPreloader({ url }) {
+    const [loaded, setLoaded] = useState(false)
+
+    useEffect(() => {
+        if (!url) return
+        // Also prefetch key assets
+        try {
+            const link = document.createElement('link')
+            link.rel = 'prefetch'
+            link.href = url
+            document.head.appendChild(link)
+            return () => link.parentNode?.removeChild(link)
+        } catch (e) { /* silent */ }
+    }, [url])
+
+    if (!url) return null
+
+    return (
+        <iframe
+            src={url}
+            onLoad={() => setLoaded(true)}
+            style={{
+                position: 'fixed', top: '-9999px', left: '-9999px',
+                width: '1px', height: '1px', opacity: 0,
+                pointerEvents: 'none', border: 'none'
+            }}
+            tabIndex={-1}
+            aria-hidden="true"
+            sandbox="allow-scripts allow-same-origin"
+            title="Preload"
+        />
+    )
+}
+
+// ============================================================
+// CROSSFADE TRANSITION — smooth redirect with fade
+// ============================================================
+function CrossfadeTransition({ targetUrl, onStart }) {
+    const [phase, setPhase] = useState('enter') // enter -> hold -> navigate
+
+    useEffect(() => {
+        onStart?.()
+        // Phase 1: Fade in white overlay
+        const t1 = setTimeout(() => setPhase('hold'), 600)
+        // Phase 2: Navigate after overlay is opaque
+        const t2 = setTimeout(() => {
+            window.location.href = targetUrl || '/'
+        }, 900)
+        return () => { clearTimeout(t1); clearTimeout(t2) }
+    }, [targetUrl, onStart])
+
+    return (
+        <div style={{
+            position: 'fixed', inset: 0, zIndex: 999999,
+            background: '#fff',
+            opacity: phase === 'enter' ? 0 : 1,
+            transition: 'opacity 0.6s ease-in-out',
+            pointerEvents: 'all'
+        }} />
+    )
+}
+
+// ============================================================
+// PREMIUM LOADING SKELETON
+// ============================================================
+function PremiumLoader() {
+    return (
+        <div style={styles.loading}>
+            <style>{`
+                ${baseCSS}
+                .mkt-qr-loader {
+                    display: flex; flex-direction: column; align-items: center; gap: 24px;
+                }
+                .mkt-qr-logo-pulse {
+                    width: 72px; height: 72px; border-radius: 20px;
+                    background: linear-gradient(135deg, rgba(255,255,255,0.1), rgba(255,255,255,0.05));
+                    display: flex; align-items: center; justify-content: center;
+                    animation: mkt-breathe 2s ease-in-out infinite;
+                    backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.1);
+                }
+                .mkt-qr-shimmer-bar {
+                    width: 200px; height: 4px; border-radius: 4px; overflow: hidden;
+                    background: rgba(255,255,255,0.1);
+                }
+                .mkt-qr-shimmer-fill {
+                    width: 40%; height: 100%; border-radius: 4px;
+                    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent);
+                    animation: mkt-shimmer 1.5s ease-in-out infinite;
+                }
+                .mkt-qr-loading-text {
+                    color: rgba(255,255,255,0.4); font-size: 13px; font-weight: 500;
+                    font-family: 'Inter', sans-serif; letter-spacing: 1px;
+                    animation: mkt-fadeInOut 2s ease-in-out infinite;
+                }
+                @keyframes mkt-breathe { 0%,100%{transform:scale(1);opacity:0.8} 50%{transform:scale(1.05);opacity:1} }
+                @keyframes mkt-shimmer { 0%{transform:translateX(-200%)} 100%{transform:translateX(400%)} }
+                @keyframes mkt-fadeInOut { 0%,100%{opacity:0.3} 50%{opacity:0.7} }
+            `}</style>
+            <div className="mkt-qr-loader">
+                <div className="mkt-qr-logo-pulse">
+                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.6)" strokeWidth="1.5">
+                        <polygon points="5,3 19,12 5,21" />
+                    </svg>
+                </div>
+                <div className="mkt-qr-shimmer-bar">
+                    <div className="mkt-qr-shimmer-fill" />
+                </div>
+                <div className="mkt-qr-loading-text">LOADING</div>
+            </div>
+        </div>
+    )
+}
+
+// ============================================================
+// VIDEO BUFFER INDICATOR
+// ============================================================
+function BufferIndicator({ videoRef, playing }) {
+    const [buffering, setBuffering] = useState(false)
+
+    useEffect(() => {
+        const v = videoRef?.current
+        if (!v) return
+        const onWaiting = () => setBuffering(true)
+        const onPlaying = () => setBuffering(false)
+        const onCanPlay = () => setBuffering(false)
+        v.addEventListener('waiting', onWaiting)
+        v.addEventListener('playing', onPlaying)
+        v.addEventListener('canplay', onCanPlay)
+        return () => {
+            v.removeEventListener('waiting', onWaiting)
+            v.removeEventListener('playing', onPlaying)
+            v.removeEventListener('canplay', onCanPlay)
+        }
+    }, [videoRef])
+
+    if (!buffering || !playing) return null
+
+    return (
+        <div style={{
+            position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%, -50%)',
+            zIndex: 15, pointerEvents: 'none'
+        }}>
+            <style>{`
+                .mkt-buffer-ring {
+                    width: 48px; height: 48px; border: 3px solid rgba(255,255,255,0.15);
+                    border-top-color: rgba(255,255,255,0.8); border-radius: 50%;
+                    animation: mkt-spin 0.7s linear infinite;
+                }
+            `}</style>
+            <div className="mkt-buffer-ring" />
+        </div>
+    )
+}
 
 // ============================================================
 // POST-VIDEO ANIMATION COMPONENTS
@@ -188,6 +373,8 @@ export default function QrVideoPage() {
     const [progress, setProgress] = useState(0)
     const [showAnimation, setShowAnimation] = useState(false)
     const [showControls, setShowControls] = useState(true)
+    const [showCrossfade, setShowCrossfade] = useState(false)
+    const [preloadStarted, setPreloadStarted] = useState(false)
 
     // ---- Fetch video data, site settings & log scan ----
     useEffect(() => {
@@ -200,10 +387,11 @@ export default function QrVideoPage() {
                 ])
                 if (videoRes.data.success) {
                     setVideo(videoRes.data.data)
+                    // Start preloading after a short delay to prioritize video
+                    setTimeout(() => setPreloadStarted(true), 2000)
                 } else {
                     setError('Video not found')
                 }
-                // Store site info for animations (logo, name)
                 if (settingsRes?.data?.data?.siteInfo) {
                     setSiteInfo(settingsRes.data.data.siteInfo)
                 }
@@ -218,7 +406,6 @@ export default function QrVideoPage() {
 
     // ---- Disable back button ----
     useEffect(() => {
-        // Push extra history states to trap the back button
         window.history.pushState(null, '', window.location.href)
         window.history.pushState(null, '', window.location.href)
 
@@ -258,17 +445,16 @@ export default function QrVideoPage() {
     }
 
     const handleVideoEnd = useCallback(async () => {
-        // Log completion
         try {
             await axios.post(`${API_URL}/marketing/qr/${id}/complete`)
         } catch (e) { /* silent */ }
         setShowAnimation(true)
     }, [id])
 
+    // Crossfade redirect instead of hard navigate
     const handleAnimationComplete = useCallback(() => {
-        const redirectUrl = video?.redirectUrl || '/'
-        window.location.href = redirectUrl
-    }, [video])
+        setShowCrossfade(true)
+    }, [])
 
     const togglePlay = () => {
         const v = videoRef.current
@@ -290,7 +476,6 @@ export default function QrVideoPage() {
                 if (el.requestFullscreen) el.requestFullscreen().catch(() => { })
                 else if (el.webkitRequestFullscreen) el.webkitRequestFullscreen()
             }
-            // Only try on user interaction
             const handler = () => {
                 tryFullscreen()
                 document.removeEventListener('click', handler)
@@ -306,7 +491,6 @@ export default function QrVideoPage() {
         if (video && videoRef.current && video.videoType === 'upload') {
             const v = videoRef.current
             v.play().then(() => setPlaying(true)).catch(() => {
-                // Autoplay blocked — show play button
                 setPlaying(false)
             })
         }
@@ -315,12 +499,26 @@ export default function QrVideoPage() {
     // --------------------------------------------------------
     // RENDER
     // --------------------------------------------------------
+
+    // Crossfade overlay (renders on top of everything)
+    if (showCrossfade) {
+        return (
+            <>
+                <CrossfadeTransition targetUrl={video?.redirectUrl || '/'} />
+                {showAnimation && (() => {
+                    const AnimComponent = ANIMATIONS[video?.animationStyle] || ConfettiAnimation
+                    return <AnimComponent onComplete={() => { }} siteInfo={siteInfo} />
+                })()}
+            </>
+        )
+    }
+
     if (loading) {
         return (
-            <div style={styles.loading}>
-                <style>{baseCSS}</style>
-                <div className="mkt-qr-spinner" />
-            </div>
+            <>
+                <PreconnectHints />
+                <PremiumLoader />
+            </>
         )
     }
 
@@ -341,7 +539,13 @@ export default function QrVideoPage() {
     // Post-video animation
     if (showAnimation) {
         const AnimComponent = ANIMATIONS[video.animationStyle] || ConfettiAnimation
-        return <AnimComponent onComplete={handleAnimationComplete} siteInfo={siteInfo} />
+        return (
+            <>
+                <AnimComponent onComplete={handleAnimationComplete} siteInfo={siteInfo} />
+                {/* Keep preloader running through animation */}
+                {preloadStarted && <HiddenPreloader url={video.redirectUrl || '/'} />}
+            </>
+        )
     }
 
     const isEmbed = video.videoType === 'youtube' || video.videoType === 'vimeo'
@@ -350,6 +554,10 @@ export default function QrVideoPage() {
     return (
         <div style={styles.container}>
             <style>{baseCSS}</style>
+            <PreconnectHints />
+
+            {/* Hidden preloader — loads redirect target while video plays */}
+            {preloadStarted && <HiddenPreloader url={video.redirectUrl || '/'} />}
 
             {/* OG Meta tags */}
             {video.title && <title>{video.title}</title>}
@@ -368,17 +576,21 @@ export default function QrVideoPage() {
                     <div style={styles.embedOverlay} onClick={togglePlay} />
                 </div>
             ) : (
-                <video
-                    ref={videoRef}
-                    src={video.videoSource}
-                    style={styles.video}
-                    playsInline
-                    onTimeUpdate={handleTimeUpdate}
-                    onEnded={handleVideoEnd}
-                    onClick={togglePlay}
-                    onPlay={() => setPlaying(true)}
-                    onPause={() => setPlaying(false)}
-                />
+                <>
+                    <video
+                        ref={videoRef}
+                        src={video.videoSource}
+                        style={styles.video}
+                        playsInline
+                        preload="auto"
+                        onTimeUpdate={handleTimeUpdate}
+                        onEnded={handleVideoEnd}
+                        onClick={togglePlay}
+                        onPlay={() => setPlaying(true)}
+                        onPause={() => setPlaying(false)}
+                    />
+                    <BufferIndicator videoRef={videoRef} playing={playing} />
+                </>
             )}
 
             {/* Custom Controls Overlay */}
@@ -428,7 +640,7 @@ const styles = {
         zIndex: 99999, fontFamily: "'Inter', -apple-system, sans-serif"
     },
     loading: {
-        position: 'fixed', inset: 0, background: '#000',
+        position: 'fixed', inset: 0, background: 'linear-gradient(135deg, #0a0a0a, #1a1a2e)',
         display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 99999
     },
     error: {

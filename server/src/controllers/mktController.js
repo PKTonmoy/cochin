@@ -425,6 +425,7 @@ const getActiveMarketing = async (req, res) => {
         // Check master toggle
         const settings = await MktSettings.getSettings();
         if (!settings.marketingEnabled) {
+            res.set('Cache-Control', 'public, max-age=60');
             return res.json({
                 success: true,
                 data: { enabled: false, popups: [], promos: [], banners: [] }
@@ -432,6 +433,9 @@ const getActiveMarketing = async (req, res) => {
         }
 
         const now = new Date();
+
+        // Lean projection — exclude internal fields from public response
+        const leanSelect = '-__v -createdAt -updatedAt';
 
         // Active popups (within date range or no date set)
         const popups = await MktPopup.find({
@@ -442,10 +446,11 @@ const getActiveMarketing = async (req, res) => {
                 { startDate: null, endDate: { $gte: now } },
                 { startDate: { $lte: now }, endDate: { $gte: now } }
             ]
-        }).sort({ createdAt: -1 });
+        }).select(leanSelect).sort({ createdAt: -1 }).lean();
 
         // Active promo sections
-        const promos = await MktPromoSection.find({ isActive: true }).sort({ sortOrder: 1 });
+        const promos = await MktPromoSection.find({ isActive: true })
+            .select(leanSelect).sort({ sortOrder: 1 }).lean();
 
         // Active offer banners (within date range and not expired)
         const banners = await MktOfferBanner.find({
@@ -456,7 +461,10 @@ const getActiveMarketing = async (req, res) => {
                 { startDate: null, endDate: { $gte: now } },
                 { startDate: { $lte: now }, endDate: { $gte: now } }
             ]
-        }).sort({ createdAt: -1 });
+        }).select(leanSelect).sort({ createdAt: -1 }).lean();
+
+        // Cache for 5 minutes — CDN and browser will skip repeat requests
+        res.set('Cache-Control', 'public, max-age=300, stale-while-revalidate=60');
 
         res.json({
             success: true,
@@ -478,10 +486,14 @@ const getActiveMarketing = async (req, res) => {
  */
 const getQrVideoPublic = async (req, res) => {
     try {
-        const video = await MktQrVideo.findById(req.params.id);
+        const video = await MktQrVideo.findById(req.params.id)
+            .select('-__v -createdAt -updatedAt -qrCodePublicId -videoPublicId')
+            .lean();
         if (!video || !video.isActive) {
             return res.status(404).json({ success: false, message: 'Video not found or inactive' });
         }
+        // Cache for 1 minute
+        res.set('Cache-Control', 'public, max-age=60, stale-while-revalidate=30');
         res.json({ success: true, data: video });
     } catch (error) {
         console.error('[MKT] getQrVideoPublic error:', error);

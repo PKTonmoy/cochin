@@ -116,10 +116,13 @@
     }
   </script>
 
-  <!-- ===== Marketing Module (isolated) ===== -->
-  <link rel="stylesheet" href="/marketing.css">
+  <!-- ===== Marketing Module (isolated, non-blocking) ===== -->
+  <link rel="preload" href="/marketing.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
+  <noscript>
+    <link rel="stylesheet" href="/marketing.css">
+  </noscript>
   <div id="marketing-root"></div>
-  <script src="/marketing.js" defer></script>
+  <script src="/marketing.js" defer fetchpriority="low"></script>
 </body>
 
 </html>

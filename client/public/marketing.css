@@ -3,34 +3,58 @@
  * Isolated marketing module styles — ALL classes prefixed with mkt-
  * Injected via <div id="marketing-root"></div>
  * Never conflicts with the main website styles
+ *
+ * OPTIMIZED VERSION:
+ *  - Glassmorphism popup with backdrop-filter
+ *  - Spring cubic-bezier animations
+ *  - IntersectionObserver scroll-reveal transitions
+ *  - GPU-accelerated ticker with will-change + contain
+ *  - Blur-up image loading effect
+ *  - Dark mode support
+ *  - Smoother sticky bar animations with bounce
  */
 
 /* ============================================================
-   POPUP BANNER
+   POPUP BANNER — Glassmorphism
    ============================================================ */
 .mkt-popup-overlay {
     position: fixed;
     inset: 0;
-    background: rgba(0, 0, 0, 0.6);
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
     display: flex;
     align-items: center;
     justify-content: center;
     z-index: 99990;
     opacity: 0;
-    animation: mkt-fadeIn 0.3s ease-out forwards;
+    animation: mkt-fadeIn 0.4s ease-out forwards;
     padding: 20px;
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
 }
 
+.mkt-popup-overlay.mkt-popup-closing {
+    animation: mkt-fadeOut 0.3s ease-in forwards;
+}
+
 .mkt-popup-card {
-    background: #fff;
-    border-radius: 16px;
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-radius: 20px;
     max-width: 480px;
     width: 100%;
     overflow: hidden;
-    box-shadow: 0 25px 60px rgba(0, 0, 0, 0.3);
-    animation: mkt-scaleIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+    box-shadow:
+        0 25px 60px rgba(0, 0, 0, 0.25),
+        0 0 0 1px rgba(255, 255, 255, 0.1),
+        inset 0 1px 0 rgba(255, 255, 255, 0.5);
+    animation: mkt-springIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
     position: relative;
+}
+
+.mkt-popup-closing .mkt-popup-card {
+    animation: mkt-springOut 0.3s ease-in forwards;
 }
 
 .mkt-popup-close {
@@ -41,7 +65,7 @@
     height: 32px;
     border-radius: 50%;
     border: none;
-    background: rgba(0, 0, 0, 0.1);
+    background: rgba(0, 0, 0, 0.08);
     color: #374151;
     font-size: 18px;
     cursor: pointer;
@@ -49,12 +73,18 @@
     align-items: center;
     justify-content: center;
     z-index: 2;
-    transition: background 0.2s;
+    transition: background 0.2s, transform 0.2s;
     line-height: 1;
 }
 
 .mkt-popup-close:hover {
-    background: rgba(0, 0, 0, 0.2);
+    background: rgba(0, 0, 0, 0.15);
+    transform: scale(1.1);
+}
+
+/* Blur-up image loading */
+.mkt-popup-img-wrap {
+    overflow: hidden;
 }
 
 .mkt-popup-img {
@@ -62,6 +92,12 @@
     max-height: 240px;
     object-fit: cover;
     display: block;
+    transition: filter 0.5s ease-out, transform 0.5s ease-out;
+}
+
+.mkt-popup-img.mkt-img-loading {
+    filter: blur(15px) saturate(1.2);
+    transform: scale(1.05);
 }
 
 .mkt-popup-body {
@@ -88,26 +124,65 @@
     padding: 12px 28px;
     background: linear-gradient(135deg, #3b82f6, #6366f1);
     color: #fff;
-    border-radius: 10px;
+    border-radius: 12px;
     text-decoration: none;
     font-weight: 600;
     font-size: 14px;
     border: none;
     cursor: pointer;
-    transition: transform 0.2s, box-shadow 0.2s;
+    transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.25s;
+    box-shadow: 0 4px 15px rgba(59, 130, 246, 0.3);
 }
 
 .mkt-popup-cta:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 6px 20px rgba(59, 130, 246, 0.4);
+    transform: translateY(-2px) scale(1.02);
+    box-shadow: 0 8px 25px rgba(59, 130, 246, 0.45);
+}
+
+.mkt-popup-cta:active {
+    transform: translateY(0) scale(0.98);
 }
 
 /* ============================================================
-   PROMO SECTIONS
+   PROMO SECTIONS — with scroll reveal
    ============================================================ */
 .mkt-promo-container {
     width: 100%;
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+
+/* Scroll reveal — hidden by default, revealed by IntersectionObserver */
+.mkt-reveal {
+    opacity: 0;
+    transform: translateY(40px);
+    transition: opacity 0.7s cubic-bezier(0.22, 1, 0.36, 1),
+        transform 0.7s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.mkt-reveal.mkt-revealed {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+/* Stagger children for cascading effect */
+.mkt-reveal.mkt-revealed .mkt-promo-heading {
+    animation: mkt-revealChild 0.6s cubic-bezier(0.22, 1, 0.36, 1) 0.1s both;
+}
+
+.mkt-reveal.mkt-revealed .mkt-promo-subheading {
+    animation: mkt-revealChild 0.6s cubic-bezier(0.22, 1, 0.36, 1) 0.2s both;
+}
+
+.mkt-reveal.mkt-revealed .mkt-promo-body {
+    animation: mkt-revealChild 0.6s cubic-bezier(0.22, 1, 0.36, 1) 0.3s both;
+}
+
+.mkt-reveal.mkt-revealed .mkt-promo-cta {
+    animation: mkt-revealChild 0.6s cubic-bezier(0.22, 1, 0.36, 1) 0.4s both;
+}
+
+.mkt-reveal.mkt-revealed .mkt-promo-img-wrap {
+    animation: mkt-revealChild 0.6s cubic-bezier(0.22, 1, 0.36, 1) 0.3s both;
 }
 
 .mkt-promo-section {
@@ -150,6 +225,7 @@
     color: #475569;
     line-height: 1.7;
     margin: 0 0 24px 0;
+    white-space: pre-line;
 }
 
 .mkt-promo-cta {
@@ -157,16 +233,17 @@
     padding: 12px 28px;
     background: linear-gradient(135deg, #3b82f6, #6366f1);
     color: #fff;
-    border-radius: 10px;
+    border-radius: 12px;
     text-decoration: none;
     font-weight: 600;
     font-size: 14px;
-    transition: transform 0.2s, box-shadow 0.2s;
+    transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.25s;
+    box-shadow: 0 4px 15px rgba(59, 130, 246, 0.25);
 }
 
 .mkt-promo-cta:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 25px rgba(59, 130, 246, 0.3);
+    transform: translateY(-2px) scale(1.02);
+    box-shadow: 0 8px 25px rgba(59, 130, 246, 0.4);
 }
 
 .mkt-promo-img-wrap {
@@ -182,25 +259,34 @@
     object-fit: cover;
     border-radius: 16px;
     box-shadow: 0 12px 40px rgba(0, 0, 0, 0.1);
+    transition: filter 0.6s ease-out, transform 0.6s ease-out;
+}
+
+.mkt-promo-img.mkt-img-loading {
+    filter: blur(15px) saturate(1.2);
+    transform: scale(1.03);
 }
 
 /* ============================================================
-   OFFER / DISCOUNT BANNERS
+   OFFER / DISCOUNT BANNERS — GPU accelerated
    ============================================================ */
 
-/* Ticker (scrolling) */
+/* Ticker (scrolling) — GPU composited */
 .mkt-ticker-wrap {
     width: 100%;
     overflow: hidden;
     position: relative;
     font-family: 'Inter', -apple-system, sans-serif;
     z-index: 100;
+    contain: content;
 }
 
 .mkt-ticker-track {
     display: flex;
     width: max-content;
+    will-change: transform;
     animation: mkt-ticker 25s linear infinite;
+    transform: translate3d(0, 0, 0);
 }
 
 .mkt-ticker-item {
@@ -220,11 +306,16 @@
 }
 
 @keyframes mkt-ticker {
-    from { transform: translateX(0); }
-    to { transform: translateX(-50%); }
+    from {
+        transform: translate3d(0, 0, 0);
+    }
+
+    to {
+        transform: translate3d(-50%, 0, 0);
+    }
 }
 
-/* Sticky bar */
+/* Sticky bar — with bounce entrance */
 .mkt-sticky-bar {
     width: 100%;
     padding: 12px 20px;
@@ -234,13 +325,14 @@
     position: fixed;
     left: 0;
     z-index: 9990;
-    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.15);
+    box-shadow: 0 2px 16px rgba(0, 0, 0, 0.2);
     font-family: 'Inter', -apple-system, sans-serif;
     display: flex;
     align-items: center;
     justify-content: center;
     gap: 12px;
-    animation: mkt-slideDown 0.4s ease-out;
+    animation: mkt-slideDownBounce 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+    transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.3s;
 }
 
 .mkt-sticky-bar.mkt-sticky-top {
@@ -249,7 +341,18 @@
 
 .mkt-sticky-bar.mkt-sticky-bottom {
     bottom: 0;
-    animation: mkt-slideUp 0.4s ease-out;
+    animation: mkt-slideUpBounce 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* Closing state */
+.mkt-sticky-bar.mkt-sticky-closing.mkt-sticky-top {
+    transform: translateY(-100%);
+    opacity: 0;
+}
+
+.mkt-sticky-bar.mkt-sticky-closing.mkt-sticky-bottom {
+    transform: translateY(100%);
+    opacity: 0;
 }
 
 .mkt-sticky-bar a {
@@ -276,29 +379,141 @@
     align-items: center;
     justify-content: center;
     line-height: 1;
+    transition: background 0.2s, transform 0.2s;
+}
+
+.mkt-sticky-close:hover {
+    background: rgba(255, 255, 255, 0.35);
+    transform: translateY(-50%) scale(1.15);
 }
 
 /* ============================================================
-   ANIMATIONS — Shared
+   ANIMATIONS — Spring-based
    ============================================================ */
 @keyframes mkt-fadeIn {
-    from { opacity: 0; }
-    to { opacity: 1; }
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
 }
 
-@keyframes mkt-scaleIn {
-    from { opacity: 0; transform: scale(0.9); }
-    to { opacity: 1; transform: scale(1); }
+@keyframes mkt-fadeOut {
+    from {
+        opacity: 1;
+    }
+
+    to {
+        opacity: 0;
+    }
 }
 
-@keyframes mkt-slideDown {
-    from { transform: translateY(-100%); }
-    to { transform: translateY(0); }
+@keyframes mkt-springIn {
+    0% {
+        opacity: 0;
+        transform: scale(0.85) translateY(20px);
+    }
+
+    50% {
+        opacity: 1;
+    }
+
+    100% {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+    }
 }
 
-@keyframes mkt-slideUp {
-    from { transform: translateY(100%); }
-    to { transform: translateY(0); }
+@keyframes mkt-springOut {
+    from {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+    }
+
+    to {
+        opacity: 0;
+        transform: scale(0.9) translateY(10px);
+    }
+}
+
+@keyframes mkt-slideDownBounce {
+    0% {
+        transform: translateY(-120%);
+    }
+
+    60% {
+        transform: translateY(4%);
+    }
+
+    80% {
+        transform: translateY(-2%);
+    }
+
+    100% {
+        transform: translateY(0);
+    }
+}
+
+@keyframes mkt-slideUpBounce {
+    0% {
+        transform: translateY(120%);
+    }
+
+    60% {
+        transform: translateY(-4%);
+    }
+
+    80% {
+        transform: translateY(2%);
+    }
+
+    100% {
+        transform: translateY(0);
+    }
+}
+
+@keyframes mkt-revealChild {
+    from {
+        opacity: 0;
+        transform: translateY(15px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* ============================================================
+   DARK MODE SUPPORT
+   ============================================================ */
+@media (prefers-color-scheme: dark) {
+    .mkt-popup-card {
+        background: rgba(30, 30, 40, 0.95);
+        box-shadow:
+            0 25px 60px rgba(0, 0, 0, 0.5),
+            0 0 0 1px rgba(255, 255, 255, 0.05),
+            inset 0 1px 0 rgba(255, 255, 255, 0.1);
+    }
+
+    .mkt-popup-title {
+        color: #f1f5f9;
+    }
+
+    .mkt-popup-text {
+        color: #94a3b8;
+    }
+
+    .mkt-popup-close {
+        background: rgba(255, 255, 255, 0.1);
+        color: #e2e8f0;
+    }
+
+    .mkt-popup-close:hover {
+        background: rgba(255, 255, 255, 0.2);
+    }
 }
 
 /* ============================================================
@@ -316,9 +531,48 @@
 
     .mkt-popup-card {
         max-width: 92vw;
+        border-radius: 16px;
     }
 
     .mkt-popup-img {
         max-height: 180px;
+    }
+
+    .mkt-popup-cta,
+    .mkt-promo-cta {
+        padding: 10px 22px;
+        font-size: 13px;
+    }
+
+    .mkt-sticky-bar {
+        font-size: 12px;
+        padding: 10px 14px;
+    }
+}
+
+/* ============================================================
+   REDUCED MOTION — respect user preference
+   ============================================================ */
+@media (prefers-reduced-motion: reduce) {
+    .mkt-reveal {
+        opacity: 1;
+        transform: none;
+        transition: none;
+    }
+
+    .mkt-popup-overlay,
+    .mkt-popup-card,
+    .mkt-sticky-bar {
+        animation: none !important;
+    }
+
+    .mkt-ticker-track {
+        animation-duration: 60s;
+    }
+
+    .mkt-popup-img.mkt-img-loading,
+    .mkt-promo-img.mkt-img-loading {
+        filter: none;
+        transform: none;
     }
 }

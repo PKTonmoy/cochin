@@ -4,10 +4,13 @@
  * Injects content ONLY into <div id="marketing-root"></div>
  * All errors are caught silently — never breaks the main page
  *
- * Features:
- *  - Pop-up banners (with frequency: always/session/daily)
- *  - Promo sections on homepage
- *  - Offer/discount banners (ticker or sticky bar)
+ * OPTIMIZED VERSION:
+ *  - requestIdleCallback for non-blocking init
+ *  - IntersectionObserver for scroll-reveal animations on promos
+ *  - GPU-accelerated ticker with will-change + translate3d
+ *  - Image blur-up effect (placeholder → loaded)
+ *  - Backdrop-blur glassmorphism popup
+ *  - Smoother spring animations
  */
 
 (function () {
@@ -23,16 +26,15 @@
     let rootEl = null;
 
     // ============================================================
-    // INIT — called after DOM ready (with delay for lazy loading)
+    // INIT — uses requestIdleCallback for non-blocking load
     // ============================================================
     MKT.init = function () {
         try {
             rootEl = document.getElementById('marketing-root');
-            if (!rootEl) return; // no root div — silently bail
+            if (!rootEl) return;
 
             MKT.fetchAndRender();
         } catch (e) {
-            // Silent fail — never break the main page
             console.warn('[MKT] init error:', e);
         }
     };
@@ -59,11 +61,10 @@
     };
 
     // ============================================================
-    // POP-UP BANNERS
+    // POP-UP BANNERS — with glassmorphism effect
     // ============================================================
     MKT.renderPopups = function (popups) {
         try {
-            // Show only the first active popup that passes frequency check
             for (const popup of popups) {
                 if (MKT.shouldShowPopup(popup)) {
                     MKT.showPopup(popup);
@@ -88,7 +89,7 @@
             if (popup.displayFrequency === 'daily') {
                 const lastShown = localStorage.getItem(key);
                 if (!lastShown) return true;
-                const today = new Date().toDateString();
+                var today = new Date().toDateString();
                 return lastShown !== today;
             }
 
@@ -112,22 +113,24 @@
 
     MKT.showPopup = function (popup) {
         try {
-            const delay = (popup.delaySeconds || 0) * 1000;
+            var delay = (popup.delaySeconds || 0) * 1000;
 
             setTimeout(function () {
                 try {
-                    // Build popup HTML
-                    const overlay = document.createElement('div');
+                    var overlay = document.createElement('div');
                     overlay.className = 'mkt-popup-overlay';
                     overlay.onclick = function (e) {
                         if (e.target === overlay) MKT.closePopup(overlay, popup);
                     };
 
-                    let html = '<div class="mkt-popup-card">';
+                    var html = '<div class="mkt-popup-card">';
                     html += '<button class="mkt-popup-close" data-mkt-close>&times;</button>';
 
                     if (popup.imageUrl) {
-                        html += '<img class="mkt-popup-img" src="' + MKT.escHtml(popup.imageUrl) + '" alt="" loading="lazy">';
+                        // Blur-up image loading
+                        html += '<div class="mkt-popup-img-wrap">';
+                        html += '<img class="mkt-popup-img mkt-img-loading" src="' + MKT.escHtml(popup.imageUrl) + '" alt="" loading="eager" onload="this.classList.remove(\'mkt-img-loading\')">';
+                        html += '</div>';
                     }
 
                     html += '<div class="mkt-popup-body">';
@@ -147,7 +150,6 @@
                     html += '</div></div>';
                     overlay.innerHTML = html;
 
-                    // Close button handler
                     var closeBtn = overlay.querySelector('[data-mkt-close]');
                     if (closeBtn) {
                         closeBtn.onclick = function () { MKT.closePopup(overlay, popup); };
@@ -166,16 +168,15 @@
 
     MKT.closePopup = function (overlay, popup) {
         try {
-            overlay.style.opacity = '0';
-            overlay.style.transition = 'opacity 0.2s';
+            overlay.classList.add('mkt-popup-closing');
             setTimeout(function () {
                 if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
-            }, 200);
+            }, 300);
         } catch (e) { /* silent */ }
     };
 
     // ============================================================
-    // PROMO SECTIONS
+    // PROMO SECTIONS — with IntersectionObserver scroll reveal
     // ============================================================
     MKT.renderPromos = function (promos) {
         try {
@@ -184,10 +185,9 @@
 
             promos.forEach(function (promo) {
                 var section = document.createElement('div');
-                section.className = 'mkt-promo-section';
+                section.className = 'mkt-promo-section mkt-reveal';
                 section.style.background = promo.bgColor || '#ffffff';
 
-                // Determine text color based on bg darkness
                 var textColor = MKT.isLight(promo.bgColor) ? '#1e293b' : '#ffffff';
                 var subColor = MKT.isLight(promo.bgColor) ? '#6366f1' : '#c4b5fd';
                 var bodyColor = MKT.isLight(promo.bgColor) ? '#475569' : 'rgba(255,255,255,0.8)';
@@ -210,7 +210,7 @@
                 html += '</div>';
 
                 if (promo.imageUrl) {
-                    html += '<div class="mkt-promo-img-wrap"><img class="mkt-promo-img" src="' + MKT.escHtml(promo.imageUrl) + '" alt="" loading="lazy"></div>';
+                    html += '<div class="mkt-promo-img-wrap"><img class="mkt-promo-img mkt-img-loading" src="' + MKT.escHtml(promo.imageUrl) + '" alt="" loading="lazy" onload="this.classList.remove(\'mkt-img-loading\')"></div>';
                 }
 
                 section.innerHTML = html;
@@ -218,13 +218,55 @@
             });
 
             rootEl.appendChild(container);
+
+            // Set up IntersectionObserver for scroll reveal
+            MKT.observeReveal();
         } catch (e) {
             console.warn('[MKT] promo error:', e);
         }
     };
 
     // ============================================================
-    // OFFER / DISCOUNT BANNERS
+    // INTERSECTION OBSERVER — scroll reveal for promo sections
+    // ============================================================
+    MKT.observeReveal = function () {
+        try {
+            if (!('IntersectionObserver' in window)) {
+                // Fallback: show all immediately
+                var elements = document.querySelectorAll('.mkt-reveal');
+                for (var i = 0; i < elements.length; i++) {
+                    elements[i].classList.add('mkt-revealed');
+                }
+                return;
+            }
+
+            var observer = new IntersectionObserver(function (entries) {
+                entries.forEach(function (entry) {
+                    if (entry.isIntersecting) {
+                        entry.target.classList.add('mkt-revealed');
+                        observer.unobserve(entry.target);
+                    }
+                });
+            }, {
+                threshold: 0.15,
+                rootMargin: '0px 0px -40px 0px'
+            });
+
+            var elements = document.querySelectorAll('.mkt-reveal');
+            for (var i = 0; i < elements.length; i++) {
+                observer.observe(elements[i]);
+            }
+        } catch (e) {
+            // Fallback: just show everything
+            var elements = document.querySelectorAll('.mkt-reveal');
+            for (var i = 0; i < elements.length; i++) {
+                elements[i].classList.add('mkt-revealed');
+            }
+        }
+    };
+
+    // ============================================================
+    // OFFER / DISCOUNT BANNERS — GPU accelerated
     // ============================================================
     MKT.renderBanners = function (banners) {
         try {
@@ -247,14 +289,12 @@
             wrap.style.background = banner.bgColor || '#ff6b35';
             wrap.style.color = banner.textColor || '#ffffff';
 
-            // Duplicate the text for seamless scroll
             var text = MKT.escHtml(banner.text);
             if (banner.linkUrl) {
                 text = '<a href="' + MKT.escHtml(banner.linkUrl) + '">' + text + '</a>';
             }
 
             var itemHtml = '<span class="mkt-ticker-item">🎉 ' + text + '</span>';
-            // Repeat enough times for seamless loop
             var repeated = itemHtml.repeat(8);
 
             wrap.innerHTML = '<div class="mkt-ticker-track">' + repeated + '</div>';
@@ -286,15 +326,13 @@
             var closeBtn = bar.querySelector('[data-mkt-sticky-close]');
             if (closeBtn) {
                 closeBtn.onclick = function () {
-                    bar.style.transform = banner.bannerType === 'sticky_top' ? 'translateY(-100%)' : 'translateY(100%)';
-                    bar.style.transition = 'transform 0.3s ease';
+                    bar.classList.add('mkt-sticky-closing');
                     setTimeout(function () {
                         if (bar.parentNode) bar.parentNode.removeChild(bar);
-                    }, 300);
+                    }, 400);
                 };
             }
 
-            // Append to body directly (sticky needs to be body-level)
             document.body.appendChild(bar);
         } catch (e) {
             console.warn('[MKT] stickyBar error:', e);
@@ -330,14 +368,21 @@
     };
 
     // ============================================================
-    // BOOT — lazy load after main content is ready
+    // BOOT — uses requestIdleCallback for non-blocking init
+    // Falls back to setTimeout(1000) for older browsers
     // ============================================================
+    function boot() {
+        if ('requestIdleCallback' in window) {
+            requestIdleCallback(MKT.init, { timeout: 1500 });
+        } else {
+            setTimeout(MKT.init, 1000);
+        }
+    }
+
     if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', function () {
-            setTimeout(MKT.init, 500); // 500ms delay for lazy loading
-        });
+        document.addEventListener('DOMContentLoaded', boot);
     } else {
-        setTimeout(MKT.init, 500);
+        boot();
     }
 
 })();
