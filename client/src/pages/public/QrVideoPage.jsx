@@ -336,11 +336,315 @@ function ZoomAnimation({ onComplete, siteInfo }) {
     )
 }
 
+function CinematicAnimation({ onComplete }) {
+    const [phase, setPhase] = useState('idle')
+    const particlesRef = useRef(null)
+
+    useEffect(() => {
+        const timeline = async () => {
+            const wait = ms => new Promise(r => setTimeout(r, ms))
+
+            // 1. Flash
+            setPhase('flash-in')
+            await wait(80)
+            setPhase('flash-out')
+            await wait(120)
+
+            // 2. Blades sweep in
+            setPhase('blades-in')
+            await wait(420)
+
+            // 3. Radial ring expand
+            setPhase('ring-expand')
+            await wait(160)
+
+            // 4. Particles burst
+            setPhase('particles')
+            spawnParticles()
+            await wait(600)
+
+            // 5. Blades sweep out
+            setPhase('blades-out')
+            await wait(400)
+
+            // 6. Ring fade → redirect
+            setPhase('done')
+            await wait(300)
+            onComplete()
+        }
+        timeline()
+    }, [onComplete])
+
+    const spawnParticles = () => {
+        const container = particlesRef.current
+        if (!container) return
+        container.innerHTML = ''
+        const colors = ['#3b82f6', '#60a5fa', '#f97316', '#fb923c', '#06b6d4', '#2563eb']
+        for (let i = 0; i < 50; i++) {
+            const p = document.createElement('div')
+            const size = 3 + Math.random() * 6
+            const angle = (i / 50) * Math.PI * 2 + (Math.random() - 0.5) * 0.4
+            const dist = 120 + Math.random() * 350
+            const tx = Math.cos(angle) * dist
+            const ty = Math.sin(angle) * dist
+            const color = colors[Math.floor(Math.random() * colors.length)]
+            p.style.cssText = `
+                position:absolute; border-radius:50%; width:${size}px; height:${size}px;
+                left:50%; top:50%; background:${color}; opacity:0;
+                box-shadow: 0 0 ${size * 2}px ${color}80;
+            `
+            container.appendChild(p)
+            setTimeout(() => {
+                p.style.opacity = '1'
+                p.style.transition = `transform ${0.5 + Math.random() * 0.4}s cubic-bezier(0.1,0.9,0.3,1), opacity 0.4s ease ${0.25 + Math.random() * 0.3}s`
+                p.style.transform = `translate(calc(${tx}px - 50%), calc(${ty}px - 50%))`
+                setTimeout(() => { p.style.opacity = '0' }, 450)
+            }, Math.random() * 150)
+        }
+    }
+
+    const BLADE_COUNT = 8
+
+    return (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 99999, background: '#080808' }}>
+            <style>{`
+                .mkt-cin-flash { position:fixed; inset:0; z-index:90; background:#fff; pointer-events:none; }
+                .mkt-cin-blades { position:fixed; inset:0; z-index:80; display:flex; flex-direction:column; pointer-events:none; }
+                .mkt-cin-blade { flex:1; background:#080808; transform:scaleX(0); transform-origin:left center; }
+                .mkt-cin-ring { position:fixed; top:50%; left:50%; transform:translate(-50%,-50%) scale(0); width:20px; height:20px; border-radius:50%; background:#080808; z-index:75; pointer-events:none; }
+                .mkt-cin-particles { position:fixed; inset:0; z-index:85; pointer-events:none; overflow:hidden; }
+            `}</style>
+
+            {/* Flash */}
+            <div className="mkt-cin-flash" style={{
+                opacity: phase === 'flash-in' ? 1 : 0,
+                transition: phase === 'flash-in' ? 'opacity 0.08s ease' : 'opacity 0.3s ease'
+            }} />
+
+            {/* Blades */}
+            <div className="mkt-cin-blades">
+                {Array.from({ length: BLADE_COUNT }, (_, i) => (
+                    <div key={i} className="mkt-cin-blade" style={{
+                        transform: ['blades-in', 'ring-expand', 'particles'].includes(phase) ? 'scaleX(1)' : 'scaleX(0)',
+                        transformOrigin: ['blades-out', 'done'].includes(phase) ? 'right center' : 'left center',
+                        transition: `transform 0.38s cubic-bezier(0.77,0,0.18,1) ${i * 0.025}s`
+                    }} />
+                ))}
+            </div>
+
+            {/* Radial ring */}
+            <div className="mkt-cin-ring" style={{
+                transform: ['ring-expand', 'particles', 'blades-out', 'done'].includes(phase)
+                    ? 'translate(-50%,-50%) scale(220)' : 'translate(-50%,-50%) scale(0)',
+                transition: 'transform 0.7s cubic-bezier(0.22,1,0.36,1)',
+                opacity: phase === 'done' ? 0 : 1
+            }} />
+
+            {/* Particles */}
+            <div className="mkt-cin-particles" ref={particlesRef} />
+        </div>
+    )
+}
+
+function WaterdropAnimation({ onComplete }) {
+    const [phase, setPhase] = useState('idle')
+    const canvasRef = useRef(null)
+
+    useEffect(() => {
+        const timeline = async () => {
+            const wait = ms => new Promise(r => setTimeout(r, ms))
+
+            // 1. Impact flash
+            setPhase('impact')
+            await wait(60)
+
+            // 2. Ripples expand
+            setPhase('ripples')
+            await wait(500)
+
+            // 3. Droplets scatter
+            setPhase('droplets')
+            await wait(400)
+
+            // 4. Glow pulse
+            setPhase('glow')
+            await wait(300)
+
+            // 5. Fade out → redirect
+            setPhase('fadeout')
+            await wait(400)
+            onComplete()
+        }
+        timeline()
+    }, [onComplete])
+
+    // Canvas-based droplet particles
+    useEffect(() => {
+        if (phase !== 'droplets' && phase !== 'glow' && phase !== 'fadeout') return
+        const canvas = canvasRef.current
+        if (!canvas) return
+        const ctx = canvas.getContext('2d')
+        canvas.width = window.innerWidth
+        canvas.height = window.innerHeight
+        const cx = canvas.width / 2
+        const cy = canvas.height / 2
+
+        const drops = Array.from({ length: 40 }, () => {
+            const angle = Math.random() * Math.PI * 2
+            const speed = 3 + Math.random() * 6
+            const size = 2 + Math.random() * 4
+            const colors = ['#3b82f6', '#60a5fa', '#f97316', '#fb923c', '#06b6d4', '#93c5fd']
+            return {
+                x: cx, y: cy,
+                vx: Math.cos(angle) * speed,
+                vy: Math.sin(angle) * speed - 2,
+                size,
+                color: colors[Math.floor(Math.random() * colors.length)],
+                alpha: 1,
+                gravity: 0.1 + Math.random() * 0.05
+            }
+        })
+
+        let animId
+        const animate = () => {
+            ctx.clearRect(0, 0, canvas.width, canvas.height)
+            drops.forEach(d => {
+                d.x += d.vx
+                d.y += d.vy
+                d.vy += d.gravity
+                d.alpha -= 0.012
+                if (d.alpha <= 0) return
+                ctx.beginPath()
+                ctx.arc(d.x, d.y, d.size, 0, Math.PI * 2)
+                ctx.fillStyle = d.color + Math.round(d.alpha * 255).toString(16).padStart(2, '0')
+                ctx.shadowColor = d.color
+                ctx.shadowBlur = d.size * 3
+                ctx.fill()
+                ctx.shadowBlur = 0
+            })
+            animId = requestAnimationFrame(animate)
+        }
+        animate()
+        return () => cancelAnimationFrame(animId)
+    }, [phase])
+
+    const RING_COUNT = 5
+
+    return (
+        <div style={{
+            position: 'fixed', inset: 0, zIndex: 99999,
+            background: '#ffffff',
+            opacity: phase === 'fadeout' ? 0 : 1,
+            transition: 'opacity 0.4s ease'
+        }}>
+            <style>{`
+                .mkt-wd-impact {
+                    position:fixed; top:50%; left:50%; transform:translate(-50%,-50%);
+                    width:14px; height:14px; border-radius:50%;
+                    background:radial-gradient(circle, #60a5fa, #3b82f6);
+                    box-shadow: 0 0 30px #3b82f6, 0 0 60px rgba(59,130,246,0.4);
+                    z-index:10;
+                }
+                .mkt-wd-ring {
+                    position:fixed; top:50%; left:50%;
+                    border-radius:50%; border:2px solid transparent;
+                    transform:translate(-50%,-50%) scale(0);
+                    pointer-events:none;
+                }
+                .mkt-wd-ring-active {
+                    animation: mkt-wd-expand var(--dur) cubic-bezier(0.22,1,0.36,1) var(--delay) forwards;
+                }
+                @keyframes mkt-wd-expand {
+                    0% { transform:translate(-50%,-50%) scale(0); opacity:1; }
+                    50% { opacity:0.5; }
+                    100% { transform:translate(-50%,-50%) scale(1); opacity:0; }
+                }
+                .mkt-wd-glow-center {
+                    position:fixed; top:50%; left:50%; transform:translate(-50%,-50%);
+                    width:250px; height:250px; border-radius:50%;
+                    background:radial-gradient(circle, rgba(59,130,246,0.15) 0%, rgba(249,115,22,0.08) 40%, transparent 70%);
+                    pointer-events:none;
+                }
+                .mkt-wd-glow-pulse {
+                    animation: mkt-wd-pulse 1s ease-in-out;
+                }
+                @keyframes mkt-wd-pulse {
+                    0% { transform:translate(-50%,-50%) scale(0.5); opacity:0; }
+                    50% { transform:translate(-50%,-50%) scale(2.5); opacity:1; }
+                    100% { transform:translate(-50%,-50%) scale(3.5); opacity:0; }
+                }
+                .mkt-wd-ambient-tl {
+                    position:fixed; top:-100px; left:-100px; width:350px; height:350px;
+                    background:radial-gradient(circle, rgba(59,130,246,0.06) 0%, transparent 70%);
+                    animation: mkt-wd-ambient 3s ease-in-out infinite;
+                }
+                .mkt-wd-ambient-br {
+                    position:fixed; bottom:-100px; right:-100px; width:300px; height:300px;
+                    background:radial-gradient(circle, rgba(249,115,22,0.04) 0%, transparent 70%);
+                    animation: mkt-wd-ambient 4s ease-in-out infinite reverse;
+                }
+                @keyframes mkt-wd-ambient {
+                    0%,100% { opacity:0.4; transform:scale(1); }
+                    50% { opacity:0.8; transform:scale(1.15); }
+                }
+                .mkt-wd-canvas {
+                    position:fixed; inset:0; z-index:5; pointer-events:none;
+                }
+            `}</style>
+
+            {/* Ambient glow */}
+            <div className="mkt-wd-ambient-tl" />
+            <div className="mkt-wd-ambient-br" />
+
+            {/* Central impact dot */}
+            {(phase === 'impact' || phase === 'ripples') && (
+                <div className="mkt-wd-impact" style={{
+                    transform: `translate(-50%,-50%) scale(${phase === 'impact' ? 1.5 : 0.3})`,
+                    opacity: phase === 'ripples' ? 0 : 1,
+                    transition: 'all 0.2s ease'
+                }} />
+            )}
+
+            {/* Concentric ripple rings */}
+            {['ripples', 'droplets', 'glow'].includes(phase) && (
+                Array.from({ length: RING_COUNT }, (_, i) => {
+                    const size = 80 + i * 140
+                    const hue = i % 2 === 0 ? '59,130,246' : '249,115,22'
+                    const borderW = Math.max(1, 2.5 - i * 0.4)
+                    return (
+                        <div key={i}
+                            className="mkt-wd-ring mkt-wd-ring-active"
+                            style={{
+                                width: `${size}px`, height: `${size}px`,
+                                borderColor: `rgba(${hue}, ${0.5 - i * 0.07})`,
+                                borderWidth: `${borderW}px`,
+                                boxShadow: `0 0 ${10 + i * 3}px rgba(${hue}, ${0.15 - i * 0.02})`,
+                                '--dur': `${0.6 + i * 0.12}s`,
+                                '--delay': `${i * 0.08}s`
+                            }}
+                        />
+                    )
+                })
+            )}
+
+            {/* Center glow pulse */}
+            {(phase === 'glow' || phase === 'droplets') && (
+                <div className={`mkt-wd-glow-center ${phase === 'glow' ? 'mkt-wd-glow-pulse' : ''}`} />
+            )}
+
+            {/* Canvas droplet particles */}
+            <canvas ref={canvasRef} className="mkt-wd-canvas" />
+        </div>
+    )
+}
+
 const ANIMATIONS = {
     confetti: ConfettiAnimation,
     logo: LogoAnimation,
     ripple: RippleAnimation,
-    zoom: ZoomAnimation
+    zoom: ZoomAnimation,
+    cinematic: CinematicAnimation,
+    waterdrop: WaterdropAnimation
 }
 
 // ============================================================
@@ -375,6 +679,7 @@ export default function QrVideoPage() {
     const [showControls, setShowControls] = useState(true)
     const [showCrossfade, setShowCrossfade] = useState(false)
     const [preloadStarted, setPreloadStarted] = useState(false)
+    const [isMuted, setIsMuted] = useState(true) // Start muted for autoplay compliance
 
     // ---- Fetch video data, site settings & log scan ----
     useEffect(() => {
@@ -486,15 +791,43 @@ export default function QrVideoPage() {
         }
     }, [video])
 
-    // ---- Auto-play ----
+    // ---- Auto-play: start muted (always works), then try to unmute ----
     useEffect(() => {
         if (video && videoRef.current && video.videoType === 'upload') {
             const v = videoRef.current
-            v.play().then(() => setPlaying(true)).catch(() => {
+            v.muted = true
+            setIsMuted(true)
+            v.play().then(() => {
+                setPlaying(true)
+                // Try to unmute — will succeed if user has interacted with the site before
+                try {
+                    v.muted = false
+                    // If no error thrown, check if browser actually unmuted
+                    if (!v.muted) {
+                        setIsMuted(false)
+                    }
+                } catch (e) {
+                    // Browser blocked unmute — keep muted, show sound button
+                    v.muted = true
+                }
+            }).catch(() => {
                 setPlaying(false)
             })
         }
     }, [video])
+
+    // ---- Toggle mute/unmute via user interaction ----
+    const toggleMute = useCallback(() => {
+        const v = videoRef.current
+        if (!v) return
+        if (v.muted || isMuted) {
+            v.muted = false
+            setIsMuted(false)
+        } else {
+            v.muted = true
+            setIsMuted(true)
+        }
+    }, [isMuted])
 
     // --------------------------------------------------------
     // RENDER
@@ -583,6 +916,8 @@ export default function QrVideoPage() {
                         style={styles.video}
                         playsInline
                         preload="auto"
+                        muted={isMuted}
+                        autoPlay
                         onTimeUpdate={handleTimeUpdate}
                         onEnded={handleVideoEnd}
                         onClick={togglePlay}
@@ -590,6 +925,52 @@ export default function QrVideoPage() {
                         onPause={() => setPlaying(false)}
                     />
                     <BufferIndicator videoRef={videoRef} playing={playing} />
+
+                    {/* Floating sound toggle button */}
+                    {isMuted && playing && (
+                        <button onClick={toggleMute} style={{
+                            position: 'fixed', bottom: '24px', right: '24px', zIndex: 20,
+                            width: '52px', height: '52px', borderRadius: '50%',
+                            background: 'rgba(255,255,255,0.15)', backdropFilter: 'blur(10px)',
+                            WebkitBackdropFilter: 'blur(10px)',
+                            border: '1px solid rgba(255,255,255,0.25)',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            cursor: 'pointer', transition: 'all 0.3s ease',
+                            boxShadow: '0 4px 20px rgba(0,0,0,0.3)',
+                            animation: 'mkt-soundPulse 2s ease-in-out infinite'
+                        }}>
+                            <style>{`
+                                @keyframes mkt-soundPulse {
+                                    0%,100% { transform: scale(1); box-shadow: 0 4px 20px rgba(0,0,0,0.3); }
+                                    50% { transform: scale(1.08); box-shadow: 0 4px 28px rgba(59,130,246,0.4); }
+                                }
+                            `}</style>
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" fill="white" />
+                                <line x1="23" y1="9" x2="17" y2="15" />
+                                <line x1="17" y1="9" x2="23" y2="15" />
+                            </svg>
+                        </button>
+                    )}
+
+                    {/* Sound ON indicator (brief flash) */}
+                    {!isMuted && playing && (
+                        <button onClick={toggleMute} style={{
+                            position: 'fixed', bottom: '24px', right: '24px', zIndex: 20,
+                            width: '52px', height: '52px', borderRadius: '50%',
+                            background: 'rgba(59,130,246,0.2)', backdropFilter: 'blur(10px)',
+                            WebkitBackdropFilter: 'blur(10px)',
+                            border: '1px solid rgba(59,130,246,0.3)',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            cursor: 'pointer', opacity: showControls ? 0.8 : 0,
+                            transition: 'opacity 0.3s ease'
+                        }}>
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" fill="white" />
+                                <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07" />
+                            </svg>
+                        </button>
+                    )}
                 </>
             )}
 

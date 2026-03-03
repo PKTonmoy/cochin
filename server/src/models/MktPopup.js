@@ -13,6 +13,11 @@ const mktPopupSchema = new mongoose.Schema({
         maxlength: 255,
         trim: true
     },
+    emoji: {
+        type: String,
+        maxlength: 10,
+        default: '🎉'
+    },
     content: {
         type: String,
         default: ''

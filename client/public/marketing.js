@@ -30,8 +30,17 @@
     // ============================================================
     MKT.init = function () {
         try {
+            // Skip marketing on immersive QR video pages
+            if (window.location.pathname.startsWith('/qr/')) return;
+
             rootEl = document.getElementById('marketing-root');
             if (!rootEl) return;
+
+            // Only show auto-fetching on public pages — skip login, student portal, admin
+            var path = window.location.pathname;
+            if (path === '/login' || path === '/student-login') return;
+            if (path.startsWith('/student')) return;
+            if (path.startsWith('/admin')) return;
 
             MKT.fetchAndRender();
         } catch (e) {
@@ -124,16 +133,21 @@
                     };
 
                     var html = '<div class="mkt-popup-card">';
-                    html += '<button class="mkt-popup-close" data-mkt-close>&times;</button>';
+                    html += '<div class="mkt-popup-accent"></div>';
+                    html += '<button class="mkt-popup-close" data-mkt-close aria-label="Close">&times;</button>';
 
                     if (popup.imageUrl) {
-                        // Blur-up image loading
                         html += '<div class="mkt-popup-img-wrap">';
                         html += '<img class="mkt-popup-img mkt-img-loading" src="' + MKT.escHtml(popup.imageUrl) + '" alt="" loading="eager" onload="this.classList.remove(\'mkt-img-loading\')">';
                         html += '</div>';
                     }
 
                     html += '<div class="mkt-popup-body">';
+
+                    // Emoji badge
+                    if (popup.emoji) {
+                        html += '<div class="mkt-popup-emoji">' + popup.emoji + '</div>';
+                    }
 
                     if (popup.title) {
                         html += '<h3 class="mkt-popup-title">' + MKT.escHtml(popup.title) + '</h3>';
@@ -144,7 +158,7 @@
                     }
 
                     if (popup.ctaLabel && popup.ctaUrl) {
-                        html += '<a class="mkt-popup-cta" href="' + MKT.escHtml(popup.ctaUrl) + '">' + MKT.escHtml(popup.ctaLabel) + '</a>';
+                        html += '<a class="mkt-popup-cta" href="' + MKT.escHtml(popup.ctaUrl) + '">' + MKT.escHtml(popup.ctaLabel) + ' <span class="mkt-popup-cta-arrow">&rarr;</span></a>';
                     }
 
                     html += '</div></div>';
@@ -368,15 +382,12 @@
     };
 
     // ============================================================
-    // BOOT — uses requestIdleCallback for non-blocking init
-    // Falls back to setTimeout(1000) for older browsers
+    // BOOT — waits for page to fully render before showing marketing
+    // Delay ensures the React SPA has mounted before popups appear
     // ============================================================
     function boot() {
-        if ('requestIdleCallback' in window) {
-            requestIdleCallback(MKT.init, { timeout: 1500 });
-        } else {
-            setTimeout(MKT.init, 1000);
-        }
+        // Wait 3s after DOM ready so the main landing page renders first
+        setTimeout(MKT.init, 3000);
     }
 
     if (document.readyState === 'loading') {

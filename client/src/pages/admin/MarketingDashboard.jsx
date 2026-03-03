@@ -344,7 +344,7 @@ export default function MarketingDashboard() {
             {activeTab === 'popups' && (
                 <ListSection
                     title="Pop-up Banners" items={popups}
-                    onAdd={() => setModal({ type: 'popup', data: {}, isEdit: false })}
+                    onAdd={() => setModal({ type: 'popup', data: { emoji: '🎉', delaySeconds: 3, displayFrequency: 'always' }, isEdit: false })}
                     onEdit={(item) => setModal({ type: 'popup', data: item, isEdit: true })}
                     onDelete={(id) => handleDelete('popups', id)}
                     onToggle={(id, active) => handleToggleActive('popups', id, active)}
@@ -352,12 +352,28 @@ export default function MarketingDashboard() {
                         <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flex: 1 }}>
                             {item.imageUrl && <img src={item.imageUrl} alt="" style={{ width: '48px', height: '48px', borderRadius: '8px', objectFit: 'cover' }} />}
                             <div style={{ flex: 1 }}>
-                                <div style={{ fontWeight: '600', color: '#1e293b' }}>{item.title}</div>
+                                <div style={{ fontWeight: '600', color: '#1e293b', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                    <span>{item.emoji || '✨'}</span> {item.title}
+                                </div>
                                 <div style={{ fontSize: '12px', color: '#94a3b8' }}>
                                     {item.displayFrequency} • {item.delaySeconds}s delay
                                     {item.ctaLabel && ` • CTA: ${item.ctaLabel}`}
                                 </div>
                             </div>
+                            <button
+                                style={STYLES.btn('outline')}
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    if (window.MKT && window.MKT.showPopup) {
+                                        window.MKT.showPopup(item);
+                                    } else {
+                                        showToast('Marketing script not loaded', 'error');
+                                    }
+                                }}
+                                title="Preview Popup"
+                            >
+                                <Eye size={14} /> Preview
+                            </button>
                         </div>
                     )}
                 />
@@ -639,9 +655,15 @@ function ModalForm({ modal, saving, onClose, onCreate, onUpdate }) {
                     {/* === POPUP FORM === */}
                     {modal.type === 'popup' && (
                         <>
-                            <div style={STYLES.formGroup}>
-                                <label style={STYLES.label}>Title *</label>
-                                <input style={STYLES.input} value={form.title || ''} onChange={e => set('title', e.target.value)} required placeholder="Popup internal name" />
+                            <div style={STYLES.grid2}>
+                                <div style={STYLES.formGroup}>
+                                    <label style={STYLES.label}>Title *</label>
+                                    <input style={STYLES.input} value={form.title || ''} onChange={e => set('title', e.target.value)} required placeholder="e.g. Admission Open" />
+                                </div>
+                                <div style={STYLES.formGroup}>
+                                    <label style={STYLES.label}>Icon/Emoji</label>
+                                    <input style={STYLES.input} value={form.emoji || ''} onChange={e => set('emoji', e.target.value)} placeholder="e.g. 🎉" maxLength={10} />
+                                </div>
                             </div>
                             <div style={STYLES.formGroup}>
                                 <label style={STYLES.label}>Content</label>
@@ -692,6 +714,47 @@ function ModalForm({ modal, saving, onClose, onCreate, onUpdate }) {
                                     <label style={STYLES.label}>End Date</label>
                                     <input type="datetime-local" style={STYLES.input} value={form.endDate ? new Date(form.endDate).toISOString().slice(0, 16) : ''} onChange={e => set('endDate', e.target.value || null)} />
                                 </div>
+                            </div>
+
+                            {/* Live Preview Section */}
+                            <div style={{ marginTop: '24px', padding: '20px', background: '#f8fafc', borderRadius: '16px', border: '1px solid #e2e8f0' }}>
+                                <div style={{ fontSize: '12px', fontWeight: '700', color: '#94a3b8', textTransform: 'uppercase', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                    <Eye size={14} /> Live Preview (Compact)
+                                </div>
+
+                                <div className="mkt-popup-card" style={{
+                                    position: 'relative', margin: '0 auto', boxShadow: '0 10px 30px rgba(0,0,0,0.1)',
+                                    animation: 'none', transform: 'none', opacity: 1, pointerEvents: 'none',
+                                    maxWidth: '320px'
+                                }}>
+                                    <div className="mkt-popup-accent"></div>
+                                    <button className="mkt-popup-close" style={{ pointerEvents: 'none' }}>&times;</button>
+
+                                    {filePreview && (
+                                        <div className="mkt-popup-img-wrap">
+                                            <img src={filePreview} alt="" className="mkt-popup-img" style={{ maxHeight: '140px' }} />
+                                        </div>
+                                    )}
+
+                                    <div className="mkt-popup-body" style={{ padding: '20px' }}>
+                                        {form.emoji && (
+                                            <div className="mkt-popup-emoji" style={{ width: '40px', height: '40px', fontSize: '20px', borderRadius: '12px', marginBottom: '12px' }}>
+                                                {form.emoji}
+                                            </div>
+                                        )}
+                                        <h3 className="mkt-popup-title" style={{ fontSize: '18px' }}>{form.title || 'Your Title'}</h3>
+                                        <p className="mkt-popup-text" style={{ fontSize: '13px', margin: '0 0 16px 0' }}>{form.content || 'Your popup message goes here...'}</p>
+
+                                        {form.ctaLabel && (
+                                            <div className="mkt-popup-cta" style={{ padding: '10px 20px', fontSize: '13px', borderRadius: '10px' }}>
+                                                {form.ctaLabel} <span className="mkt-popup-cta-arrow">&rarr;</span>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                                <p style={{ fontSize: '11px', color: '#94a3b8', textAlign: 'center', marginTop: '12px' }}>
+                                    Note: This is a scaled-down preview. Use the list "Preview" button for full test.
+                                </p>
                             </div>
                         </>
                     )}
@@ -827,6 +890,8 @@ function ModalForm({ modal, saving, onClose, onCreate, onUpdate }) {
                                         <option value="logo">⭐ Logo Reveal</option>
                                         <option value="ripple">🌊 Ripple</option>
                                         <option value="zoom">🔍 Zoom Out</option>
+                                        <option value="cinematic">🎬 Cinematic</option>
+                                        <option value="waterdrop">💧 Waterdrop</option>
                                     </select>
                                 </div>
                                 <div style={STYLES.formGroup}>

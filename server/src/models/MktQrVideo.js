@@ -38,7 +38,7 @@ const mktQrVideoSchema = new mongoose.Schema({
     },
     animationStyle: {
         type: String,
-        enum: ['logo', 'confetti', 'ripple', 'zoom'],
+        enum: ['logo', 'confetti', 'ripple', 'zoom', 'cinematic', 'waterdrop'],
         default: 'confetti'
     },
     qrCodeUrl: {

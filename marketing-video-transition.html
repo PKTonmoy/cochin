@@ -1,0 +1,1092 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Welcome Experience</title>
+    <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500&display=swap"
+        rel="stylesheet">
+    <style>
+        *,
+        *::before,
+        *::after {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --gold: #c9a84c;
+            --gold-light: #f0d080;
+            --dark: #080808;
+            --mid: #111;
+            --white: #f5f0e8;
+        }
+
+        html,
+        body {
+            width: 100%;
+            height: 100%;
+            background: var(--dark);
+            overflow: hidden;
+            font-family: 'DM Sans', sans-serif;
+            cursor: default;
+            -webkit-tap-highlight-color: transparent;
+            -webkit-user-select: none;
+            user-select: none;
+        }
+
+        /* ═══════════════════════════════
+     STAGE 0 — TAP TO START (needed for audio autoplay)
+  ═══════════════════════════════ */
+        #stage-tap {
+            position: fixed;
+            inset: 0;
+            z-index: 100;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background: var(--dark);
+            cursor: pointer;
+            overflow: hidden;
+        }
+
+        /* Animated background gradient */
+        #stage-tap::before {
+            content: '';
+            position: absolute;
+            inset: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(ellipse at 30% 40%, rgba(201, 168, 76, 0.06) 0%, transparent 50%),
+                radial-gradient(ellipse at 70% 60%, rgba(201, 168, 76, 0.04) 0%, transparent 50%);
+            animation: tapBgFloat 6s ease-in-out infinite alternate;
+        }
+
+        @keyframes tapBgFloat {
+            from {
+                transform: translate(-2%, -2%) rotate(0deg);
+            }
+
+            to {
+                transform: translate(2%, 2%) rotate(1deg);
+            }
+        }
+
+        /* Pulsing ring behind button */
+        .tap-ring {
+            position: absolute;
+            width: 180px;
+            height: 180px;
+            border-radius: 50%;
+            border: 1px solid rgba(201, 168, 76, 0.15);
+            animation: tapRingPulse 2.5s ease-in-out infinite;
+        }
+
+        .tap-ring:nth-child(2) {
+            animation-delay: 0.8s;
+        }
+
+        .tap-ring:nth-child(3) {
+            animation-delay: 1.6s;
+            width: 220px;
+            height: 220px;
+        }
+
+        @keyframes tapRingPulse {
+            0% {
+                transform: scale(1);
+                opacity: 0.5;
+            }
+
+            100% {
+                transform: scale(2.8);
+                opacity: 0;
+            }
+        }
+
+        .tap-content {
+            position: relative;
+            z-index: 2;
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 28px;
+        }
+
+        /* Play icon */
+        .play-icon {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            border: 2px solid rgba(201, 168, 76, 0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            transition: border-color 0.3s, transform 0.3s, box-shadow 0.3s;
+            box-shadow: 0 0 40px rgba(201, 168, 76, 0.1);
+        }
+
+        .play-icon::after {
+            content: '';
+            display: block;
+            width: 0;
+            height: 0;
+            border-style: solid;
+            border-width: 12px 0 12px 22px;
+            border-color: transparent transparent transparent var(--gold);
+            margin-left: 5px;
+        }
+
+        #stage-tap:hover .play-icon {
+            border-color: var(--gold);
+            transform: scale(1.08);
+            box-shadow: 0 0 60px rgba(201, 168, 76, 0.25);
+        }
+
+        .tap-label {
+            font-family: 'DM Sans', sans-serif;
+            font-size: 11px;
+            letter-spacing: 5px;
+            text-transform: uppercase;
+            color: rgba(201, 168, 76, 0.6);
+            animation: tapLabelFade 2s ease-in-out infinite alternate;
+        }
+
+        @keyframes tapLabelFade {
+            from {
+                opacity: 0.5;
+            }
+
+            to {
+                opacity: 1;
+            }
+        }
+
+        .tap-subtitle {
+            font-size: 10px;
+            letter-spacing: 2px;
+            color: rgba(245, 240, 232, 0.2);
+            text-transform: uppercase;
+            margin-top: -14px;
+        }
+
+        /* Corner accents on tap screen */
+        .tap-corner {
+            position: absolute;
+            width: 40px;
+            height: 40px;
+            opacity: 0.2;
+        }
+
+        .tap-corner::before,
+        .tap-corner::after {
+            content: '';
+            position: absolute;
+            background: var(--gold);
+        }
+
+        .tap-corner::before {
+            width: 100%;
+            height: 1px;
+            top: 0;
+        }
+
+        .tap-corner::after {
+            width: 1px;
+            height: 100%;
+            left: 0;
+        }
+
+        .tap-corner.tl {
+            top: 30px;
+            left: 30px;
+        }
+
+        .tap-corner.tr {
+            top: 30px;
+            right: 30px;
+            transform: scaleX(-1);
+        }
+
+        .tap-corner.bl {
+            bottom: 30px;
+            left: 30px;
+            transform: scaleY(-1);
+        }
+
+        .tap-corner.br {
+            bottom: 30px;
+            right: 30px;
+            transform: scale(-1);
+        }
+
+        /* ═══════════════════════════════
+     STAGE 1 — FULLSCREEN VIDEO
+  ═══════════════════════════════ */
+        #stage-video {
+            position: fixed;
+            inset: 0;
+            z-index: 20;
+            background: #000;
+            display: none;
+            align-items: center;
+            justify-content: center;
+        }
+
+        #promo-video {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            background: #000;
+        }
+
+        /* Subtle vignette overlay on video */
+        .video-vignette {
+            position: absolute;
+            inset: 0;
+            background: radial-gradient(ellipse at center, transparent 50%, rgba(0, 0, 0, 0.4) 100%);
+            pointer-events: none;
+            z-index: 2;
+        }
+
+        /* Optional thin progress bar at bottom of video */
+        .video-progress-track {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: rgba(255, 255, 255, 0.08);
+            z-index: 3;
+        }
+
+        .video-progress-fill {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, var(--gold), var(--gold-light));
+            transition: width 0.3s linear;
+        }
+
+        /* ═══════════════════════════════
+     STAGE 2 — TRANSITION LAYERS
+  ═══════════════════════════════ */
+
+        /* Layer A: white flash */
+        #flash {
+            position: fixed;
+            inset: 0;
+            z-index: 90;
+            background: var(--white);
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        /* Layer B: horizontal wipe blades */
+        #blades {
+            position: fixed;
+            inset: 0;
+            z-index: 80;
+            display: flex;
+            flex-direction: column;
+            pointer-events: none;
+        }
+
+        .blade {
+            flex: 1;
+            background: var(--dark);
+            transform: scaleX(0);
+            transform-origin: left center;
+        }
+
+        /* Layer C: golden particle burst */
+        #particles {
+            position: fixed;
+            inset: 0;
+            z-index: 85;
+            pointer-events: none;
+            overflow: hidden;
+        }
+
+        .particle {
+            position: absolute;
+            border-radius: 50%;
+            background: var(--gold);
+            opacity: 0;
+        }
+
+        /* Layer D: radial reveal mask */
+        #reveal-ring {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) scale(0);
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: var(--dark);
+            z-index: 75;
+            pointer-events: none;
+        }
+
+        /* ═══════════════════════════════
+     STAGE 3 — WEBSITE
+  ═══════════════════════════════ */
+        #stage-site {
+            position: fixed;
+            inset: 0;
+            z-index: 10;
+            background: var(--dark);
+            opacity: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+
+        /* Textured noise overlay */
+        #stage-site::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 512 512' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+            background-size: 200px 200px;
+            opacity: 0.6;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        /* Scan lines */
+        #stage-site::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: repeating-linear-gradient(0deg,
+                    transparent,
+                    transparent 2px,
+                    rgba(255, 255, 255, 0.012) 2px,
+                    rgba(255, 255, 255, 0.012) 4px);
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        /* Ambient glows */
+        .glow-tl {
+            position: absolute;
+            top: -200px;
+            left: -200px;
+            width: 600px;
+            height: 600px;
+            background: radial-gradient(circle, rgba(201, 168, 76, 0.08) 0%, transparent 65%);
+            pointer-events: none;
+            z-index: 1;
+            animation: glowPulse 5s ease-in-out infinite;
+        }
+
+        .glow-br {
+            position: absolute;
+            bottom: -200px;
+            right: -200px;
+            width: 500px;
+            height: 500px;
+            background: radial-gradient(circle, rgba(201, 168, 76, 0.06) 0%, transparent 65%);
+            pointer-events: none;
+            z-index: 1;
+            animation: glowPulse 7s ease-in-out infinite reverse;
+        }
+
+        @keyframes glowPulse {
+
+            0%,
+            100% {
+                opacity: 1;
+                transform: scale(1);
+            }
+
+            50% {
+                opacity: 0.6;
+                transform: scale(1.15);
+            }
+        }
+
+        /* Decorative rules */
+        .h-rule {
+            position: absolute;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(201, 168, 76, 0.3), transparent);
+        }
+
+        .h-rule.top {
+            top: 60px;
+        }
+
+        .h-rule.bottom {
+            bottom: 60px;
+        }
+
+        .v-rule {
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            width: 1px;
+            background: linear-gradient(180deg, transparent, rgba(201, 168, 76, 0.2), transparent);
+        }
+
+        .v-rule.left {
+            left: 60px;
+        }
+
+        .v-rule.right {
+            right: 60px;
+        }
+
+        /* Corner brackets */
+        .corner {
+            position: absolute;
+            width: 28px;
+            height: 28px;
+            opacity: 0.4;
+        }
+
+        .corner::before,
+        .corner::after {
+            content: '';
+            position: absolute;
+            background: var(--gold);
+        }
+
+        .corner::before {
+            width: 100%;
+            height: 1.5px;
+            top: 0;
+        }
+
+        .corner::after {
+            width: 1.5px;
+            height: 100%;
+            left: 0;
+        }
+
+        .corner.tl {
+            top: 40px;
+            left: 40px;
+        }
+
+        .corner.tr {
+            top: 40px;
+            right: 40px;
+            transform: scaleX(-1);
+        }
+
+        .corner.bl {
+            bottom: 40px;
+            left: 40px;
+            transform: scaleY(-1);
+        }
+
+        .corner.br {
+            bottom: 40px;
+            right: 40px;
+            transform: scale(-1);
+        }
+
+        /* ── Hero typography ── */
+        .hero {
+            position: relative;
+            z-index: 2;
+            text-align: center;
+            padding: 30px 24px;
+        }
+
+        .overline {
+            display: inline-flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 11px;
+            letter-spacing: 5px;
+            text-transform: uppercase;
+            color: var(--gold);
+            margin-bottom: 28px;
+            opacity: 0;
+            transform: translateY(18px);
+        }
+
+        .overline-dash {
+            display: block;
+            width: 32px;
+            height: 1px;
+            background: var(--gold);
+            opacity: 0.6;
+        }
+
+        .main-title {
+            font-family: 'Bebas Neue', cursive;
+            font-size: clamp(58px, 11vw, 130px);
+            letter-spacing: 4px;
+            line-height: 0.92;
+            color: var(--white);
+            margin-bottom: 6px;
+            opacity: 0;
+            transform: translateY(24px);
+        }
+
+        .title-accent {
+            display: block;
+            background: linear-gradient(90deg, var(--gold) 0%, var(--gold-light) 50%, var(--gold) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            background-size: 200% auto;
+            animation: shimmer 4s linear infinite;
+        }
+
+        @keyframes shimmer {
+            from {
+                background-position: 0% center;
+            }
+
+            to {
+                background-position: 200% center;
+            }
+        }
+
+        .subtitle {
+            font-size: clamp(13px, 1.8vw, 16px);
+            color: rgba(245, 240, 232, 0.4);
+            letter-spacing: 1.5px;
+            font-weight: 300;
+            margin-top: 20px;
+            margin-bottom: 48px;
+            max-width: 420px;
+            margin-left: auto;
+            margin-right: auto;
+            line-height: 1.8;
+            opacity: 0;
+            transform: translateY(18px);
+        }
+
+        .cta-row {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 20px;
+            flex-wrap: wrap;
+            opacity: 0;
+            transform: translateY(18px);
+        }
+
+        .btn-gold {
+            padding: 14px 40px;
+            background: linear-gradient(135deg, var(--gold) 0%, var(--gold-light) 50%, var(--gold) 100%);
+            background-size: 200% auto;
+            border: none;
+            border-radius: 2px;
+            font-family: 'DM Sans', sans-serif;
+            font-size: 12px;
+            font-weight: 500;
+            letter-spacing: 3px;
+            text-transform: uppercase;
+            color: var(--dark);
+            cursor: pointer;
+            transition: background-position 0.4s ease, transform 0.2s, box-shadow 0.2s;
+            box-shadow: 0 4px 24px rgba(201, 168, 76, 0.25);
+            text-decoration: none;
+            display: inline-block;
+        }
+
+        .btn-gold:hover {
+            background-position: right center;
+            transform: translateY(-2px);
+            box-shadow: 0 8px 36px rgba(201, 168, 76, 0.45);
+        }
+
+        .btn-outline {
+            padding: 13px 40px;
+            background: transparent;
+            border: 1px solid rgba(201, 168, 76, 0.35);
+            border-radius: 2px;
+            font-family: 'DM Sans', sans-serif;
+            font-size: 12px;
+            font-weight: 400;
+            letter-spacing: 3px;
+            text-transform: uppercase;
+            color: rgba(245, 240, 232, 0.55);
+            cursor: pointer;
+            transition: border-color 0.3s, color 0.3s, background 0.3s;
+            text-decoration: none;
+            display: inline-block;
+        }
+
+        .btn-outline:hover {
+            border-color: rgba(201, 168, 76, 0.7);
+            color: var(--gold);
+            background: rgba(201, 168, 76, 0.04);
+        }
+
+        /* Stats row */
+        .stats {
+            display: flex;
+            gap: 56px;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-top: 72px;
+            opacity: 0;
+            transform: translateY(18px);
+        }
+
+        .stat {
+            text-align: center;
+        }
+
+        .stat-number {
+            font-family: 'Bebas Neue', cursive;
+            font-size: clamp(32px, 5vw, 52px);
+            color: var(--white);
+            letter-spacing: 2px;
+            line-height: 1;
+        }
+
+        .stat-unit {
+            color: var(--gold);
+            font-size: 0.7em;
+        }
+
+        .stat-label {
+            font-size: 10px;
+            letter-spacing: 3px;
+            text-transform: uppercase;
+            color: rgba(245, 240, 232, 0.3);
+            margin-top: 6px;
+        }
+
+        .stat-divider {
+            width: 1px;
+            background: rgba(201, 168, 76, 0.2);
+            align-self: stretch;
+            margin: 4px 0;
+        }
+
+        /* ═══════════════════════════════
+     LOADING STATE (while video buffers)
+  ═══════════════════════════════ */
+        .loading-overlay {
+            position: fixed;
+            inset: 0;
+            z-index: 95;
+            background: var(--dark);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .loading-spinner {
+            width: 40px;
+            height: 40px;
+            border: 2px solid rgba(201, 168, 76, 0.15);
+            border-top-color: var(--gold);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        .loading-text {
+            font-size: 10px;
+            letter-spacing: 4px;
+            text-transform: uppercase;
+            color: rgba(201, 168, 76, 0.5);
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- ══ STAGE 0: TAP TO START (required for audio autoplay) ══ -->
+    <div id="stage-tap">
+        <div class="tap-corner tl"></div>
+        <div class="tap-corner tr"></div>
+        <div class="tap-corner bl"></div>
+        <div class="tap-corner br"></div>
+        <div class="tap-ring"></div>
+        <div class="tap-ring"></div>
+        <div class="tap-ring"></div>
+        <div class="tap-content">
+            <div class="play-icon"></div>
+            <div class="tap-label">Tap to Experience</div>
+            <div class="tap-subtitle">Best with sound on</div>
+        </div>
+    </div>
+
+    <!-- ══ LOADING (while video buffers) ══ -->
+    <div class="loading-overlay" id="loading">
+        <div class="loading-spinner"></div>
+        <div class="loading-text">Loading Experience</div>
+    </div>
+
+    <!-- ══ STAGE 1: FULLSCREEN VIDEO ══ -->
+    <div id="stage-video">
+        <!--
+    ╔═══════════════════════════════════════════════════════════╗
+    ║  REPLACE THE src BELOW WITH YOUR ACTUAL VIDEO URL        ║
+    ║  Supports: MP4, WebM. Use Cloudinary or any CDN link.    ║
+    ║  Example: src="https://res.cloudinary.com/.../video.mp4" ║
+    ╚═══════════════════════════════════════════════════════════╝
+  -->
+        <video id="promo-video" playsinline webkit-playsinline preload="auto" crossorigin="anonymous">
+            <source src="" type="video/mp4">
+            Your browser does not support the video tag.
+        </video>
+        <div class="video-vignette"></div>
+        <div class="video-progress-track">
+            <div class="video-progress-fill" id="video-progress"></div>
+        </div>
+    </div>
+
+    <!-- ══ TRANSITION LAYERS ══ -->
+    <div id="flash"></div>
+    <div id="reveal-ring"></div>
+    <div id="blades">
+        <div class="blade"></div>
+        <div class="blade"></div>
+        <div class="blade"></div>
+        <div class="blade"></div>
+        <div class="blade"></div>
+        <div class="blade"></div>
+        <div class="blade"></div>
+        <div class="blade"></div>
+    </div>
+    <div id="particles"></div>
+
+    <!-- ══ STAGE 3: WEBSITE (your actual website content / redirect) ══ -->
+    <div id="stage-site">
+        <div class="glow-tl"></div>
+        <div class="glow-br"></div>
+        <div class="h-rule top"></div>
+        <div class="h-rule bottom"></div>
+        <div class="v-rule left"></div>
+        <div class="v-rule right"></div>
+        <div class="corner tl"></div>
+        <div class="corner tr"></div>
+        <div class="corner bl"></div>
+        <div class="corner br"></div>
+
+        <div class="hero">
+            <div class="overline">
+                <span class="overline-dash"></span>
+                Welcome
+                <span class="overline-dash"></span>
+            </div>
+            <h1 class="main-title">
+                We Create<br>
+                <span class="title-accent">The Future</span>
+            </h1>
+            <p class="subtitle">
+                Bold ideas. Refined execution.<br>
+                Stories that move people to act.
+            </p>
+            <div class="cta-row">
+                <a href="#" class="btn-gold" id="cta-main">Enter Website</a>
+                <a href="#" class="btn-outline">Learn More</a>
+            </div>
+
+            <div class="stats">
+                <div class="stat">
+                    <div class="stat-number">12<span class="stat-unit">K+</span></div>
+                    <div class="stat-label">Students</div>
+                </div>
+                <div class="stat-divider"></div>
+                <div class="stat">
+                    <div class="stat-number">98<span class="stat-unit">%</span></div>
+                    <div class="stat-label">Satisfaction</div>
+                </div>
+                <div class="stat-divider"></div>
+                <div class="stat">
+                    <div class="stat-number">40<span class="stat-unit">+</span></div>
+                    <div class="stat-label">Programs</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        /* ══════════════════════════════════════════════════════════════
+           CONFIGURATION — Change these to match your setup
+        ══════════════════════════════════════════════════════════════ */
+        const CONFIG = {
+            // Replace with your actual video URL (Cloudinary, CDN, local path, etc.)
+            videoSrc: '',
+
+            // Where to redirect after transition (set to '' to stay on page)
+            redirectUrl: '',
+
+            // Delay (ms) after "Enter Website" click before redirect
+            redirectDelay: 300,
+        };
+
+        /* ══════════════════════════════════════════════════════════════
+           UTILITY FUNCTIONS
+        ══════════════════════════════════════════════════════════════ */
+        function wait(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+        /* ══════════════════════════════════════════════════════════════
+           ELEMENTS
+        ══════════════════════════════════════════════════════════════ */
+        const stageTap = document.getElementById('stage-tap');
+        const stageVideo = document.getElementById('stage-video');
+        const stageSite = document.getElementById('stage-site');
+        const video = document.getElementById('promo-video');
+        const videoProgress = document.getElementById('video-progress');
+        const loading = document.getElementById('loading');
+        const flash = document.getElementById('flash');
+        const blades = document.querySelectorAll('.blade');
+        const revealRing = document.getElementById('reveal-ring');
+
+        /* ══════════════════════════════════════════════════════════════
+           STAGE 0 → STAGE 1: USER TAPS → VIDEO PLAYS WITH SOUND
+        ══════════════════════════════════════════════════════════════ */
+        stageTap.addEventListener('click', handleTap, { once: true });
+
+        async function handleTap() {
+            // Animate tap screen out
+            stageTap.style.transition = 'opacity 0.4s ease';
+            stageTap.style.opacity = '0';
+
+            // Show loading while video buffers
+            loading.style.display = 'flex';
+
+            // Set video source dynamically
+            if (CONFIG.videoSrc) {
+                video.querySelector('source').src = CONFIG.videoSrc;
+                video.load();
+            }
+
+            // Wait for enough data to play
+            await new Promise((resolve) => {
+                if (video.readyState >= 3) {
+                    resolve();
+                } else {
+                    video.addEventListener('canplay', resolve, { once: true });
+                    // Fallback timeout — start anyway after 8s
+                    setTimeout(resolve, 8000);
+                }
+            });
+
+            // Hide loading, hide tap
+            loading.style.display = 'none';
+            stageTap.style.display = 'none';
+
+            // Show video stage
+            stageVideo.style.display = 'flex';
+
+            // Play with sound (this works because user already interacted)
+            video.muted = false;
+            video.volume = 1.0;
+
+            try {
+                await video.play();
+            } catch (e) {
+                // If unmuted fails (rare), try muted as failsafe then unmute
+                console.warn('Unmuted play failed, trying muted then unmuting:', e);
+                video.muted = true;
+                await video.play();
+                // Try to unmute after a brief moment
+                setTimeout(() => { video.muted = false; }, 100);
+            }
+
+            // Start tracking progress
+            trackVideoProgress();
+
+            // Listen for video end
+            video.addEventListener('ended', runTransition, { once: true });
+        }
+
+        /* ══════════════════════════════════════════════════════════════
+           VIDEO PROGRESS TRACKING
+        ══════════════════════════════════════════════════════════════ */
+        function trackVideoProgress() {
+            function update() {
+                if (video.duration && video.duration > 0) {
+                    const pct = (video.currentTime / video.duration) * 100;
+                    videoProgress.style.width = pct + '%';
+                }
+                if (!video.ended && !video.paused) {
+                    requestAnimationFrame(update);
+                }
+            }
+            requestAnimationFrame(update);
+        }
+
+        /* ══════════════════════════════════════════════════════════════
+           PARTICLE BURST
+        ══════════════════════════════════════════════════════════════ */
+        function spawnParticles() {
+            const container = document.getElementById('particles');
+            container.innerHTML = '';
+            const count = 55;
+            for (let i = 0; i < count; i++) {
+                const p = document.createElement('div');
+                p.className = 'particle';
+                const size = 2 + Math.random() * 6;
+                p.style.cssText = `
+      width:${size}px; height:${size}px;
+      left:50%; top:50%;
+      background: ${Math.random() > 0.4 ? '#c9a84c' : '#f0d080'};
+      box-shadow: 0 0 ${size * 2}px rgba(201,168,76,0.8);
+    `;
+                container.appendChild(p);
+
+                const angle = (i / count) * Math.PI * 2 + (Math.random() - 0.5) * 0.4;
+                const dist = 160 + Math.random() * 380;
+                const tx = Math.cos(angle) * dist;
+                const ty = Math.sin(angle) * dist;
+                const delay = Math.random() * 180;
+
+                setTimeout(() => {
+                    p.style.opacity = '1';
+                    p.style.transition = `transform ${0.6 + Math.random() * 0.5}s cubic-bezier(0.1,0.9,0.3,1), opacity 0.4s ease ${0.3 + Math.random() * 0.3}s`;
+                    p.style.transform = `translate(calc(${tx}px - 50%), calc(${ty}px - 50%))`;
+                    setTimeout(() => { p.style.opacity = '0'; }, 500);
+                }, delay);
+            }
+        }
+
+        /* ══════════════════════════════════════════════════════════════
+           HERO REVEAL
+        ══════════════════════════════════════════════════════════════ */
+        function revealHero() {
+            const els = [
+                { el: document.querySelector('.overline'), delay: 0 },
+                { el: document.querySelector('.main-title'), delay: 120 },
+                { el: document.querySelector('.subtitle'), delay: 260 },
+                { el: document.querySelector('.cta-row'), delay: 400 },
+                { el: document.querySelector('.stats'), delay: 560 },
+            ];
+            els.forEach(({ el, delay }) => {
+                setTimeout(() => {
+                    el.style.transition = 'opacity 0.7s ease, transform 0.7s cubic-bezier(0.22,1,0.36,1)';
+                    el.style.opacity = '1';
+                    el.style.transform = 'translateY(0)';
+                }, delay);
+            });
+        }
+
+        /* ══════════════════════════════════════════════════════════════
+           MAIN TRANSITION SEQUENCE (fires when video ends)
+        ══════════════════════════════════════════════════════════════ */
+        async function runTransition() {
+            // ── 1. White flash ──
+            flash.style.transition = 'opacity 0.08s ease';
+            flash.style.opacity = '1';
+            await wait(80);
+            flash.style.transition = 'opacity 0.3s ease';
+            flash.style.opacity = '0';
+
+            // ── 2. Blades sweep in (left to right) ──
+            await wait(60);
+            blades.forEach((b, i) => {
+                b.style.transition = `transform 0.38s cubic-bezier(0.77,0,0.18,1) ${i * 0.025}s`;
+                b.style.transform = 'scaleX(1)';
+            });
+            stageVideo.style.transition = 'opacity 0.2s ease';
+            stageVideo.style.opacity = '0';
+            await wait(420);
+
+            // ── 3. Radial ring expands ──
+            revealRing.style.transition = 'transform 0.7s cubic-bezier(0.22,1,0.36,1)';
+            revealRing.style.transform = 'translate(-50%,-50%) scale(220)';
+            await wait(160);
+
+            // ── 4. Particle burst ──
+            spawnParticles();
+
+            // ── 5. Site fades in ──
+            await wait(200);
+            stageSite.style.transition = 'opacity 0.4s ease';
+            stageSite.style.opacity = '1';
+
+            // ── 6. Blades sweep OUT (right to left) ──
+            blades.forEach((b, i) => {
+                const ri = blades.length - 1 - i;
+                b.style.transition = `transform 0.4s cubic-bezier(0.77,0,0.18,1) ${ri * 0.025}s`;
+                b.style.transform = 'scaleX(0)';
+                b.style.transformOrigin = 'right center';
+            });
+            await wait(100);
+
+            // ── 7. Ring fades away ──
+            revealRing.style.transition = 'opacity 0.3s ease';
+            revealRing.style.opacity = '0';
+            await wait(200);
+
+            // ── 8. Hero text stagger ──
+            revealHero();
+
+            // Hide video stage fully
+            stageVideo.style.display = 'none';
+
+            // ── 9. Auto-redirect if configured ──
+            if (CONFIG.redirectUrl) {
+                const ctaBtn = document.getElementById('cta-main');
+                if (ctaBtn) ctaBtn.href = CONFIG.redirectUrl;
+            }
+        }
+
+        /* ══════════════════════════════════════════════════════════════
+           CTA BUTTON — Redirect to actual website
+        ══════════════════════════════════════════════════════════════ */
+        document.getElementById('cta-main').addEventListener('click', function (e) {
+            if (CONFIG.redirectUrl) {
+                e.preventDefault();
+                // Smooth fade out before redirect
+                stageSite.style.transition = 'opacity 0.3s ease';
+                stageSite.style.opacity = '0';
+                setTimeout(() => {
+                    window.location.href = CONFIG.redirectUrl;
+                }, CONFIG.redirectDelay);
+            }
+        });
+
+        /* ══════════════════════════════════════════════════════════════
+           PREVENT ALL INTERACTION DURING VIDEO
+           - No right-click on video
+           - No keyboard shortcuts to skip
+        ══════════════════════════════════════════════════════════════ */
+        video.addEventListener('contextmenu', e => e.preventDefault());
+        document.addEventListener('keydown', function (e) {
+            // Block spacebar, arrow keys, etc. during video
+            if (stageVideo.style.display !== 'none' && video && !video.ended) {
+                const blocked = ['Space', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Escape'];
+                if (blocked.includes(e.code)) {
+                    e.preventDefault();
+                }
+            }
+        });
+
+        /* ══════════════════════════════════════════════════════════════
+           ENSURE VIDEO KEEPS PLAYING (handle browser tab visibility)
+        ══════════════════════════════════════════════════════════════ */
+        document.addEventListener('visibilitychange', function () {
+            if (!document.hidden && video && !video.ended && video.paused && stageVideo.style.display !== 'none') {
+                video.play().catch(() => { });
+            }
+        });
+    </script>
+</body>
+
+</html>
