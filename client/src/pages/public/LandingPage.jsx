@@ -107,7 +107,9 @@ export default function LandingPage() {
     const [faculty, setFaculty] = useState([])
     const [toppers, setToppers] = useState([])
     const [testimonialData, setTestimonialData] = useState([])
-    const [loading, setLoading] = useState(true)
+    // Skip skeleton loading if redirected from QR video page
+    const isFromQr = new URLSearchParams(window.location.search).get('from') === 'qr'
+    const [loading, setLoading] = useState(!isFromQr)
     const [storyOpen, setStoryOpen] = useState(false)
     const [storyIndex, setStoryIndex] = useState(0)
     const [leadName, setLeadName] = useState('')
@@ -115,6 +117,15 @@ export default function LandingPage() {
     const [leadClass, setLeadClass] = useState('')
     const [submitting, setSubmitting] = useState(false)
     const location = useLocation()
+
+    // Clean up ?from=qr param from URL without reload
+    useEffect(() => {
+        if (isFromQr) {
+            const url = new URL(window.location.href)
+            url.searchParams.delete('from')
+            window.history.replaceState({}, '', url.pathname + url.hash)
+        }
+    }, [])
 
     useEffect(() => {
         const scrollToElement = () => {

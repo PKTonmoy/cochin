@@ -84,27 +84,61 @@ function HiddenPreloader({ url }) {
 // CROSSFADE TRANSITION — smooth redirect with fade
 // ============================================================
 function CrossfadeTransition({ targetUrl, onStart }) {
-    const [phase, setPhase] = useState('enter') // enter -> hold -> navigate
+    const [phase, setPhase] = useState('enter')
 
     useEffect(() => {
         onStart?.()
-        // Phase 1: Fade in white overlay
-        const t1 = setTimeout(() => setPhase('hold'), 600)
-        // Phase 2: Navigate after overlay is opaque
-        const t2 = setTimeout(() => {
-            window.location.href = targetUrl || '/'
-        }, 900)
-        return () => { clearTimeout(t1); clearTimeout(t2) }
+        const t1 = setTimeout(() => setPhase('sweep'), 100)
+        const t2 = setTimeout(() => setPhase('hold'), 700)
+        const t3 = setTimeout(() => {
+            // Append from=qr param so landing page skips skeleton loading
+            const url = new URL(targetUrl || '/', window.location.origin)
+            url.searchParams.set('from', 'qr')
+            window.location.href = url.toString()
+        }, 1000)
+        return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3) }
     }, [targetUrl, onStart])
 
     return (
-        <div style={{
-            position: 'fixed', inset: 0, zIndex: 999999,
-            background: '#fff',
-            opacity: phase === 'enter' ? 0 : 1,
-            transition: 'opacity 0.6s ease-in-out',
-            pointerEvents: 'all'
-        }} />
+        <div style={{ position: 'fixed', inset: 0, zIndex: 999999, pointerEvents: 'all' }}>
+            <style>{`
+                @keyframes mkt-gradSweep {
+                    0% { transform: translateX(-100%); }
+                    100% { transform: translateX(0%); }
+                }
+                @keyframes mkt-shimmerLine {
+                    0% { transform: translateX(-100%); }
+                    100% { transform: translateX(200%); }
+                }
+            `}</style>
+            {/* White base */}
+            <div style={{
+                position: 'absolute', inset: 0, background: '#ffffff',
+                opacity: phase === 'enter' ? 0 : 1,
+                transition: 'opacity 0.5s cubic-bezier(0.4,0,0.2,1)'
+            }} />
+            {/* Gradient sweep */}
+            <div style={{
+                position: 'absolute', inset: 0, overflow: 'hidden',
+                opacity: ['sweep', 'hold'].includes(phase) ? 1 : 0,
+                transition: 'opacity 0.3s ease'
+            }}>
+                <div style={{
+                    position: 'absolute', inset: 0,
+                    background: 'linear-gradient(135deg, rgba(59,130,246,0.08) 0%, rgba(249,115,22,0.06) 100%)',
+                    animation: phase === 'sweep' ? 'mkt-gradSweep 0.6s cubic-bezier(0.22,1,0.36,1) forwards' : 'none',
+                    transform: phase === 'hold' ? 'translateX(0)' : undefined
+                }} />
+                {/* Shimmer line */}
+                <div style={{
+                    position: 'absolute', top: 0, left: 0, width: '40%', height: '100%',
+                    background: 'linear-gradient(90deg, transparent, rgba(59,130,246,0.06), rgba(249,115,22,0.04), transparent)',
+                    animation: 'mkt-shimmerLine 0.8s ease-in-out 0.3s forwards',
+                    opacity: phase === 'sweep' ? 1 : 0
+                }} />
+            </div>
+
+        </div>
     )
 }
 
@@ -116,44 +150,63 @@ function PremiumLoader() {
         <div style={styles.loading}>
             <style>{`
                 ${baseCSS}
-                .mkt-qr-loader {
-                    display: flex; flex-direction: column; align-items: center; gap: 24px;
+                .mkt-loader-wrap {
+                    display:flex; flex-direction:column; align-items:center; gap:28px;
+                    position:relative; z-index:2;
                 }
-                .mkt-qr-logo-pulse {
-                    width: 72px; height: 72px; border-radius: 20px;
-                    background: linear-gradient(135deg, rgba(255,255,255,0.1), rgba(255,255,255,0.05));
-                    display: flex; align-items: center; justify-content: center;
+                .mkt-loader-icon {
+                    width:80px; height:80px; border-radius:24px;
+                    background:rgba(255,255,255,0.9); backdrop-filter:blur(20px); -webkit-backdrop-filter:blur(20px);
+                    border:1px solid rgba(0,0,0,0.06);
+                    display:flex; align-items:center; justify-content:center;
                     animation: mkt-breathe 2s ease-in-out infinite;
-                    backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.1);
+                    box-shadow: 0 8px 32px rgba(59,130,246,0.12);
                 }
-                .mkt-qr-shimmer-bar {
-                    width: 200px; height: 4px; border-radius: 4px; overflow: hidden;
-                    background: rgba(255,255,255,0.1);
+                .mkt-loader-spinner {
+                    width:52px; height:52px; border:3px solid rgba(0,0,0,0.06);
+                    border-top-color:#3b82f6; border-right-color:#f97316;
+                    border-radius:50%; animation:mkt-spin 0.9s linear infinite;
                 }
-                .mkt-qr-shimmer-fill {
-                    width: 40%; height: 100%; border-radius: 4px;
-                    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent);
-                    animation: mkt-shimmer 1.5s ease-in-out infinite;
+                .mkt-loader-shimmer {
+                    width:180px; height:3px; border-radius:3px; overflow:hidden;
+                    background:rgba(0,0,0,0.06);
                 }
-                .mkt-qr-loading-text {
-                    color: rgba(255,255,255,0.4); font-size: 13px; font-weight: 500;
-                    font-family: 'Inter', sans-serif; letter-spacing: 1px;
+                .mkt-loader-shimmer-fill {
+                    width:40%; height:100%; border-radius:3px;
+                    background:linear-gradient(90deg, transparent, #3b82f6, #f97316, transparent);
+                    animation: mkt-shimmer 1.4s ease-in-out infinite;
+                }
+                .mkt-loader-text {
+                    color:rgba(30,41,59,0.45); font-size:11px; font-weight:600;
+                    font-family:'Inter',sans-serif; letter-spacing:3px; text-transform:uppercase;
                     animation: mkt-fadeInOut 2s ease-in-out infinite;
                 }
-                @keyframes mkt-breathe { 0%,100%{transform:scale(1);opacity:0.8} 50%{transform:scale(1.05);opacity:1} }
-                @keyframes mkt-shimmer { 0%{transform:translateX(-200%)} 100%{transform:translateX(400%)} }
-                @keyframes mkt-fadeInOut { 0%,100%{opacity:0.3} 50%{opacity:0.7} }
+                .mkt-loader-orb {
+                    position:absolute; border-radius:50%; pointer-events:none; filter:blur(60px);
+                    animation: mkt-orbFloat 6s ease-in-out infinite;
+                }
+                @keyframes mkt-breathe { 0%,100%{transform:scale(1);opacity:0.85} 50%{transform:scale(1.04);opacity:1} }
+                @keyframes mkt-shimmer { 0%{transform:translateX(-300%)} 100%{transform:translateX(400%)} }
+                @keyframes mkt-fadeInOut { 0%,100%{opacity:0.25} 50%{opacity:0.6} }
+                @keyframes mkt-orbFloat { 0%,100%{transform:translate(0,0)} 50%{transform:translate(30px,-20px)} }
             `}</style>
-            <div className="mkt-qr-loader">
-                <div className="mkt-qr-logo-pulse">
-                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.6)" strokeWidth="1.5">
-                        <polygon points="5,3 19,12 5,21" />
-                    </svg>
+            {/* Ambient background orbs */}
+            <div className="mkt-loader-orb" style={{
+                width: '300px', height: '300px', top: '-80px', left: '-80px',
+                background: 'rgba(59,130,246,0.08)'
+            }} />
+            <div className="mkt-loader-orb" style={{
+                width: '250px', height: '250px', bottom: '-60px', right: '-60px',
+                background: 'rgba(249,115,22,0.06)', animationDelay: '3s'
+            }} />
+            <div className="mkt-loader-wrap">
+                <div className="mkt-loader-icon">
+                    <div className="mkt-loader-spinner" />
                 </div>
-                <div className="mkt-qr-shimmer-bar">
-                    <div className="mkt-qr-shimmer-fill" />
+                <div className="mkt-loader-shimmer">
+                    <div className="mkt-loader-shimmer-fill" />
                 </div>
-                <div className="mkt-qr-loading-text">LOADING</div>
+                <div className="mkt-loader-text">Preparing Video</div>
             </div>
         </div>
     )
@@ -190,8 +243,8 @@ function BufferIndicator({ videoRef, playing }) {
         }}>
             <style>{`
                 .mkt-buffer-ring {
-                    width: 48px; height: 48px; border: 3px solid rgba(255,255,255,0.15);
-                    border-top-color: rgba(255,255,255,0.8); border-radius: 50%;
+                    width: 48px; height: 48px; border: 3px solid rgba(59,130,246,0.15);
+                    border-top-color: #3b82f6; border-radius: 50%;
                     animation: mkt-spin 0.7s linear infinite;
                 }
             `}</style>
@@ -201,52 +254,114 @@ function BufferIndicator({ videoRef, playing }) {
 }
 
 // ============================================================
-// POST-VIDEO ANIMATION COMPONENTS
+// POST-VIDEO ANIMATION COMPONENTS — Website Theme Matched
+// Colors: Blue #3b82f6, Orange #f97316, White backgrounds
+// Fonts: Inter, Poppins — matching the main landing page
 // ============================================================
+
+const ANIM_SHARED_CSS = `
+    .mkt-anim-wrap {
+        position:fixed; inset:0; z-index:99999; overflow:hidden;
+        display:flex; flex-direction:column; align-items:center; justify-content:center;
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    }
+    .mkt-anim-bg-white {
+        background: linear-gradient(180deg, #f8fafc 0%, #ffffff 50%, #f1f5f9 100%);
+    }
+    .mkt-anim-glow-tl {
+        position:absolute; top:-150px; left:-150px; width:500px; height:500px;
+        background:radial-gradient(circle, rgba(59,130,246,0.1) 0%, transparent 60%);
+        pointer-events:none; animation: mkt-a-pulse 4s ease-in-out infinite;
+    }
+    .mkt-anim-glow-br {
+        position:absolute; bottom:-150px; right:-150px; width:450px; height:450px;
+        background:radial-gradient(circle, rgba(249,115,22,0.08) 0%, transparent 60%);
+        pointer-events:none; animation: mkt-a-pulse 5s ease-in-out infinite reverse;
+    }
+    .mkt-a-glass {
+        background: rgba(255,255,255,0.9); backdrop-filter:blur(20px); -webkit-backdrop-filter:blur(20px);
+        border:1px solid rgba(0,0,0,0.08); border-radius:24px;
+        box-shadow: 0 8px 40px rgba(0,0,0,0.06);
+        padding:40px 48px; text-align:center; position:relative; z-index:2;
+    }
+    .mkt-a-gradient-text {
+        background:linear-gradient(135deg, #3b82f6 0%, #f97316 100%);
+        -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text;
+    }
+    .mkt-a-title {
+        font-family:'Poppins','Inter',sans-serif; font-size:clamp(24px,5vw,42px);
+        font-weight:800; margin:0 0 8px; color:#1e293b; line-height:1.2;
+    }
+    .mkt-a-sub {
+        font-size:clamp(14px,2.5vw,18px); color:#64748b; font-weight:500; margin:0;
+    }
+    .mkt-a-logo { width:72px; height:72px; border-radius:18px; object-fit:contain; margin:0 auto 20px; display:block; }
+    .mkt-a-logo-fallback {
+        width:72px; height:72px; border-radius:18px; margin:0 auto 20px;
+        background:linear-gradient(135deg, #3b82f6, #f97316);
+        display:flex; align-items:center; justify-content:center; font-size:32px;
+        box-shadow: 0 8px 24px rgba(59,130,246,0.25);
+    }
+    @keyframes mkt-a-pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.5;transform:scale(1.15)} }
+    @keyframes mkt-a-fadeUp { from{opacity:0;transform:translateY(24px)} to{opacity:1;transform:translateY(0)} }
+    @keyframes mkt-a-scaleIn { from{opacity:0;transform:scale(0.8)} to{opacity:1;transform:scale(1)} }
+`
 
 function ConfettiAnimation({ onComplete, siteInfo }) {
     useEffect(() => {
-        const timer = setTimeout(onComplete, 4000)
+        const timer = setTimeout(onComplete, 1800)
         return () => clearTimeout(timer)
     }, [onComplete])
 
-    const particles = Array.from({ length: 60 }, (_, i) => ({
+    const particles = Array.from({ length: 50 }, (_, i) => ({
         id: i,
         left: Math.random() * 100,
-        delay: Math.random() * 1.5,
-        duration: 2 + Math.random() * 2,
-        color: ['#ff6b6b', '#ffd93d', '#6bcb77', '#4d96ff', '#ff6b6b', '#ee5a24', '#a29bfe', '#fd79a8'][i % 8],
-        size: 6 + Math.random() * 8,
-        rotation: Math.random() * 360
+        delay: Math.random() * 1.2,
+        duration: 2.2 + Math.random() * 1.8,
+        color: ['#3b82f6', '#60a5fa', '#f97316', '#fb923c', '#06b6d4', '#2563eb', '#ea580c', '#93c5fd'][i % 8],
+        size: 5 + Math.random() * 7,
+        rotation: Math.random() * 720,
+        sway: -30 + Math.random() * 60
     }))
 
     const siteName = siteInfo?.name || ''
 
     return (
-        <div className="mkt-anim-container">
+        <div className="mkt-anim-wrap mkt-anim-bg-white">
             <style>{`
-                .mkt-anim-container { position:fixed; inset:0; background:rgba(0,0,0,0.9); display:flex; flex-direction:column; align-items:center; justify-content:center; z-index:99999; overflow:hidden; }
-                .mkt-anim-text { color:#fff; font-size:clamp(24px,5vw,48px); font-weight:800; text-align:center; animation:mkt-fadeUp 1s ease-out; font-family:'Inter',sans-serif; }
-                .mkt-anim-subtext { color:rgba(255,255,255,0.6); font-size:clamp(14px,2.5vw,20px); font-weight:500; text-align:center; animation:mkt-fadeUp 1s ease-out 0.3s both; font-family:'Inter',sans-serif; margin-top:8px; }
-                .mkt-confetti { position:absolute; border-radius:2px; animation:mkt-confettiFall var(--dur) ease-in var(--delay) forwards; opacity:0; }
-                @keyframes mkt-confettiFall { 0%{transform:translateY(-100vh) rotate(0deg);opacity:1} 100%{transform:translateY(100vh) rotate(var(--rot));opacity:0} }
-                @keyframes mkt-fadeUp { from{opacity:0;transform:translateY(30px)} to{opacity:1;transform:translateY(0)} }
+                ${ANIM_SHARED_CSS}
+                .mkt-confetti-p {
+                    position:absolute; border-radius:3px; opacity:0;
+                    animation: mkt-confettiFall var(--dur) cubic-bezier(0.25,0.46,0.45,0.94) var(--delay) forwards;
+                }
+                @keyframes mkt-confettiFall {
+                    0% { transform:translateY(-100vh) translateX(0) rotate(0deg); opacity:1; }
+                    25% { opacity:1; }
+                    100% { transform:translateY(100vh) translateX(var(--sway)) rotate(var(--rot)); opacity:0; }
+                }
+                .mkt-a-confetti-card { animation: mkt-a-scaleIn 0.6s cubic-bezier(0.34,1.56,0.64,1) 0.2s both; }
             `}</style>
+            <div className="mkt-anim-glow-tl" />
+            <div className="mkt-anim-glow-br" />
             {particles.map(p => (
-                <div key={p.id} className="mkt-confetti" style={{
-                    left: `${p.left}%`, width: `${p.size}px`, height: `${p.size * 1.5}px`,
-                    background: p.color, '--delay': `${p.delay}s`, '--dur': `${p.duration}s`, '--rot': `${p.rotation}deg`
+                <div key={p.id} className="mkt-confetti-p" style={{
+                    left: `${p.left}%`, width: `${p.size}px`, height: `${p.size * 1.6}px`,
+                    background: p.color, '--delay': `${p.delay}s`, '--dur': `${p.duration}s`,
+                    '--rot': `${p.rotation}deg`, '--sway': `${p.sway}px`
                 }} />
             ))}
-            <div className="mkt-anim-text">🎉 Thank You!</div>
-            {siteName && <div className="mkt-anim-subtext">{siteName}</div>}
+            <div className="mkt-a-glass mkt-a-confetti-card">
+                <div style={{ fontSize: '48px', marginBottom: '16px' }}>🎉</div>
+                <h2 className="mkt-a-title">Thank <span className="mkt-a-gradient-text">You!</span></h2>
+                <p className="mkt-a-sub">{siteName ? `Welcome to ${siteName}` : 'Redirecting you now...'}</p>
+            </div>
         </div>
     )
 }
 
 function LogoAnimation({ onComplete, siteInfo }) {
     useEffect(() => {
-        const timer = setTimeout(onComplete, 3500)
+        const timer = setTimeout(onComplete, 1600)
         return () => clearTimeout(timer)
     }, [onComplete])
 
@@ -254,27 +369,43 @@ function LogoAnimation({ onComplete, siteInfo }) {
     const siteName = siteInfo?.name || ''
 
     return (
-        <div className="mkt-anim-container">
+        <div className="mkt-anim-wrap mkt-anim-bg-white">
             <style>{`
-                .mkt-anim-container { position:fixed; inset:0; background:linear-gradient(135deg,#0f0c29,#302b63,#24243e); display:flex; align-items:center; justify-content:center; z-index:99999; }
-                .mkt-logo-reveal { animation:mkt-logoReveal 2s cubic-bezier(0.19,1,0.22,1) forwards; opacity:0; transform:scale(0.3); text-align:center; }
-                .mkt-logo-img { width:120px; height:120px; border-radius:24px; object-fit:contain; display:block; margin:0 auto 20px; filter:drop-shadow(0 0 30px rgba(255,255,255,0.3)); background:rgba(255,255,255,0.1); padding:12px; }
-                .mkt-logo-fallback { font-size:80px; display:block; margin-bottom:20px; filter:drop-shadow(0 0 30px rgba(255,215,0,0.6)); }
-                .mkt-logo-text { color:#fff; font-size:clamp(20px,4vw,36px); font-weight:700; font-family:'Inter',sans-serif; letter-spacing:2px; }
-                .mkt-logo-subtitle { color:rgba(255,255,255,0.6); font-size:clamp(14px,2.5vw,18px); font-weight:500; font-family:'Inter',sans-serif; margin-top:8px; }
-                .mkt-logo-glow { position:absolute; width:300px; height:300px; border-radius:50%; background:radial-gradient(circle,rgba(99,102,241,0.3),transparent 70%); animation:mkt-pulse 2s ease-in-out infinite; }
-                @keyframes mkt-logoReveal { 0%{opacity:0;transform:scale(0.3)} 50%{opacity:1} 100%{opacity:1;transform:scale(1)} }
-                @keyframes mkt-pulse { 0%,100%{transform:scale(1);opacity:0.5} 50%{transform:scale(1.3);opacity:0.8} }
+                ${ANIM_SHARED_CSS}
+                .mkt-logo-card { animation: mkt-a-scaleIn 0.7s cubic-bezier(0.34,1.56,0.64,1) 0.1s both; }
+                .mkt-logo-ring {
+                    position:absolute; border-radius:50%;
+                    border:1.5px solid rgba(59,130,246,0.12);
+                    animation: mkt-logo-ringPulse 2s ease-in-out infinite;
+                    pointer-events:none;
+                }
+                .mkt-logo-ring:nth-child(2) { animation-delay:0.6s; }
+                .mkt-logo-ring:nth-child(3) { animation-delay:1.2s; }
+                @keyframes mkt-logo-ringPulse {
+                    0% { transform:translate(-50%,-50%) scale(0.8); opacity:0.6; }
+                    100% { transform:translate(-50%,-50%) scale(2.5); opacity:0; }
+                }
             `}</style>
-            <div className="mkt-logo-glow" />
-            <div className="mkt-logo-reveal">
+            <div className="mkt-anim-glow-tl" />
+            <div className="mkt-anim-glow-br" />
+            {/* Pulsing rings behind card */}
+            {[160, 200, 250].map((size, i) => (
+                <div key={i} className="mkt-logo-ring" style={{
+                    width: `${size}px`, height: `${size}px`,
+                    top: '50%', left: '50%', transform: 'translate(-50%,-50%)'
+                }} />
+            ))}
+            <div className="mkt-a-glass mkt-logo-card">
                 {logoUrl ? (
-                    <img className="mkt-logo-img" src={logoUrl} alt={siteName} />
+                    <img className="mkt-a-logo" src={logoUrl} alt={siteName} style={{
+                        background: 'rgba(59,130,246,0.05)', padding: '8px',
+                        border: '1px solid rgba(59,130,246,0.1)'
+                    }} />
                 ) : (
-                    <span className="mkt-logo-fallback">⭐</span>
+                    <div className="mkt-a-logo-fallback"><span style={{ filter: 'brightness(10)' }}>⭐</span></div>
                 )}
-                <div className="mkt-logo-text">{siteName || 'Thank You'}</div>
-                <div className="mkt-logo-subtitle">Thank You For Watching</div>
+                <h2 className="mkt-a-title"><span className="mkt-a-gradient-text">{siteName || 'Thank You'}</span></h2>
+                <p className="mkt-a-sub">Thank you for watching</p>
             </div>
         </div>
     )
@@ -282,55 +413,92 @@ function LogoAnimation({ onComplete, siteInfo }) {
 
 function RippleAnimation({ onComplete, siteInfo }) {
     useEffect(() => {
-        const timer = setTimeout(onComplete, 3500)
+        const timer = setTimeout(onComplete, 1600)
         return () => clearTimeout(timer)
     }, [onComplete])
 
     const siteName = siteInfo?.name || ''
 
     return (
-        <div className="mkt-anim-container">
+        <div className="mkt-anim-wrap mkt-anim-bg-white">
             <style>{`
-                .mkt-anim-container { position:fixed; inset:0; background:#0a0a0a; display:flex; flex-direction:column; align-items:center; justify-content:center; z-index:99999; overflow:hidden; }
-                .mkt-ripple { position:absolute; border:2px solid rgba(99,102,241,0.6); border-radius:50%; animation:mkt-rippleExpand var(--dur) ease-out var(--delay) infinite; }
-                .mkt-ripple-text { color:#fff; font-size:clamp(20px,4vw,40px); font-weight:700; z-index:1; animation:mkt-fadeUp 1s ease-out 0.5s both; font-family:'Inter',sans-serif; }
-                .mkt-ripple-sub { color:rgba(255,255,255,0.5); font-size:clamp(14px,2vw,18px); z-index:1; animation:mkt-fadeUp 1s ease-out 0.8s both; font-family:'Inter',sans-serif; margin-top:8px; }
-                @keyframes mkt-rippleExpand { 0%{width:0;height:0;opacity:1} 100%{width:600px;height:600px;opacity:0} }
-                @keyframes mkt-fadeUp { from{opacity:0;transform:translateY(20px)} to{opacity:1;transform:translateY(0)} }
+                ${ANIM_SHARED_CSS}
+                .mkt-ripple-ring {
+                    position:absolute; top:50%; left:50%;
+                    border-radius:50%; border:2px solid transparent;
+                    transform:translate(-50%,-50%) scale(0);
+                    pointer-events:none;
+                    animation: mkt-rippleExpand var(--dur) ease-out var(--delay) infinite;
+                }
+                @keyframes mkt-rippleExpand {
+                    0% { transform:translate(-50%,-50%) scale(0); opacity:0.8; }
+                    100% { transform:translate(-50%,-50%) scale(1); opacity:0; }
+                }
+                .mkt-ripple-card { animation: mkt-a-scaleIn 0.6s cubic-bezier(0.34,1.56,0.64,1) 0.3s both; z-index:5; }
             `}</style>
-            {[0, 0.5, 1, 1.5, 2].map((delay, i) => (
-                <div key={i} className="mkt-ripple" style={{ '--delay': `${delay}s`, '--dur': '2.5s' }} />
-            ))}
-            <div className="mkt-ripple-text">🌊 See You Soon!</div>
-            {siteName && <div className="mkt-ripple-sub">{siteName}</div>}
+            <div className="mkt-anim-glow-tl" />
+            <div className="mkt-anim-glow-br" />
+            {[0, 0.4, 0.8, 1.2, 1.6].map((delay, i) => {
+                const size = 120 + i * 120
+                const isBlue = i % 2 === 0
+                return (
+                    <div key={i} className="mkt-ripple-ring" style={{
+                        width: `${size}px`, height: `${size}px`,
+                        borderColor: isBlue ? 'rgba(59,130,246,0.25)' : 'rgba(249,115,22,0.2)',
+                        boxShadow: isBlue
+                            ? '0 0 20px rgba(59,130,246,0.08)'
+                            : '0 0 20px rgba(249,115,22,0.06)',
+                        '--dur': `${2 + i * 0.15}s`, '--delay': `${delay}s`
+                    }} />
+                )
+            })}
+            <div className="mkt-a-glass mkt-ripple-card">
+                <div style={{ fontSize: '42px', marginBottom: '16px' }}>👋</div>
+                <h2 className="mkt-a-title">See You <span className="mkt-a-gradient-text">Soon!</span></h2>
+                <p className="mkt-a-sub">{siteName || 'Redirecting...'}</p>
+            </div>
         </div>
     )
 }
 
 function ZoomAnimation({ onComplete, siteInfo }) {
+    const [phase, setPhase] = useState('enter')
+
     useEffect(() => {
-        const timer = setTimeout(onComplete, 3000)
-        return () => clearTimeout(timer)
+        const t1 = setTimeout(() => setPhase('show'), 80)
+        const t2 = setTimeout(() => setPhase('zoom-out'), 1100)
+        const t3 = setTimeout(onComplete, 1500)
+        return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3) }
     }, [onComplete])
 
     const logoUrl = siteInfo?.logo?.url || siteInfo?.logo || ''
     const siteName = siteInfo?.name || ''
 
     return (
-        <div className="mkt-anim-container">
+        <div className="mkt-anim-wrap mkt-anim-bg-white">
             <style>{`
-                .mkt-anim-container { position:fixed; inset:0; background:#000; display:flex; align-items:center; justify-content:center; z-index:99999; }
-                .mkt-zoom-content { animation:mkt-zoomOut 2.5s cubic-bezier(0.25,0.46,0.45,0.94) forwards; text-align:center; }
-                .mkt-zoom-logo { width:80px; height:80px; border-radius:16px; object-fit:contain; display:block; margin:0 auto 16px; }
-                .mkt-zoom-emoji { font-size:100px; display:block; margin-bottom:20px; }
-                .mkt-zoom-text { color:#fff; font-size:clamp(18px,3vw,32px); font-weight:600; font-family:'Inter',sans-serif; }
-                .mkt-zoom-sub { color:rgba(255,255,255,0.5); font-size:clamp(12px,2vw,16px); font-family:'Inter',sans-serif; margin-top:6px; }
-                @keyframes mkt-zoomOut { 0%{transform:scale(3);opacity:0} 40%{transform:scale(1);opacity:1} 80%{transform:scale(1);opacity:1} 100%{transform:scale(0.5);opacity:0} }
+                ${ANIM_SHARED_CSS}
+                .mkt-zoom-card {
+                    transition: all 0.8s cubic-bezier(0.22,1,0.36,1);
+                }
             `}</style>
-            <div className="mkt-zoom-content">
-                {logoUrl ? <img className="mkt-zoom-logo" src={logoUrl} alt={siteName} /> : <span className="mkt-zoom-emoji">🔍</span>}
-                <div className="mkt-zoom-text">Thanks for watching!</div>
-                {siteName && <div className="mkt-zoom-sub">{siteName}</div>}
+            <div className="mkt-anim-glow-tl" />
+            <div className="mkt-anim-glow-br" />
+            <div className="mkt-a-glass mkt-zoom-card" style={{
+                opacity: phase === 'enter' ? 0 : phase === 'zoom-out' ? 0 : 1,
+                transform: phase === 'enter' ? 'scale(2.5)' :
+                    phase === 'zoom-out' ? 'scale(0.6)' : 'scale(1)'
+            }}>
+                {logoUrl ? (
+                    <img className="mkt-a-logo" src={logoUrl} alt={siteName} style={{
+                        background: 'rgba(59,130,246,0.05)', padding: '8px',
+                        border: '1px solid rgba(59,130,246,0.1)'
+                    }} />
+                ) : (
+                    <div className="mkt-a-logo-fallback"><span style={{ filter: 'brightness(10)' }}>🎬</span></div>
+                )}
+                <h2 className="mkt-a-title">Thanks for <span className="mkt-a-gradient-text">watching!</span></h2>
+                <p className="mkt-a-sub">{siteName || 'Taking you to our website...'}</p>
             </div>
         </div>
     )
@@ -344,32 +512,19 @@ function CinematicAnimation({ onComplete }) {
         const timeline = async () => {
             const wait = ms => new Promise(r => setTimeout(r, ms))
 
-            // 1. Flash
             setPhase('flash-in')
-            await wait(80)
+            await wait(40)
             setPhase('flash-out')
-            await wait(120)
-
-            // 2. Blades sweep in
+            await wait(60)
             setPhase('blades-in')
-            await wait(420)
-
-            // 3. Radial ring expand
-            setPhase('ring-expand')
-            await wait(160)
-
-            // 4. Particles burst
+            await wait(250)
             setPhase('particles')
             spawnParticles()
-            await wait(600)
-
-            // 5. Blades sweep out
-            setPhase('blades-out')
-            await wait(400)
-
-            // 6. Ring fade → redirect
-            setPhase('done')
             await wait(300)
+            setPhase('blades-out')
+            await wait(200)
+            setPhase('done')
+            await wait(150)
             onComplete()
         }
         timeline()
@@ -380,68 +535,82 @@ function CinematicAnimation({ onComplete }) {
         if (!container) return
         container.innerHTML = ''
         const colors = ['#3b82f6', '#60a5fa', '#f97316', '#fb923c', '#06b6d4', '#2563eb']
-        for (let i = 0; i < 50; i++) {
+        for (let i = 0; i < 45; i++) {
             const p = document.createElement('div')
-            const size = 3 + Math.random() * 6
-            const angle = (i / 50) * Math.PI * 2 + (Math.random() - 0.5) * 0.4
-            const dist = 120 + Math.random() * 350
+            const size = 3 + Math.random() * 5
+            const angle = (i / 45) * Math.PI * 2 + (Math.random() - 0.5) * 0.4
+            const dist = 100 + Math.random() * 300
             const tx = Math.cos(angle) * dist
             const ty = Math.sin(angle) * dist
             const color = colors[Math.floor(Math.random() * colors.length)]
             p.style.cssText = `
                 position:absolute; border-radius:50%; width:${size}px; height:${size}px;
                 left:50%; top:50%; background:${color}; opacity:0;
-                box-shadow: 0 0 ${size * 2}px ${color}80;
+                box-shadow: 0 0 ${size * 3}px ${color}60;
             `
             container.appendChild(p)
             setTimeout(() => {
                 p.style.opacity = '1'
-                p.style.transition = `transform ${0.5 + Math.random() * 0.4}s cubic-bezier(0.1,0.9,0.3,1), opacity 0.4s ease ${0.25 + Math.random() * 0.3}s`
+                p.style.transition = `transform ${0.4 + Math.random() * 0.4}s cubic-bezier(0.1,0.9,0.3,1), opacity 0.3s ease ${0.2 + Math.random() * 0.25}s`
                 p.style.transform = `translate(calc(${tx}px - 50%), calc(${ty}px - 50%))`
-                setTimeout(() => { p.style.opacity = '0' }, 450)
-            }, Math.random() * 150)
+                setTimeout(() => { p.style.opacity = '0' }, 400)
+            }, Math.random() * 120)
         }
     }
 
-    const BLADE_COUNT = 8
+    const BLADE_COUNT = 6
 
     return (
-        <div style={{ position: 'fixed', inset: 0, zIndex: 99999, background: '#080808' }}>
+        <div style={{
+            position: 'fixed', inset: 0, zIndex: 99999,
+            background: 'linear-gradient(180deg, #f8fafc, #ffffff, #f1f5f9)',
+            opacity: phase === 'done' ? 0 : 1,
+            transition: 'opacity 0.25s ease'
+        }}>
             <style>{`
-                .mkt-cin-flash { position:fixed; inset:0; z-index:90; background:#fff; pointer-events:none; }
-                .mkt-cin-blades { position:fixed; inset:0; z-index:80; display:flex; flex-direction:column; pointer-events:none; }
-                .mkt-cin-blade { flex:1; background:#080808; transform:scaleX(0); transform-origin:left center; }
-                .mkt-cin-ring { position:fixed; top:50%; left:50%; transform:translate(-50%,-50%) scale(0); width:20px; height:20px; border-radius:50%; background:#080808; z-index:75; pointer-events:none; }
-                .mkt-cin-particles { position:fixed; inset:0; z-index:85; pointer-events:none; overflow:hidden; }
+                .mkt-cin2-flash {
+                    position:fixed; inset:0; z-index:90;
+                    background:linear-gradient(135deg, rgba(59,130,246,0.15), rgba(249,115,22,0.1));
+                    pointer-events:none;
+                }
+                .mkt-cin2-blades { position:fixed; inset:0; z-index:80; display:flex; flex-direction:column; pointer-events:none; }
+                .mkt-cin2-blade { flex:1; background:linear-gradient(135deg, #f8fafc, #ffffff); transform:scaleX(0); transform-origin:left center; }
+                .mkt-cin2-particles { position:fixed; inset:0; z-index:85; pointer-events:none; overflow:hidden; }
             `}</style>
 
+            {/* Ambient glows */}
+            <div style={{
+                position: 'absolute', top: '-100px', left: '-100px', width: '400px', height: '400px',
+                background: 'radial-gradient(circle, rgba(59,130,246,0.12) 0%, transparent 60%)',
+                pointerEvents: 'none'
+            }} />
+            <div style={{
+                position: 'absolute', bottom: '-100px', right: '-100px', width: '350px', height: '350px',
+                background: 'radial-gradient(circle, rgba(249,115,22,0.08) 0%, transparent 60%)',
+                pointerEvents: 'none'
+            }} />
+
             {/* Flash */}
-            <div className="mkt-cin-flash" style={{
+            <div className="mkt-cin2-flash" style={{
                 opacity: phase === 'flash-in' ? 1 : 0,
-                transition: phase === 'flash-in' ? 'opacity 0.08s ease' : 'opacity 0.3s ease'
+                transition: phase === 'flash-in' ? 'opacity 0.06s ease' : 'opacity 0.2s ease'
             }} />
 
             {/* Blades */}
-            <div className="mkt-cin-blades">
+            <div className="mkt-cin2-blades">
                 {Array.from({ length: BLADE_COUNT }, (_, i) => (
-                    <div key={i} className="mkt-cin-blade" style={{
-                        transform: ['blades-in', 'ring-expand', 'particles'].includes(phase) ? 'scaleX(1)' : 'scaleX(0)',
-                        transformOrigin: ['blades-out', 'done'].includes(phase) ? 'right center' : 'left center',
-                        transition: `transform 0.38s cubic-bezier(0.77,0,0.18,1) ${i * 0.025}s`
+                    <div key={i} className="mkt-cin2-blade" style={{
+                        transform: ['blades-in', 'particles'].includes(phase) ? 'scaleX(1)' : 'scaleX(0)',
+                        transformOrigin: phase === 'blades-out' ? 'right center' : 'left center',
+                        transition: `transform 0.35s cubic-bezier(0.77,0,0.18,1) ${i * 0.03}s`,
+                        borderBottom: i < BLADE_COUNT - 1 ? '1px solid rgba(59,130,246,0.06)' : 'none'
                     }} />
                 ))}
             </div>
 
-            {/* Radial ring */}
-            <div className="mkt-cin-ring" style={{
-                transform: ['ring-expand', 'particles', 'blades-out', 'done'].includes(phase)
-                    ? 'translate(-50%,-50%) scale(220)' : 'translate(-50%,-50%) scale(0)',
-                transition: 'transform 0.7s cubic-bezier(0.22,1,0.36,1)',
-                opacity: phase === 'done' ? 0 : 1
-            }} />
-
             {/* Particles */}
-            <div className="mkt-cin-particles" ref={particlesRef} />
+            <div className="mkt-cin2-particles" ref={particlesRef} />
+
         </div>
     )
 }
@@ -453,32 +622,21 @@ function WaterdropAnimation({ onComplete }) {
     useEffect(() => {
         const timeline = async () => {
             const wait = ms => new Promise(r => setTimeout(r, ms))
-
-            // 1. Impact flash
             setPhase('impact')
-            await wait(60)
-
-            // 2. Ripples expand
+            await wait(40)
             setPhase('ripples')
-            await wait(500)
-
-            // 3. Droplets scatter
+            await wait(250)
             setPhase('droplets')
-            await wait(400)
-
-            // 4. Glow pulse
+            await wait(200)
             setPhase('glow')
-            await wait(300)
-
-            // 5. Fade out → redirect
+            await wait(180)
             setPhase('fadeout')
-            await wait(400)
+            await wait(200)
             onComplete()
         }
         timeline()
     }, [onComplete])
 
-    // Canvas-based droplet particles
     useEffect(() => {
         if (phase !== 'droplets' && phase !== 'glow' && phase !== 'fadeout') return
         const canvas = canvasRef.current
@@ -489,10 +647,10 @@ function WaterdropAnimation({ onComplete }) {
         const cx = canvas.width / 2
         const cy = canvas.height / 2
 
-        const drops = Array.from({ length: 40 }, () => {
+        const drops = Array.from({ length: 35 }, () => {
             const angle = Math.random() * Math.PI * 2
-            const speed = 3 + Math.random() * 6
-            const size = 2 + Math.random() * 4
+            const speed = 3 + Math.random() * 5
+            const size = 2 + Math.random() * 3.5
             const colors = ['#3b82f6', '#60a5fa', '#f97316', '#fb923c', '#06b6d4', '#93c5fd']
             return {
                 x: cx, y: cy,
@@ -501,7 +659,7 @@ function WaterdropAnimation({ onComplete }) {
                 size,
                 color: colors[Math.floor(Math.random() * colors.length)],
                 alpha: 1,
-                gravity: 0.1 + Math.random() * 0.05
+                gravity: 0.08 + Math.random() * 0.04
             }
         })
 
@@ -512,7 +670,7 @@ function WaterdropAnimation({ onComplete }) {
                 d.x += d.vx
                 d.y += d.vy
                 d.vy += d.gravity
-                d.alpha -= 0.012
+                d.alpha -= 0.014
                 if (d.alpha <= 0) return
                 ctx.beginPath()
                 ctx.arc(d.x, d.y, d.size, 0, Math.PI * 2)
@@ -533,72 +691,62 @@ function WaterdropAnimation({ onComplete }) {
     return (
         <div style={{
             position: 'fixed', inset: 0, zIndex: 99999,
-            background: '#ffffff',
+            background: 'linear-gradient(180deg, #f8fafc 0%, #ffffff 50%, #f1f5f9 100%)',
             opacity: phase === 'fadeout' ? 0 : 1,
-            transition: 'opacity 0.4s ease'
+            transition: 'opacity 0.35s ease'
         }}>
             <style>{`
-                .mkt-wd-impact {
+                .mkt-wd2-impact {
                     position:fixed; top:50%; left:50%; transform:translate(-50%,-50%);
-                    width:14px; height:14px; border-radius:50%;
+                    width:12px; height:12px; border-radius:50%;
                     background:radial-gradient(circle, #60a5fa, #3b82f6);
-                    box-shadow: 0 0 30px #3b82f6, 0 0 60px rgba(59,130,246,0.4);
+                    box-shadow: 0 0 24px #3b82f6, 0 0 48px rgba(59,130,246,0.3);
                     z-index:10;
                 }
-                .mkt-wd-ring {
+                .mkt-wd2-ring {
                     position:fixed; top:50%; left:50%;
                     border-radius:50%; border:2px solid transparent;
                     transform:translate(-50%,-50%) scale(0);
                     pointer-events:none;
                 }
-                .mkt-wd-ring-active {
-                    animation: mkt-wd-expand var(--dur) cubic-bezier(0.22,1,0.36,1) var(--delay) forwards;
+                .mkt-wd2-ring-active {
+                    animation: mkt-wd2-expand var(--dur) cubic-bezier(0.22,1,0.36,1) var(--delay) forwards;
                 }
-                @keyframes mkt-wd-expand {
-                    0% { transform:translate(-50%,-50%) scale(0); opacity:1; }
-                    50% { opacity:0.5; }
+                @keyframes mkt-wd2-expand {
+                    0% { transform:translate(-50%,-50%) scale(0); opacity:0.8; }
+                    50% { opacity:0.4; }
                     100% { transform:translate(-50%,-50%) scale(1); opacity:0; }
                 }
-                .mkt-wd-glow-center {
+                .mkt-wd2-glow-pulse {
                     position:fixed; top:50%; left:50%; transform:translate(-50%,-50%);
-                    width:250px; height:250px; border-radius:50%;
-                    background:radial-gradient(circle, rgba(59,130,246,0.15) 0%, rgba(249,115,22,0.08) 40%, transparent 70%);
+                    width:200px; height:200px; border-radius:50%;
+                    background:radial-gradient(circle, rgba(59,130,246,0.12) 0%, rgba(249,115,22,0.06) 40%, transparent 70%);
                     pointer-events:none;
+                    animation: mkt-wd2-pulse 0.8s ease-in-out;
                 }
-                .mkt-wd-glow-pulse {
-                    animation: mkt-wd-pulse 1s ease-in-out;
-                }
-                @keyframes mkt-wd-pulse {
+                @keyframes mkt-wd2-pulse {
                     0% { transform:translate(-50%,-50%) scale(0.5); opacity:0; }
                     50% { transform:translate(-50%,-50%) scale(2.5); opacity:1; }
                     100% { transform:translate(-50%,-50%) scale(3.5); opacity:0; }
                 }
-                .mkt-wd-ambient-tl {
-                    position:fixed; top:-100px; left:-100px; width:350px; height:350px;
-                    background:radial-gradient(circle, rgba(59,130,246,0.06) 0%, transparent 70%);
-                    animation: mkt-wd-ambient 3s ease-in-out infinite;
-                }
-                .mkt-wd-ambient-br {
-                    position:fixed; bottom:-100px; right:-100px; width:300px; height:300px;
-                    background:radial-gradient(circle, rgba(249,115,22,0.04) 0%, transparent 70%);
-                    animation: mkt-wd-ambient 4s ease-in-out infinite reverse;
-                }
-                @keyframes mkt-wd-ambient {
-                    0%,100% { opacity:0.4; transform:scale(1); }
-                    50% { opacity:0.8; transform:scale(1.15); }
-                }
-                .mkt-wd-canvas {
-                    position:fixed; inset:0; z-index:5; pointer-events:none;
-                }
+                .mkt-wd2-canvas { position:fixed; inset:0; z-index:5; pointer-events:none; }
             `}</style>
 
-            {/* Ambient glow */}
-            <div className="mkt-wd-ambient-tl" />
-            <div className="mkt-wd-ambient-br" />
+            {/* Ambient glows */}
+            <div style={{
+                position: 'absolute', top: '-100px', left: '-100px', width: '350px', height: '350px',
+                background: 'radial-gradient(circle, rgba(59,130,246,0.08) 0%, transparent 65%)',
+                pointerEvents: 'none'
+            }} />
+            <div style={{
+                position: 'absolute', bottom: '-100px', right: '-100px', width: '300px', height: '300px',
+                background: 'radial-gradient(circle, rgba(249,115,22,0.06) 0%, transparent 65%)',
+                pointerEvents: 'none'
+            }} />
 
             {/* Central impact dot */}
             {(phase === 'impact' || phase === 'ripples') && (
-                <div className="mkt-wd-impact" style={{
+                <div className="mkt-wd2-impact" style={{
                     transform: `translate(-50%,-50%) scale(${phase === 'impact' ? 1.5 : 0.3})`,
                     opacity: phase === 'ripples' ? 0 : 1,
                     transition: 'all 0.2s ease'
@@ -608,19 +756,21 @@ function WaterdropAnimation({ onComplete }) {
             {/* Concentric ripple rings */}
             {['ripples', 'droplets', 'glow'].includes(phase) && (
                 Array.from({ length: RING_COUNT }, (_, i) => {
-                    const size = 80 + i * 140
-                    const hue = i % 2 === 0 ? '59,130,246' : '249,115,22'
+                    const size = 70 + i * 120
+                    const isBlue = i % 2 === 0
                     const borderW = Math.max(1, 2.5 - i * 0.4)
                     return (
                         <div key={i}
-                            className="mkt-wd-ring mkt-wd-ring-active"
+                            className="mkt-wd2-ring mkt-wd2-ring-active"
                             style={{
                                 width: `${size}px`, height: `${size}px`,
-                                borderColor: `rgba(${hue}, ${0.5 - i * 0.07})`,
+                                borderColor: isBlue ? `rgba(59,130,246,${0.4 - i * 0.06})` : `rgba(249,115,22,${0.35 - i * 0.05})`,
                                 borderWidth: `${borderW}px`,
-                                boxShadow: `0 0 ${10 + i * 3}px rgba(${hue}, ${0.15 - i * 0.02})`,
-                                '--dur': `${0.6 + i * 0.12}s`,
-                                '--delay': `${i * 0.08}s`
+                                boxShadow: isBlue
+                                    ? `0 0 ${10 + i * 4}px rgba(59,130,246,${0.12 - i * 0.02})`
+                                    : `0 0 ${10 + i * 4}px rgba(249,115,22,${0.1 - i * 0.015})`,
+                                '--dur': `${0.55 + i * 0.1}s`,
+                                '--delay': `${i * 0.07}s`
                             }}
                         />
                     )
@@ -629,11 +779,12 @@ function WaterdropAnimation({ onComplete }) {
 
             {/* Center glow pulse */}
             {(phase === 'glow' || phase === 'droplets') && (
-                <div className={`mkt-wd-glow-center ${phase === 'glow' ? 'mkt-wd-glow-pulse' : ''}`} />
+                <div className={`mkt-wd2-glow-pulse`} />
             )}
 
             {/* Canvas droplet particles */}
-            <canvas ref={canvasRef} className="mkt-wd-canvas" />
+            <canvas ref={canvasRef} className="mkt-wd2-canvas" />
+
         </div>
     )
 }
@@ -693,7 +844,7 @@ export default function QrVideoPage() {
                 if (videoRes.data.success) {
                     setVideo(videoRes.data.data)
                     // Start preloading after a short delay to prioritize video
-                    setTimeout(() => setPreloadStarted(true), 2000)
+                    setPreloadStarted(true)
                 } else {
                     setError('Video not found')
                 }
@@ -859,10 +1010,21 @@ export default function QrVideoPage() {
         return (
             <div style={styles.error}>
                 <style>{baseCSS}</style>
-                <div style={{ textAlign: 'center' }}>
-                    <div style={{ fontSize: '64px', marginBottom: '20px' }}>📹</div>
-                    <h1 style={{ color: '#fff', fontSize: '24px', fontWeight: '700', marginBottom: '8px' }}>{error || 'Video Not Available'}</h1>
-                    <p style={{ color: '#94a3b8', fontSize: '16px' }}>This video may have been removed or is currently inactive.</p>
+                <div style={{
+                    background: 'rgba(255,255,255,0.95)', backdropFilter: 'blur(20px)',
+                    WebkitBackdropFilter: 'blur(20px)', border: '1px solid rgba(0,0,0,0.06)',
+                    borderRadius: '24px', padding: '48px 40px', textAlign: 'center',
+                    maxWidth: '420px', margin: '0 20px',
+                    boxShadow: '0 8px 40px rgba(0,0,0,0.06)'
+                }}>
+                    <div style={{ fontSize: '56px', marginBottom: '20px', filter: 'grayscale(0.3)' }}>📹</div>
+                    <h1 style={{
+                        fontFamily: "'Poppins','Inter',sans-serif", color: '#1e293b',
+                        fontSize: '22px', fontWeight: '700', marginBottom: '10px', lineHeight: 1.3
+                    }}>{error || 'Video Not Available'}</h1>
+                    <p style={{ color: '#64748b', fontSize: '15px', lineHeight: 1.6, marginBottom: '24px' }}>
+                        This video may have been removed or is currently inactive.
+                    </p>
                     <a href="/" style={styles.homeLink}>Go to Homepage</a>
                 </div>
             </div>
@@ -927,46 +1089,47 @@ export default function QrVideoPage() {
                     <BufferIndicator videoRef={videoRef} playing={playing} />
 
                     {/* Floating sound toggle button */}
+                    <style>{`
+                        @keyframes mkt-soundPulse {
+                            0%,100% { transform:scale(1); box-shadow:0 4px 24px rgba(59,130,246,0.15); }
+                            50% { transform:scale(1.06); box-shadow:0 4px 32px rgba(59,130,246,0.3); }
+                        }
+                    `}</style>
                     {isMuted && playing && (
                         <button onClick={toggleMute} style={{
-                            position: 'fixed', bottom: '24px', right: '24px', zIndex: 20,
-                            width: '52px', height: '52px', borderRadius: '50%',
-                            background: 'rgba(255,255,255,0.15)', backdropFilter: 'blur(10px)',
-                            WebkitBackdropFilter: 'blur(10px)',
-                            border: '1px solid rgba(255,255,255,0.25)',
+                            position: 'fixed', bottom: '28px', right: '28px', zIndex: 20,
+                            width: '48px', height: '48px', borderRadius: '14px',
+                            background: 'rgba(255,255,255,0.9)',
+                            backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)',
+                            border: '1px solid rgba(59,130,246,0.15)',
                             display: 'flex', alignItems: 'center', justifyContent: 'center',
                             cursor: 'pointer', transition: 'all 0.3s ease',
-                            boxShadow: '0 4px 20px rgba(0,0,0,0.3)',
-                            animation: 'mkt-soundPulse 2s ease-in-out infinite'
+                            boxShadow: '0 4px 24px rgba(59,130,246,0.15)',
+                            animation: 'mkt-soundPulse 2.5s ease-in-out infinite'
                         }}>
-                            <style>{`
-                                @keyframes mkt-soundPulse {
-                                    0%,100% { transform: scale(1); box-shadow: 0 4px 20px rgba(0,0,0,0.3); }
-                                    50% { transform: scale(1.08); box-shadow: 0 4px 28px rgba(59,130,246,0.4); }
-                                }
-                            `}</style>
-                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" fill="white" />
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" fill="#3b82f6" />
                                 <line x1="23" y1="9" x2="17" y2="15" />
                                 <line x1="17" y1="9" x2="23" y2="15" />
                             </svg>
                         </button>
                     )}
 
-                    {/* Sound ON indicator (brief flash) */}
+                    {/* Sound ON indicator */}
                     {!isMuted && playing && (
                         <button onClick={toggleMute} style={{
-                            position: 'fixed', bottom: '24px', right: '24px', zIndex: 20,
-                            width: '52px', height: '52px', borderRadius: '50%',
-                            background: 'rgba(59,130,246,0.2)', backdropFilter: 'blur(10px)',
-                            WebkitBackdropFilter: 'blur(10px)',
-                            border: '1px solid rgba(59,130,246,0.3)',
+                            position: 'fixed', bottom: '28px', right: '28px', zIndex: 20,
+                            width: '48px', height: '48px', borderRadius: '14px',
+                            background: 'rgba(255,255,255,0.9)',
+                            backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)',
+                            border: '1px solid rgba(59,130,246,0.15)',
                             display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            cursor: 'pointer', opacity: showControls ? 0.8 : 0,
-                            transition: 'opacity 0.3s ease'
+                            cursor: 'pointer', opacity: showControls ? 0.9 : 0,
+                            transition: 'opacity 0.3s ease',
+                            boxShadow: '0 4px 20px rgba(59,130,246,0.1)'
                         }}>
-                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" fill="white" />
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" fill="#3b82f6" />
                                 <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07" />
                             </svg>
                         </button>
@@ -976,24 +1139,37 @@ export default function QrVideoPage() {
 
             {/* Custom Controls Overlay */}
             <div style={{ ...styles.controlsOverlay, opacity: showControls ? 1 : 0 }}>
-                {/* Title */}
+                {/* Title pill */}
                 <div style={styles.titleBar}>
-                    <h1 style={styles.videoTitle}>{video.title}</h1>
+                    <div style={styles.titlePill}>
+                        <div style={styles.titleDot} />
+                        <h1 style={styles.videoTitle}>{video.title}</h1>
+                    </div>
                 </div>
 
                 {/* Center Play/Pause button */}
                 <button onClick={togglePlay} style={styles.playBtn}>
-                    {playing ? (
-                        <svg width="48" height="48" viewBox="0 0 24 24" fill="white"><rect x="6" y="4" width="4" height="16" rx="1" /><rect x="14" y="4" width="4" height="16" rx="1" /></svg>
-                    ) : (
-                        <svg width="48" height="48" viewBox="0 0 24 24" fill="white"><polygon points="5,3 19,12 5,21" /></svg>
-                    )}
+                    <div style={styles.playBtnInner}>
+                        {playing ? (
+                            <svg width="36" height="36" viewBox="0 0 24 24" fill="#3b82f6">
+                                <rect x="6" y="4" width="4" height="16" rx="1.5" />
+                                <rect x="14" y="4" width="4" height="16" rx="1.5" />
+                            </svg>
+                        ) : (
+                            <svg width="36" height="36" viewBox="0 0 24 24" fill="#3b82f6">
+                                <polygon points="6,3 20,12 6,21" />
+                            </svg>
+                        )}
+                    </div>
                 </button>
 
-                {/* Progress bar (read-only) */}
+                {/* Premium progress bar */}
                 {!isEmbed && (
-                    <div style={styles.progressBar}>
-                        <div style={{ ...styles.progressFill, width: `${progress}%` }} />
+                    <div style={styles.progressWrap}>
+                        <div style={styles.progressBar}>
+                            <div style={{ ...styles.progressFill, width: `${progress}%` }} />
+                            <div style={{ ...styles.progressGlow, left: `${progress}%` }} />
+                        </div>
                     </div>
                 )}
             </div>
@@ -1006,36 +1182,41 @@ export default function QrVideoPage() {
 // ============================================================
 const baseCSS = `
     * { margin:0; padding:0; box-sizing:border-box; }
-    html, body { background:#000; overflow:hidden; width:100%; height:100%; }
-    .mkt-qr-spinner {
-        width:48px; height:48px; border:4px solid rgba(255,255,255,0.2);
-        border-top-color:#fff; border-radius:50%; animation:mkt-spin 0.8s linear infinite;
-    }
+    html, body { background:#ffffff; overflow:hidden; width:100%; height:100%; }
     @keyframes mkt-spin { to{transform:rotate(360deg)} }
 `
 
 const styles = {
     container: {
-        position: 'fixed', inset: 0, background: '#000',
+        position: 'fixed', inset: 0,
+        background: '#ffffff',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
-        zIndex: 99999, fontFamily: "'Inter', -apple-system, sans-serif"
+        zIndex: 99999, fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif"
     },
     loading: {
-        position: 'fixed', inset: 0, background: 'linear-gradient(135deg, #0a0a0a, #1a1a2e)',
-        display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 99999
+        position: 'fixed', inset: 0,
+        background: '#ffffff',
+        display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 99999,
+        overflow: 'hidden'
     },
     error: {
-        position: 'fixed', inset: 0, background: 'linear-gradient(135deg, #0f0c29, #302b63)',
+        position: 'fixed', inset: 0,
+        background: '#ffffff',
         display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 99999,
         fontFamily: "'Inter', sans-serif", padding: '20px'
     },
     homeLink: {
-        display: 'inline-block', marginTop: '20px', padding: '12px 24px',
-        background: '#3b82f6', color: '#fff', textDecoration: 'none',
-        borderRadius: '10px', fontWeight: '600', fontSize: '14px'
+        display: 'inline-flex', alignItems: 'center', gap: '8px',
+        padding: '12px 28px',
+        background: 'linear-gradient(135deg, #3b82f6, #60a5fa)',
+        color: '#fff', textDecoration: 'none',
+        borderRadius: '14px', fontWeight: '600', fontSize: '14px',
+        boxShadow: '0 4px 20px rgba(59,130,246,0.25)',
+        transition: 'all 0.3s ease'
     },
     video: {
-        width: '100%', height: '100%', objectFit: 'contain', background: '#000'
+        width: '100%', height: '100%', objectFit: 'contain',
+        background: '#ffffff'
     },
     embedContainer: {
         position: 'relative', width: '100%', height: '100%'
@@ -1049,30 +1230,75 @@ const styles = {
     controlsOverlay: {
         position: 'fixed', inset: 0, zIndex: 10,
         display: 'flex', flexDirection: 'column', justifyContent: 'space-between',
-        pointerEvents: 'none', transition: 'opacity 0.3s ease'
+        pointerEvents: 'none',
+        transition: 'opacity 0.4s cubic-bezier(0.4,0,0.2,1)'
     },
     titleBar: {
-        padding: '20px 24px',
-        background: 'linear-gradient(to bottom, rgba(0,0,0,0.7), transparent)',
+        padding: '24px 28px',
+        background: 'transparent',
         pointerEvents: 'auto'
     },
+    titlePill: {
+        display: 'inline-flex', alignItems: 'center', gap: '10px',
+        padding: '8px 18px 8px 14px',
+        background: 'rgba(255,255,255,0.9)',
+        backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)',
+        border: '1px solid rgba(0,0,0,0.06)',
+        borderRadius: '100px',
+        boxShadow: '0 2px 12px rgba(0,0,0,0.04)'
+    },
+    titleDot: {
+        width: '8px', height: '8px', borderRadius: '50%',
+        background: 'linear-gradient(135deg, #3b82f6, #f97316)',
+        boxShadow: '0 0 8px rgba(59,130,246,0.3)',
+        flexShrink: 0
+    },
     videoTitle: {
-        color: '#fff', fontSize: 'clamp(14px, 3vw, 22px)', fontWeight: '600',
-        textShadow: '0 2px 8px rgba(0,0,0,0.5)', margin: 0
+        color: '#1e293b', fontSize: 'clamp(13px, 2.5vw, 16px)', fontWeight: '600',
+        fontFamily: "'Poppins','Inter',sans-serif",
+        margin: 0, letterSpacing: '0.01em',
+        whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+        maxWidth: '70vw'
     },
     playBtn: {
-        alignSelf: 'center', background: 'rgba(255,255,255,0.15)',
-        border: 'none', borderRadius: '50%', width: '80px', height: '80px',
+        alignSelf: 'center',
+        background: 'transparent',
+        border: 'none', borderRadius: '50%',
+        width: '88px', height: '88px',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
-        cursor: 'pointer', pointerEvents: 'auto', backdropFilter: 'blur(10px)',
-        transition: 'transform 0.2s, background 0.2s'
+        cursor: 'pointer', pointerEvents: 'auto',
+        padding: 0, position: 'relative'
     },
-    progressBar: {
-        width: '100%', height: '4px', background: 'rgba(255,255,255,0.2)',
+    playBtnInner: {
+        width: '72px', height: '72px', borderRadius: '50%',
+        background: 'rgba(255,255,255,0.85)',
+        backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)',
+        border: '1px solid rgba(59,130,246,0.15)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        boxShadow: '0 8px 32px rgba(59,130,246,0.12), inset 0 0 0 1px rgba(255,255,255,0.5)',
+        transition: 'all 0.3s cubic-bezier(0.4,0,0.2,1)'
+    },
+    progressWrap: {
+        padding: '0 20px 16px',
         pointerEvents: 'none'
     },
+    progressBar: {
+        width: '100%', height: '3px', borderRadius: '3px',
+        background: 'rgba(0,0,0,0.08)',
+        position: 'relative', overflow: 'visible'
+    },
     progressFill: {
-        height: '100%', background: '#3b82f6',
-        transition: 'width 0.3s linear', borderRadius: '0 2px 2px 0'
+        height: '100%', borderRadius: '3px',
+        background: 'linear-gradient(90deg, #3b82f6, #60a5fa, #f97316)',
+        transition: 'width 0.3s linear',
+        position: 'relative'
+    },
+    progressGlow: {
+        position: 'absolute', top: '-3px',
+        width: '8px', height: '8px', borderRadius: '50%',
+        background: '#3b82f6',
+        boxShadow: '0 0 12px rgba(59,130,246,0.5)',
+        transform: 'translateX(-50%)',
+        transition: 'left 0.3s linear'
     }
 }
