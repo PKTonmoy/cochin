@@ -119,10 +119,17 @@
   </script>
 
   <!-- ===== Marketing Module (isolated, non-blocking) ===== -->
-  <link rel="preload" href="/marketing.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
+  <link rel="preload" href="/marketing.css" as="style">
   <noscript>
     <link rel="stylesheet" href="/marketing.css">
   </noscript>
+  <script>
+    // CSP-safe: swap preload→stylesheet after DOM ready (no inline onload)
+    document.addEventListener('DOMContentLoaded', function () {
+      var pl = document.querySelector('link[rel="preload"][href="/marketing.css"]');
+      if (pl) pl.rel = 'stylesheet';
+    });
+  </script>
   <div id="marketing-root"></div>
   <script src="/marketing.js" defer fetchpriority="low"></script>
 </body>

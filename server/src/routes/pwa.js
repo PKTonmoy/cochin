@@ -88,22 +88,6 @@ router.get('/manifest.json', async (req, res) => {
             dir: 'ltr',
             scope: '/',
             icons,
-            screenshots: [
-                {
-                    src: '/icons/screenshot-wide.png',
-                    sizes: '1280x720',
-                    type: 'image/png',
-                    form_factor: 'wide',
-                    label: `${siteName} - Dashboard`
-                },
-                {
-                    src: '/icons/screenshot-narrow.png',
-                    sizes: '390x844',
-                    type: 'image/png',
-                    form_factor: 'narrow',
-                    label: `${siteName} - Mobile Login`
-                }
-            ]
         };
 
         res.setHeader('Content-Type', 'application/manifest+json');

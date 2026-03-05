@@ -147,7 +147,7 @@
 
                     if (popup.imageUrl) {
                         html += '<div class="mkt-popup-img-wrap">';
-                        html += '<img class="mkt-popup-img mkt-img-loading" src="' + MKT.escHtml(popup.imageUrl) + '" alt="" loading="eager" onload="this.classList.remove(\'mkt-img-loading\')">';
+                        html += '<img class="mkt-popup-img mkt-img-loading" src="' + MKT.escHtml(popup.imageUrl) + '" alt="" loading="eager">';
                         html += '</div>';
                     }
 
@@ -233,7 +233,7 @@
                 html += '</div>';
 
                 if (promo.imageUrl) {
-                    html += '<div class="mkt-promo-img-wrap"><img class="mkt-promo-img mkt-img-loading" src="' + MKT.escHtml(promo.imageUrl) + '" alt="" loading="lazy" onload="this.classList.remove(\'mkt-img-loading\')"></div>';
+                    html += '<div class="mkt-promo-img-wrap"><img class="mkt-promo-img mkt-img-loading" src="' + MKT.escHtml(promo.imageUrl) + '" alt="" loading="lazy"></div>';
                 }
 
                 section.innerHTML = html;
@@ -389,6 +389,15 @@
             return true;
         }
     };
+
+    // ============================================================
+    // IMAGE LOAD HANDLER — CSP-safe replacement for inline onload
+    // ============================================================
+    document.addEventListener('load', function (e) {
+        if (e.target && e.target.classList && e.target.classList.contains('mkt-img-loading')) {
+            e.target.classList.remove('mkt-img-loading');
+        }
+    }, true); // 'true' = capture phase, fires for all descendant load events
 
     // ============================================================
     // BOOT — waits for page to fully render before showing marketing
