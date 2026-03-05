@@ -461,7 +461,7 @@ export default function MarketingDashboard() {
                                         <div>
                                             <div style={{ fontWeight: '600', fontSize: '16px', color: '#1e293b' }}>{v.title}</div>
                                             <div style={{ fontSize: '13px', color: '#64748b', marginTop: '4px' }}>
-                                                {v.videoType === 'upload' ? '📹 Uploaded Video' : v.videoType === 'youtube' ? '▶️ YouTube' : '🎬 Vimeo'} • Animation: {v.animationStyle}
+                                                {v.videoType === 'upload' ? '📹 Uploaded Video' : v.videoType === 'youtube' ? '▶️ YouTube' : '🎬 Vimeo'} • Transition: Cinematic Dissolve
                                             </div>
                                         </div>
                                         <span style={STYLES.badge(v.isActive)}>{v.isActive ? 'Active' : 'Inactive'}</span>
@@ -882,22 +882,8 @@ function ModalForm({ modal, saving, onClose, onCreate, onUpdate }) {
                                     <input style={STYLES.input} value={form.videoSource || ''} onChange={e => set('videoSource', e.target.value)} required placeholder={form.videoType === 'youtube' ? 'https://www.youtube.com/watch?v=...' : 'https://vimeo.com/...'} />
                                 </div>
                             )}
-                            <div style={STYLES.grid2}>
-                                <div style={STYLES.formGroup}>
-                                    <label style={STYLES.label}>Post-Video Animation</label>
-                                    <select style={STYLES.select} value={form.animationStyle || 'confetti'} onChange={e => set('animationStyle', e.target.value)}>
-                                        <option value="confetti">🎉 Confetti</option>
-                                        <option value="logo">⭐ Logo Reveal</option>
-                                        <option value="ripple">🌊 Ripple</option>
-                                        <option value="zoom">🔍 Zoom Out</option>
-                                        <option value="cinematic">🎬 Cinematic</option>
-                                        <option value="waterdrop">💧 Waterdrop</option>
-                                    </select>
-                                </div>
-                                <div style={STYLES.formGroup}>
-                                    <label style={STYLES.label}>Redirect URL (after video)</label>
-                                    <input style={STYLES.input} value={form.redirectUrl || '/'} onChange={e => set('redirectUrl', e.target.value)} placeholder="/" />
-                                </div>
+                            <div style={{ fontSize: '13px', color: '#64748b', background: '#f0f9ff', padding: '12px 16px', borderRadius: '10px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                🎬 <strong>Transition:</strong> Cinematic Freeze-Frame Dissolve (automatic)
                             </div>
                         </>
                     )}

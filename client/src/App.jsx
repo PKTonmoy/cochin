@@ -1,6 +1,8 @@
 import { Routes, Route, Navigate } from 'react-router-dom'
 import { Suspense, lazy, Component } from 'react'
 import { useAuth } from './contexts/AuthContext'
+import { VideoTransitionProvider } from './contexts/VideoTransitionContext'
+import TransitionOverlay from './components/TransitionOverlay'
 
 // Layouts
 import PublicLayout from './layouts/PublicLayout'
@@ -130,9 +132,10 @@ const ProtectedRoute = ({ children, roles }) => {
 
 function App() {
   return (
-    <>
+    <VideoTransitionProvider>
       <DynamicMetadata />
       <PWAInstallPrompt />
+      <TransitionOverlay />
       <Routes>
         {/* Portal entry — smart redirect (no layout wrapper) */}
         <Route path="/portal-entry" element={<PortalEntryPage />} />
@@ -237,7 +240,7 @@ function App() {
         {/* Catch all */}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
-    </>
+    </VideoTransitionProvider>
   )
 }
 

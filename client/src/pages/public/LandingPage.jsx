@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import api from '../../lib/api'
 import { useSettings } from '../../contexts/SettingsContext'
+import { useVideoTransition } from '../../contexts/VideoTransitionContext'
 import { HeroSection3D } from '../../components/hero'
 import HolographicStatCard from '../../components/cards/HolographicStatCard'
 import CourseCarousel from '../../components/carousel/CourseCarousel'
@@ -102,14 +103,16 @@ function FacultyCard({ faculty, index }) {
 // Main Component
 export default function LandingPage() {
     const { settings, getPrimaryPhone, getEmail, getAddress } = useSettings()
-    const [content, setContent] = useState({})
-    const [courses, setCourses] = useState([])
-    const [faculty, setFaculty] = useState([])
-    const [toppers, setToppers] = useState([])
-    const [testimonialData, setTestimonialData] = useState([])
-    // Skip skeleton loading if redirected from QR video page
-    const isFromQr = new URLSearchParams(window.location.search).get('from') === 'qr'
-    const [loading, setLoading] = useState(!isFromQr)
+    const { preloadedData, isPreloaded } = useVideoTransition()
+
+    // Use preloaded data from video transition if available
+    const [content, setContent] = useState(preloadedData?.content || {})
+    const [courses, setCourses] = useState(preloadedData?.courses || [])
+    const [faculty, setFaculty] = useState(preloadedData?.faculty || [])
+    const [toppers, setToppers] = useState(preloadedData?.toppers || [])
+    const [testimonialData, setTestimonialData] = useState(preloadedData?.testimonials || [])
+    // Skip skeleton loading if data was preloaded during video transition
+    const [loading, setLoading] = useState(!isPreloaded && !preloadedData)
     const [storyOpen, setStoryOpen] = useState(false)
     const [storyIndex, setStoryIndex] = useState(0)
     const [leadName, setLeadName] = useState('')
@@ -117,15 +120,6 @@ export default function LandingPage() {
     const [leadClass, setLeadClass] = useState('')
     const [submitting, setSubmitting] = useState(false)
     const location = useLocation()
-
-    // Clean up ?from=qr param from URL without reload
-    useEffect(() => {
-        if (isFromQr) {
-            const url = new URL(window.location.href)
-            url.searchParams.delete('from')
-            window.history.replaceState({}, '', url.pathname + url.hash)
-        }
-    }, [])
 
     useEffect(() => {
         const scrollToElement = () => {
@@ -170,6 +164,17 @@ export default function LandingPage() {
     }
 
     useEffect(() => {
+        // Skip fetching if data was preloaded during video transition
+        if (preloadedData && (isPreloaded || Object.keys(preloadedData).length > 0)) {
+            setContent(preloadedData.content || {})
+            setCourses(preloadedData.courses || [])
+            setFaculty(preloadedData.faculty || [])
+            setToppers(preloadedData.toppers || [])
+            setTestimonialData(preloadedData.testimonials || [])
+            setLoading(false)
+            return
+        }
+
         const fetchData = async () => {
             try {
                 // Fetch all data in parallel
@@ -194,7 +199,7 @@ export default function LandingPage() {
         }
 
         fetchData()
-    }, [])
+    }, [preloadedData, isPreloaded])
 
     // Reveal animations
     useEffect(() => {

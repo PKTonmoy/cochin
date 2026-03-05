@@ -33,6 +33,15 @@
             // Skip marketing on immersive QR video pages
             if (window.location.pathname.startsWith('/qr/')) return;
 
+            // Defer popups if arriving from a video transition
+            // The video transition system sets this flag to ensure
+            // the landing page renders fully before any popups appear
+            if (window.__MKT_DEFER_POPUPS) {
+                // Re-check every 500ms until the transition is complete
+                setTimeout(MKT.init, 500);
+                return;
+            }
+
             rootEl = document.getElementById('marketing-root');
             if (!rootEl) return;
 
