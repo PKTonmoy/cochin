@@ -4,14 +4,13 @@
  * Full-screen fixed overlay for the cinematic video-to-landing-page transition.
  * Rendered in App.jsx above Routes so it persists across navigation.
  * 
- * PERFORMANCE NOTES:
- * - Uses ONLY opacity + transform for animations (GPU-composited properties)
- * - Avoids filter:blur() which triggers CPU paint on every frame
- * - Uses a pre-blurred image via canvas ctx.filter for the frozen frame
- * - Minimal React state changes during animation to avoid re-renders
+ * PERFORMANCE: Uses ONLY CSS transitions on opacity + transform.
+ * CSS transitions run on the GPU compositor thread at 60fps,
+ * completely independent of JavaScript main thread activity.
+ * This means smooth animation even while React is mounting the landing page.
  */
 
-import { useEffect, useRef, useCallback } from 'react'
+import { useEffect, useRef } from 'react'
 import { useVideoTransition } from '../contexts/VideoTransitionContext'
 
 export default function TransitionOverlay() {
@@ -23,19 +22,23 @@ export default function TransitionOverlay() {
     } = useVideoTransition()
 
     const overlayRef = useRef(null)
-    const animFrameRef = useRef(null)
+    const completeTimerRef = useRef(null)
+    const fadeTimerRef = useRef(null)
 
-    // When we get a video frame (canvas), convert it to a background image
+    // When we get a video frame (canvas), insert it directly into the overlay
+    // IMPORTANT: No toDataURL() — that call is synchronous and blocks the main thread
     useEffect(() => {
         if (!overlayRef.current) return
 
         if (videoFrame && !isEmbedVideo) {
             try {
-                // Convert canvas to a data URL and set as background
-                const dataUrl = videoFrame.toDataURL('image/jpeg', 0.92)
-                overlayRef.current.style.backgroundImage = `url(${dataUrl})`
-                overlayRef.current.style.backgroundSize = 'cover'
-                overlayRef.current.style.backgroundPosition = 'center'
+                // Insert canvas element directly — zero encoding overhead
+                const canvas = videoFrame
+                canvas.style.cssText = 'width:100%;height:100%;object-fit:cover;display:block;'
+                // Clear any previous children
+                const container = overlayRef.current
+                while (container.firstChild) container.removeChild(container.firstChild)
+                container.appendChild(canvas)
             } catch (e) {
                 console.warn('[TransitionOverlay] Frame render failed:', e)
                 overlayRef.current.style.background = '#ffffff'
@@ -43,93 +46,56 @@ export default function TransitionOverlay() {
         }
     }, [videoFrame, isEmbedVideo])
 
-    // Handle the dissolve animation using requestAnimationFrame for buttery smooth 60fps
-    const runDissolve = useCallback(() => {
+    // Trigger CSS transition when transitioning starts
+    useEffect(() => {
+        if (transitionState !== 'transitioning') return
         if (!overlayRef.current) return
 
         const el = overlayRef.current
-        const duration = 1400 // ms — fast enough to feel snappy, slow enough to feel cinematic
-        const start = performance.now()
 
-        // Pre-promote to GPU layer
+        // GPU layer promotion
         el.style.willChange = 'opacity, transform'
-        el.style.transform = 'translateZ(0) scale(1)'
         el.style.opacity = '1'
+        el.style.transform = 'translateZ(0) scale(1)'
+        el.style.transition = 'none'
 
-        const animate = (now) => {
-            const elapsed = now - start
-            const progress = Math.min(elapsed / duration, 1)
+        const duration = isEmbedVideo ? 600 : 800
 
-            // Smooth easing: cubic-bezier approximation (ease-out-quart)
-            const eased = 1 - Math.pow(1 - progress, 4)
-
-            // Scale up slightly while fading — creates depth illusion without blur
-            const scale = 1 + eased * 0.08
-            const opacity = 1 - eased
-
-            el.style.opacity = String(opacity)
-            el.style.transform = `translateZ(0) scale(${scale})`
-
-            if (progress < 1) {
-                animFrameRef.current = requestAnimationFrame(animate)
-            } else {
-                // Animation complete
-                el.style.willChange = 'auto'
-                onTransitionComplete()
-            }
+        if (isEmbedVideo) {
+            el.style.background = 'linear-gradient(135deg, #3b82f6 0%, #60a5fa 40%, #f97316 100%)'
         }
 
-        // Start on next frame to ensure the overlay is visible first
-        animFrameRef.current = requestAnimationFrame(animate)
-    }, [onTransitionComplete])
+        // Wait for landing page to mount and do initial render behind us
+        fadeTimerRef.current = setTimeout(() => {
+            if (!overlayRef.current) return
 
-    // Trigger dissolve when transitioning starts
-    useEffect(() => {
-        if (transitionState === 'transitioning') {
-            if (isEmbedVideo) {
-                // For embeds: simple quick fade with brand gradient
-                if (overlayRef.current) {
-                    overlayRef.current.style.background = 'linear-gradient(135deg, #3b82f6 0%, #60a5fa 40%, #f97316 100%)'
-                    overlayRef.current.style.willChange = 'opacity'
-                    overlayRef.current.style.opacity = '1'
-                    overlayRef.current.style.transform = 'translateZ(0)'
+            // Start the CSS transition — this runs on the GPU compositor,
+            // completely independent of JS main thread
+            el.style.transition = `opacity ${duration}ms cubic-bezier(0.4, 0, 0.2, 1), transform ${duration}ms cubic-bezier(0.4, 0, 0.2, 1)`
+            el.style.opacity = '0'
+            el.style.transform = 'translateZ(0) scale(1.05)'
+        }, 200) // 200ms for page to render
 
-                    // Quick fade out
-                    requestAnimationFrame(() => {
-                        overlayRef.current.style.transition = 'opacity 1s cubic-bezier(0.4, 0, 0.2, 1)'
-                        overlayRef.current.style.opacity = '0'
-                    })
-
-                    const timer = setTimeout(() => {
-                        if (overlayRef.current) {
-                            overlayRef.current.style.transition = ''
-                            overlayRef.current.style.willChange = 'auto'
-                        }
-                        onTransitionComplete()
-                    }, 1050)
-
-                    return () => clearTimeout(timer)
-                }
-            } else {
-                // For uploaded videos: smooth rAF dissolve
-                // Small delay to ensure landing page has mounted behind us
-                const timer = setTimeout(() => runDissolve(), 80)
-                return () => {
-                    clearTimeout(timer)
-                    if (animFrameRef.current) {
-                        cancelAnimationFrame(animFrameRef.current)
-                    }
-                }
+        // Cleanup after transition finishes
+        completeTimerRef.current = setTimeout(() => {
+            if (overlayRef.current) {
+                overlayRef.current.style.transition = ''
+                overlayRef.current.style.willChange = 'auto'
             }
+            onTransitionComplete()
+        }, 200 + duration + 50) // delay + duration + buffer
+
+        return () => {
+            clearTimeout(fadeTimerRef.current)
+            clearTimeout(completeTimerRef.current)
         }
-    }, [transitionState, isEmbedVideo, runDissolve, onTransitionComplete])
+    }, [transitionState, isEmbedVideo, onTransitionComplete])
 
     // Cleanup on unmount
     useEffect(() => {
         return () => {
-            if (animFrameRef.current) {
-                cancelAnimationFrame(animFrameRef.current)
-            }
+            clearTimeout(fadeTimerRef.current)
+            clearTimeout(completeTimerRef.current)
         }
     }, [])
 
@@ -155,7 +121,6 @@ export default function TransitionOverlay() {
                 background: isEmbedVideo
                     ? 'linear-gradient(135deg, #3b82f6 0%, #60a5fa 40%, #f97316 100%)'
                     : '#000000',
-                // GPU layer promotion from the start
                 transform: 'translateZ(0)',
                 backfaceVisibility: 'hidden',
             }}

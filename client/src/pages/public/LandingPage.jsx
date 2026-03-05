@@ -9,6 +9,7 @@ import CourseCarousel from '../../components/carousel/CourseCarousel'
 import VictoryCard from '../../components/cards/VictoryCard'
 import StoryCarousel, { StoryPreviews } from '../../components/testimonials/StoryCarousel'
 import Footer from '../../components/layout/Footer'
+import WhatsAppFloat from '../../components/WhatsAppFloat'
 import ProgramCardSkeleton from '../../components/ProgramCardSkeleton'
 // Skeletons
 import HeroSkeleton from '../../components/skeletons/HeroSkeleton'
@@ -259,7 +260,8 @@ export default function LandingPage() {
             result: t.achievement || '',
             image: t.photo?.url || t.image,
             rating: t.rating || 5,
-            institution: t.achievement
+            institution: t.achievement,
+            videoUrl: t.videoUrl || null
         }))
         : toppers.length > 0
             ? toppers.map(topper => ({
@@ -352,6 +354,7 @@ export default function LandingPage() {
         <div className="bg-white min-h-screen">
             <ScrollProgress />
             <BackToTop />
+            <WhatsAppFloat />
 
             {/* Hero */}
             {settings?.siteInfo?.name && <title>{`${settings.siteInfo.name}${settings.siteInfo.tagline ? ` - ${settings.siteInfo.tagline}` : ''}`}</title>}

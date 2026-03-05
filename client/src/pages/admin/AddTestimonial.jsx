@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { ArrowLeft, Save, Upload, Star } from 'lucide-react';
+import { ArrowLeft, Save, Upload, Star, Video, X, Film } from 'lucide-react';
 import api from '../../lib/api';
 import { toast } from 'react-hot-toast';
 
@@ -31,6 +31,9 @@ export default function AddTestimonial() {
     const [formData, setFormData] = useState(initialFormState);
     const [imagePreview, setImagePreview] = useState('');
     const [uploading, setUploading] = useState(false);
+    const [videoUploading, setVideoUploading] = useState(false);
+    const [videoProgress, setVideoProgress] = useState(0);
+    const [videoPreview, setVideoPreview] = useState('');
 
     // Fetch existing data
     const { data: existingData, isLoading: loadingExisting } = useQuery({
@@ -62,6 +65,9 @@ export default function AddTestimonial() {
             });
             if (existingData.photo?.url || existingData.photo) {
                 setImagePreview(existingData.photo?.url || existingData.photo);
+            }
+            if (existingData.videoUrl) {
+                setVideoPreview(existingData.videoUrl);
             }
         }
     }, [existingData]);
@@ -126,6 +132,55 @@ export default function AddTestimonial() {
         } finally {
             setUploading(false);
         }
+    };
+
+    const handleVideoUpload = async (e) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        // Validate file size (50MB)
+        if (file.size > 50 * 1024 * 1024) {
+            toast.error('Video file too large. Maximum size is 50MB.');
+            return;
+        }
+
+        setVideoUploading(true);
+        setVideoProgress(0);
+
+        try {
+            const formDataUpload = new FormData();
+            formDataUpload.append('file', file);
+            formDataUpload.append('folder', 'testimonials/videos');
+
+            const res = await api.post('/media/upload-video', formDataUpload, {
+                onUploadProgress: (progressEvent) => {
+                    const percent = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+                    setVideoProgress(percent);
+                }
+            });
+
+            const videoUrl = res.data.data.url;
+            setFormData(prev => ({
+                ...prev,
+                videoUrl,
+                videoThumbnail: {
+                    url: res.data.data.thumbnailUrl || '',
+                    publicId: res.data.data.publicId
+                }
+            }));
+            setVideoPreview(videoUrl);
+            toast.success('Video uploaded to Cloudinary!');
+        } catch (error) {
+            toast.error(error.response?.data?.message || 'Failed to upload video');
+        } finally {
+            setVideoUploading(false);
+            setVideoProgress(0);
+        }
+    };
+
+    const handleRemoveVideo = () => {
+        setFormData(prev => ({ ...prev, videoUrl: '', videoThumbnail: { url: '', publicId: '' } }));
+        setVideoPreview('');
     };
 
     const handleSubmit = (e) => {
@@ -284,15 +339,78 @@ export default function AddTestimonial() {
                         </div>
 
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Video Testimonial URL</label>
-                            <input
-                                type="url"
-                                name="videoUrl"
-                                value={formData.videoUrl}
-                                onChange={handleChange}
-                                placeholder="https://youtube.com/watch?v=..."
-                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                            />
+                            <label className="block text-sm font-medium text-gray-700 mb-2">Video Testimonial</label>
+
+                            {videoPreview ? (
+                                /* Video Preview */
+                                <div className="relative rounded-xl overflow-hidden bg-gray-900">
+                                    <video
+                                        src={videoPreview}
+                                        className="w-full max-h-64 object-contain"
+                                        controls
+                                        preload="metadata"
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={handleRemoveVideo}
+                                        className="absolute top-2 right-2 p-1.5 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors shadow-lg"
+                                    >
+                                        <X className="w-4 h-4" />
+                                    </button>
+                                    <div className="p-3 bg-green-50 border-t border-green-200">
+                                        <p className="text-sm text-green-700 flex items-center gap-2">
+                                            <Video className="w-4 h-4" />
+                                            Video uploaded to Cloudinary
+                                        </p>
+                                    </div>
+                                </div>
+                            ) : videoUploading ? (
+                                /* Upload Progress */
+                                <div className="border-2 border-blue-200 bg-blue-50 rounded-xl p-6 text-center">
+                                    <Film className="w-10 h-10 text-blue-500 mx-auto mb-3 animate-pulse" />
+                                    <p className="text-sm text-blue-700 font-medium mb-2">Uploading video...</p>
+                                    <div className="w-full bg-blue-200 rounded-full h-2.5 mb-1">
+                                        <div
+                                            className="bg-blue-600 h-2.5 rounded-full transition-all duration-300"
+                                            style={{ width: `${videoProgress}%` }}
+                                        />
+                                    </div>
+                                    <p className="text-xs text-blue-600">{videoProgress}%</p>
+                                </div>
+                            ) : (
+                                /* Upload Area */
+                                <div className="space-y-3">
+                                    <label className="block border-2 border-dashed border-gray-300 rounded-xl p-6 text-center cursor-pointer hover:border-blue-400 hover:bg-blue-50/50 transition-all">
+                                        <input
+                                            type="file"
+                                            accept="video/mp4,video/webm,video/quicktime,video/x-msvideo"
+                                            onChange={handleVideoUpload}
+                                            className="hidden"
+                                        />
+                                        <Video className="w-10 h-10 text-gray-400 mx-auto mb-2" />
+                                        <p className="text-sm font-medium text-gray-700">Click to upload video</p>
+                                        <p className="text-xs text-gray-500 mt-1">MP4, WebM, MOV — Max 50MB</p>
+                                    </label>
+
+                                    {/* Optional: paste a URL manually */}
+                                    <div className="flex items-center gap-2">
+                                        <div className="flex-1 h-px bg-gray-200" />
+                                        <span className="text-xs text-gray-400">or paste URL</span>
+                                        <div className="flex-1 h-px bg-gray-200" />
+                                    </div>
+                                    <input
+                                        type="url"
+                                        name="videoUrl"
+                                        value={formData.videoUrl}
+                                        onChange={(e) => {
+                                            handleChange(e);
+                                            if (e.target.value) setVideoPreview(e.target.value);
+                                        }}
+                                        placeholder="https://res.cloudinary.com/... or YouTube URL"
+                                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"
+                                    />
+                                </div>
+                            )}
                         </div>
                     </div>
                 </div>

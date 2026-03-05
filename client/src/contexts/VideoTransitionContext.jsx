@@ -105,10 +105,13 @@ export function VideoTransitionProvider({ children }) {
 
     // Internal: actually start the CSS transition and navigate
     const triggerTransition = useCallback((navigate) => {
-        setTransitionState('transitioning')
-        // Navigate on next frame — overlay is already visible
+        // Navigate FIRST — the overlay is still fully visible covering the screen
+        // This gives React time to mount and render the landing page behind the overlay
+        // before the dissolve animation starts revealing it
+        navigate('/', { replace: true })
+        // Start the dissolve on the next frame after navigation
         requestAnimationFrame(() => {
-            navigate('/', { replace: true })
+            setTransitionState('transitioning')
         })
     }, [])
 
@@ -137,8 +140,7 @@ export function VideoTransitionProvider({ children }) {
         videoEndedRef.current = false
 
         // Allow marketing popups now that landing page is fully rendered
-        // Small delay to ensure the page is visually complete
-        setTimeout(() => { window.__MKT_DEFER_POPUPS = false }, 1000)
+        setTimeout(() => { window.__MKT_DEFER_POPUPS = false }, 500)
         navigateFnRef.current = null
         // Keep preloadedData — landing page still needs it
     }, [])

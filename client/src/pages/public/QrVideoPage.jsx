@@ -265,11 +265,9 @@ export default function QrVideoPage() {
     }
 
     // When video ends: capture frame + trigger transition
-    const handleVideoEnd = useCallback(async () => {
-        // Log completion analytics (silent)
-        try {
-            await axios.post(`${API_URL}/marketing/qr/${id}/complete`)
-        } catch (e) { /* silent */ }
+    const handleVideoEnd = useCallback(() => {
+        // Log completion analytics (fire-and-forget — don't block transition)
+        axios.post(`${API_URL}/marketing/qr/${id}/complete`).catch(() => { })
 
         // Capture the last frame for freeze-frame dissolve
         const v = videoRef.current

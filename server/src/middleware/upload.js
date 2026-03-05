@@ -108,6 +108,46 @@ const uploadImage = multer({
 });
 
 /**
+ * File filter for video files
+ */
+const videoFilter = (req, file, cb) => {
+    const allowedMimes = [
+        'video/mp4',
+        'video/webm',
+        'video/quicktime',  // .mov
+        'video/x-msvideo',  // .avi
+        'video/x-ms-wmv',
+        'video/mpeg'
+    ];
+    const allowedExts = ['.mp4', '.webm', '.mov', '.avi', '.wmv', '.mpeg'];
+    const ext = path.extname(file.originalname).toLowerCase();
+
+    console.log('[Upload Middleware] Video file received:', {
+        originalname: file.originalname,
+        mimetype: file.mimetype,
+        extension: ext
+    });
+
+    if (allowedMimes.includes(file.mimetype) || allowedExts.includes(ext)) {
+        cb(null, true);
+    } else {
+        console.error('[Upload Middleware] Video file rejected - invalid type:', file.mimetype);
+        cb(new Error(`Only video files (mp4, webm, mov, avi) are allowed. Received: ${file.mimetype}`), false);
+    }
+};
+
+/**
+ * Video upload middleware (50MB limit)
+ */
+const uploadVideo = multer({
+    storage: imageStorage, // memory storage for Cloudinary
+    fileFilter: videoFilter,
+    limits: {
+        fileSize: 50 * 1024 * 1024 // 50MB
+    }
+});
+
+/**
  * Delete uploaded file
  */
 const deleteFile = (filePath) => {
@@ -125,6 +165,7 @@ const deleteFile = (filePath) => {
 module.exports = {
     uploadExcel,
     uploadImage,
+    uploadVideo,
     deleteFile,
     uploadDir,
     excelDir,

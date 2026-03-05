@@ -15,7 +15,7 @@
  */
 
 // ─── Cache Version ───────────────────────────────────────────────
-const CACHE_VERSION = 'v3';
+const CACHE_VERSION = 'v4';
 const STATIC_CACHE = `paragon-static-${CACHE_VERSION}`;
 const DYNAMIC_CACHE = `paragon-dynamic-${CACHE_VERSION}`;
 const API_CACHE = `paragon-api-${CACHE_VERSION}`;
@@ -24,7 +24,8 @@ const API_CACHE = `paragon-api-${CACHE_VERSION}`;
 const PRE_CACHE_ASSETS = [
     '/offline.html',
     '/icons/icon-192x192.png',
-    '/icons/icon-512x512.png'
+    '/icons/icon-512x512.png',
+    '/'
 ];
 
 // ─── Install Event ───────────────────────────────────────────────

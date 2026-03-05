@@ -5,6 +5,7 @@ import { useSettings } from '../../contexts/SettingsContext'
 import StoryCarousel from '../../components/testimonials/StoryCarousel'
 import VictoryCard from '../../components/cards/VictoryCard'
 import Footer from '../../components/layout/Footer'
+import WhatsAppFloat from '../../components/WhatsAppFloat'
 import VictoryCardSkeleton from '../../components/skeletons/VictoryCardSkeleton'
 import TestimonialCardSkeleton from '../../components/skeletons/TestimonialCardSkeleton'
 import {
@@ -150,6 +151,7 @@ const SuccessStoriesPage = () => {
     return (
         <div className="bg-white min-h-screen">
             <BackToTop />
+            <WhatsAppFloat />
 
             {/* Hero Section */}
             <section className="relative pt-32 pb-20 bg-gradient-to-br from-blue-600 via-blue-500 to-orange-500 overflow-hidden">

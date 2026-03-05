@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
@@ -7,11 +8,19 @@
   <title>Offline - PARAGON Student Portal</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Hind+Siliguri:wght@400;600;700&display=swap"
+    rel="stylesheet">
   <style>
     /* ===== Reset & Base ===== */
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
     :root {
       --primary: #3b82f6;
       --primary-dark: #2563eb;
@@ -41,7 +50,10 @@
     body::before {
       content: '';
       position: fixed;
-      top: 0; left: 0; right: 0; bottom: 0;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
       background:
         radial-gradient(ellipse at 20% 20%, rgba(59, 130, 246, 0.08) 0%, transparent 50%),
         radial-gradient(ellipse at 80% 80%, rgba(249, 115, 22, 0.06) 0%, transparent 50%),
@@ -94,9 +106,24 @@
       animation: pulse-glow 3s ease-in-out infinite;
     }
 
-    .wifi-svg .wifi-bar { fill: none; stroke: var(--text-muted); stroke-width: 3; stroke-linecap: round; opacity: 0.3; }
-    .wifi-svg .wifi-dot { fill: var(--text-muted); opacity: 0.3; }
-    .wifi-svg .slash-line { stroke: #ef4444; stroke-width: 3; stroke-linecap: round; }
+    .wifi-svg .wifi-bar {
+      fill: none;
+      stroke: var(--text-muted);
+      stroke-width: 3;
+      stroke-linecap: round;
+      opacity: 0.3;
+    }
+
+    .wifi-svg .wifi-dot {
+      fill: var(--text-muted);
+      opacity: 0.3;
+    }
+
+    .wifi-svg .slash-line {
+      stroke: #ef4444;
+      stroke-width: 3;
+      stroke-linecap: round;
+    }
 
     /* ===== Content ===== */
     .institute-name {
@@ -196,25 +223,34 @@
       transform: scale(0.97);
     }
 
-    .retry-btn.loading .retry-text { opacity: 0; }
-    .retry-btn .spinner { display: none; }
+    .retry-btn.loading .retry-text {
+      opacity: 0;
+    }
+
+    .retry-btn .spinner {
+      display: none;
+    }
+
     .retry-btn.loading .spinner {
       display: block;
       position: absolute;
       width: 22px;
       height: 22px;
-      border: 3px solid rgba(255,255,255,0.3);
+      border: 3px solid rgba(255, 255, 255, 0.3);
       border-top-color: white;
       border-radius: 50%;
       animation: spin 0.8s linear infinite;
     }
 
     .retry-icon {
-      width: 18px; height: 18px;
+      width: 18px;
+      height: 18px;
       transition: transform 0.3s ease;
     }
 
-    .retry-btn:hover .retry-icon { transform: rotate(180deg); }
+    .retry-btn:hover .retry-icon {
+      transform: rotate(180deg);
+    }
 
     /* ===== Footer ===== */
     .footer {
@@ -226,32 +262,65 @@
 
     /* ===== Animations ===== */
     @keyframes float {
-      0%, 100% { transform: translateY(0); }
-      50% { transform: translateY(-10px); }
+
+      0%,
+      100% {
+        transform: translateY(0);
+      }
+
+      50% {
+        transform: translateY(-10px);
+      }
     }
 
     @keyframes pulse-glow {
-      0%, 100% { opacity: 1; }
-      50% { opacity: 0.6; }
+
+      0%,
+      100% {
+        opacity: 1;
+      }
+
+      50% {
+        opacity: 0.6;
+      }
     }
 
     @keyframes blink {
-      0%, 100% { opacity: 1; }
-      50% { opacity: 0.3; }
+
+      0%,
+      100% {
+        opacity: 1;
+      }
+
+      50% {
+        opacity: 0.3;
+      }
     }
 
     @keyframes spin {
-      to { transform: rotate(360deg); }
+      to {
+        transform: rotate(360deg);
+      }
     }
 
     @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(20px); }
-      to { opacity: 1; transform: translateY(0); }
+      from {
+        opacity: 0;
+        transform: translateY(20px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
     }
 
-    .container { animation: fadeIn 0.6s ease-out; }
+    .container {
+      animation: fadeIn 0.6s ease-out;
+    }
   </style>
 </head>
+
 <body>
   <div class="container">
     <!-- Logo -->
@@ -282,8 +351,8 @@
 
     <!-- Message -->
     <p class="message">
-      Please check your internet connection and try again. 
-      Your data will sync automatically once you're back online.
+      ইন্টারনেট সংযোগ নেই। অনুগ্রহ করে আপনার সংযোগ পরীক্ষা করুন।<br>
+      <span style="font-size:14px;color:#94a3b8;">Please check your internet connection and try again.</span>
     </p>
 
     <!-- Status Card -->
@@ -299,7 +368,8 @@
     <button class="retry-btn" onclick="retryConnection()" id="retryBtn">
       <div class="spinner"></div>
       <span class="retry-text">
-        <svg class="retry-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <svg class="retry-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+          stroke-linecap="round" stroke-linejoin="round">
           <polyline points="23 4 23 10 17 10"></polyline>
           <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path>
         </svg>
@@ -315,7 +385,7 @@
     // ─── Show Last Sync Time ───
     (async function showLastSync() {
       try {
-        const cache = await caches.open('paragon-static-v1');
+        const cache = await caches.open('paragon-static-v4');
         const response = await cache.match('/__last_sync_time');
         if (response) {
           const timeStr = await response.text();
@@ -361,4 +431,5 @@
     });
   </script>
 </body>
+
 </html>

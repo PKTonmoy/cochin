@@ -8,7 +8,7 @@ const router = express.Router();
 const multer = require('multer');
 const mediaController = require('../controllers/mediaController');
 const { authenticate, authorize } = require('../middleware/auth');
-const { uploadImage } = require('../middleware/upload');
+const { uploadImage, uploadVideo } = require('../middleware/upload');
 
 // All routes are protected
 router.use(authenticate);
@@ -20,7 +20,7 @@ router.get('/cloudinary-usage', authorize('admin'), mediaController.getCloudinar
 router.get('/folders', authorize('admin', 'staff'), mediaController.getFolders);
 router.get('/:id', authorize('admin', 'staff'), mediaController.getMedia);
 
-// Upload with proper error handling
+// Image upload with proper error handling
 router.post('/upload',
     authorize('admin', 'staff'),
     (req, res, next) => {
@@ -39,6 +39,36 @@ router.post('/upload',
                 });
             } else if (err) {
                 console.error('[Media Upload] File filter error:', err.message);
+                return res.status(400).json({
+                    success: false,
+                    message: err.message
+                });
+            }
+            next();
+        });
+    },
+    mediaController.uploadMedia
+);
+
+// Video upload with larger size limit
+router.post('/upload-video',
+    authorize('admin', 'staff'),
+    (req, res, next) => {
+        uploadVideo.single('file')(req, res, (err) => {
+            if (err instanceof multer.MulterError) {
+                console.error('[Video Upload] Multer error:', err.message, err.code);
+                if (err.code === 'LIMIT_FILE_SIZE') {
+                    return res.status(400).json({
+                        success: false,
+                        message: 'Video file too large. Maximum size is 50MB.'
+                    });
+                }
+                return res.status(400).json({
+                    success: false,
+                    message: `Upload error: ${err.message}`
+                });
+            } else if (err) {
+                console.error('[Video Upload] File filter error:', err.message);
                 return res.status(400).json({
                     success: false,
                     message: err.message

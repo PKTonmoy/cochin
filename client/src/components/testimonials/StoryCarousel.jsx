@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { X, ChevronLeft, ChevronRight, Star, Trophy, Pause, Play, Share2 } from 'lucide-react'
+import { X, ChevronLeft, ChevronRight, Star, Trophy, Pause, Play, Share2, Video } from 'lucide-react'
 
 export default function StoryCarousel({
     testimonials = [],
@@ -12,9 +12,11 @@ export default function StoryCarousel({
     const [isPaused, setIsPaused] = useState(false)
     const intervalRef = useRef(null)
     const containerRef = useRef(null)
+    const videoRef = useRef(null)
 
     const STORY_DURATION = 5000
     const current = testimonials[currentIndex]
+    const hasVideo = Boolean(current?.videoUrl)
 
     const goNext = () => {
         if (currentIndex < testimonials.length - 1) {
@@ -33,7 +35,7 @@ export default function StoryCarousel({
     }
 
     useEffect(() => {
-        if (!isOpen || isPaused) return
+        if (!isOpen || isPaused || hasVideo) return
 
         intervalRef.current = setInterval(() => {
             setProgress(prev => {
@@ -46,7 +48,7 @@ export default function StoryCarousel({
         }, 100)
 
         return () => clearInterval(intervalRef.current)
-    }, [isOpen, isPaused, currentIndex])
+    }, [isOpen, isPaused, currentIndex, hasVideo])
 
     useEffect(() => {
         if (isOpen) {
@@ -125,27 +127,49 @@ export default function StoryCarousel({
 
                 {/* Main content */}
                 <div className="flex-1 flex items-center justify-center px-8 py-20">
-                    <div className="text-center max-w-md">
-                        <div className="mb-8">
-                            <span className="text-6xl text-white/30 font-serif">"</span>
-                            <p className="text-xl md:text-2xl text-white font-medium leading-relaxed -mt-8 font-bangla">
-                                {current.testimonial}
-                            </p>
-                        </div>
-
-                        {current.result && (
-                            <div className="inline-flex items-center gap-2 px-4 py-2 bg-white/20 backdrop-blur rounded-full mb-6">
-                                <Trophy size={18} className="text-yellow-300" />
-                                <span className="text-white font-semibold">{current.result}</span>
+                    {hasVideo ? (
+                        /* Video Testimonial */
+                        <div className="w-full max-w-lg flex flex-col items-center gap-4">
+                            <video
+                                ref={videoRef}
+                                src={current.videoUrl}
+                                className="w-full rounded-2xl shadow-2xl"
+                                style={{ maxHeight: '60vh', objectFit: 'contain', background: 'rgba(0,0,0,0.3)' }}
+                                controls
+                                autoPlay
+                                playsInline
+                                onEnded={goNext}
+                                onClick={(e) => e.stopPropagation()}
+                            />
+                            <div className="text-center">
+                                <p className="text-white font-semibold text-lg">{current.name}</p>
+                                <p className="text-white/70 text-sm">{current.achievement} • {current.year}</p>
                             </div>
-                        )}
-
-                        <div className="flex items-center justify-center gap-1">
-                            {[...Array(5)].map((_, i) => (
-                                <Star key={i} size={20} className="text-yellow-300" fill="currentColor" />
-                            ))}
                         </div>
-                    </div>
+                    ) : (
+                        /* Text Testimonial */
+                        <div className="text-center max-w-md">
+                            <div className="mb-8">
+                                <span className="text-6xl text-white/30 font-serif">"</span>
+                                <p className="text-xl md:text-2xl text-white font-medium leading-relaxed -mt-8 font-bangla">
+                                    {current.testimonial}
+                                </p>
+                            </div>
+
+                            {current.result && (
+                                <div className="inline-flex items-center gap-2 px-4 py-2 bg-white/20 backdrop-blur rounded-full mb-6">
+                                    <Trophy size={18} className="text-yellow-300" />
+                                    <span className="text-white font-semibold">{current.result}</span>
+                                </div>
+                            )}
+
+                            <div className="flex items-center justify-center gap-1">
+                                {[...Array(5)].map((_, i) => (
+                                    <Star key={i} size={20} className="text-yellow-300" fill="currentColor" />
+                                ))}
+                            </div>
+                        </div>
+                    )}
                 </div>
 
                 {/* Counter */}
@@ -171,11 +195,21 @@ export function StoryPreviews({ testimonials = [], onOpen }) {
                         <div className="absolute inset-0 bg-gradient-to-br from-blue-500 via-orange-500 to-pink-500 rounded-full p-0.5">
                             <div className="w-full h-full rounded-full bg-white p-0.5">
                                 <div className="w-16 h-16 rounded-full bg-gradient-to-br from-blue-500 to-orange-500 flex items-center justify-center text-white font-bold text-xl group-hover:scale-105 transition-transform shadow-md">
-                                    {testimonial.name?.charAt(0) || 'S'}
+                                    {testimonial.image ? (
+                                        <img src={testimonial.image} alt={testimonial.name} className="w-full h-full rounded-full object-cover" />
+                                    ) : (
+                                        testimonial.name?.charAt(0) || 'S'
+                                    )}
                                 </div>
                             </div>
                         </div>
                         <div className="w-[72px] h-[72px]" />
+                        {/* Video indicator badge */}
+                        {testimonial.videoUrl && (
+                            <div className="absolute -bottom-0.5 -right-0.5 w-6 h-6 rounded-full bg-gradient-to-br from-blue-500 to-orange-500 flex items-center justify-center shadow-md border-2 border-white z-10">
+                                <Video size={11} className="text-white" />
+                            </div>
+                        )}
                     </div>
                     <span className="text-xs text-gray-500 max-w-[80px] truncate">
                         {testimonial.name?.split(' ')[0]}
