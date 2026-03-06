@@ -20,6 +20,7 @@ import {
     Users, GraduationCap, Award, Trophy, BookOpen, ArrowRight, Phone, Mail, MapPin,
     MessageCircle, Sparkles, TrendingUp, Target, Clock, ArrowUp
 } from 'lucide-react'
+import { CLASSES } from '../../data/classData'
 
 // Scroll Progress
 function ScrollProgress() {
@@ -547,10 +548,9 @@ export default function LandingPage() {
                                         onChange={(e) => setLeadClass(e.target.value)}
                                     >
                                         <option value="">ক্লাস নির্বাচন করুন</option>
-                                        <option value="9">৯ম শ্রেণী</option>
-                                        <option value="10">১০ম শ্রেণী</option>
-                                        <option value="11">একাদশ</option>
-                                        <option value="Examinee">ভর্তি পরীক্ষার্থী</option>
+                                        {CLASSES.map((cls) => (
+                                            <option key={cls} value={cls}>{cls}</option>
+                                        ))}
                                     </select>
                                     <button type="submit" className="btn-cyber w-full py-4" disabled={submitting}>
                                         <span className="font-bangla">{submitting ? 'Submitting...' : 'বুক করুন'}</span>
